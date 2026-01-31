@@ -23,57 +23,51 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-brand-light via-white to-gray-50">
-      {/* Hero Section con gradiente dorado */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-primary via-brand-secondary to-brand-primary px-4 py-20 text-white">
-        {/* Patrón de fondo decorativo */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute left-0 top-0 h-96 w-96 rounded-full bg-white blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-white blur-3xl" />
+    <main className="min-h-screen bg-brand-dark">
+      {/* Hero Section - Gradiente oscuro elegante */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-black via-brand-dark to-brand-card px-4 py-20 text-brand-text">
+        {/* Patrón de fondo sutil */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute left-0 top-0 h-96 w-96 rounded-full bg-brand-primary blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-brand-primary blur-3xl" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl text-center animate-[fadeIn_0.5s_ease-in]">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 backdrop-blur-sm animate-[scaleIn_0.3s_ease-out] [text-shadow:_0_1px_2px_rgba(0,0,0,0.3)]">
-            <Sparkles className="h-5 w-5" />
-            <span className="text-sm font-medium">Cotización en línea 24/7</span>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2 animate-[scaleIn_0.3s_ease-out] glass-effect">
+            <Sparkles className="h-5 w-5 text-brand-primary" />
+            <span className="text-sm font-medium text-brand-text">
+              Cotización en línea 24/7
+            </span>
           </div>
 
-          <h1 className="mb-6 text-5xl font-bold leading-tight md:text-6xl [text-shadow:_0_2px_8px_rgba(0,0,0,0.4)]">
+          <h1 className="mb-6 text-5xl font-bold leading-tight md:text-6xl text-shadow-dark">
             Cotiza tu Remodelación <br />
-            <span className="text-brand-accent [text-shadow:_0_2px_8px_rgba(0,0,0,0.4)]">
+            <span className="text-brand-primary text-shadow-gold">
               en 3 Minutos
             </span>
           </h1>
 
-          <p className="mx-auto mb-8 max-w-3xl text-xl text-white/90 md:text-2xl [text-shadow:_0_2px_4px_rgba(0,0,0,0.3)]">
+          <p className="mx-auto mb-8 max-w-3xl text-xl text-brand-textSecondary md:text-2xl">
             Elige tu proyecto y personaliza tu apartamento VIS con acabados
             premium
           </p>
 
           <div className="flex flex-col justify-center gap-4 sm:flex-row">
-            <div className="rounded-lg bg-white/10 px-6 py-3 backdrop-blur-sm">
-              <div className="text-3xl font-bold [text-shadow:_0_2px_4px_rgba(0,0,0,0.3)]">
-                +100
-              </div>
-              <div className="text-sm text-white/90 [text-shadow:_0_1px_2px_rgba(0,0,0,0.3)]">
+            <div className="rounded-xl px-6 py-3 glass-effect">
+              <div className="text-3xl font-bold text-brand-primary">+100</div>
+              <div className="text-sm text-brand-textSecondary">
                 Proyectos Remodelados
               </div>
             </div>
-            <div className="rounded-lg bg-white/10 px-6 py-3 backdrop-blur-sm">
-              <div className="text-3xl font-bold [text-shadow:_0_2px_4px_rgba(0,0,0,0.3)]">
-                +100
-              </div>
-              <div className="text-sm text-white/90 [text-shadow:_0_1px_2px_rgba(0,0,0,0.3)]">
+            <div className="rounded-xl px-6 py-3 glass-effect">
+              <div className="text-3xl font-bold text-brand-primary">+100</div>
+              <div className="text-sm text-brand-textSecondary">
                 Clientes Satisfechos
               </div>
             </div>
-            <div className="rounded-lg bg-white/10 px-6 py-3 backdrop-blur-sm">
-              <div className="text-3xl font-bold [text-shadow:_0_2px_4px_rgba(0,0,0,0.3)]">
-                5★
-              </div>
-              <div className="text-sm text-white/90 [text-shadow:_0_1px_2px_rgba(0,0,0,0.3)]">
-                Calificación
-              </div>
+            <div className="rounded-xl px-6 py-3 glass-effect">
+              <div className="text-3xl font-bold text-brand-primary">5★</div>
+              <div className="text-sm text-brand-textSecondary">Calificación</div>
             </div>
           </div>
         </div>
@@ -82,10 +76,10 @@ export default function Home() {
       {/* Grid de Proyectos */}
       <section className="mx-auto max-w-7xl px-4 py-16">
         <div className="mb-12 text-center animate-[slideUp_0.4s_ease-out]">
-          <h2 className="mb-4 text-3xl font-bold text-brand-dark md:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-brand-text md:text-4xl">
             Elige tu Proyecto
           </h2>
-          <p className="mx-auto max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto max-w-2xl text-lg text-brand-textSecondary">
             Contamos con presencia en los mejores conjuntos residenciales de
             Bucaramanga
           </p>
@@ -95,7 +89,7 @@ export default function Home() {
           {proyectos.map((proyecto, index) => (
             <Card
               key={proyecto.id}
-              className="group overflow-hidden border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all duration-300 hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] animate-[slideUp_0.4s_ease-out]"
+              className="group overflow-hidden border border-brand-border bg-brand-card shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all duration-300 hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)] animate-[slideUp_0.4s_ease-out]"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <CardHeader className="relative overflow-hidden p-0">
@@ -107,35 +101,35 @@ export default function Home() {
                     height={300}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
-                  {/* Overlay con gradiente */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-                  {/* Badge especial para Ciudadela Verde */}
                   {"precioIntermedioEspecial" in proyecto &&
                     proyecto.precioIntermedioEspecial && (
-                      <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-brand-primary px-3 py-1 text-xs font-bold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)]">
+                      <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-brand-primary px-3 py-1 text-xs font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]">
                         <Sparkles className="h-3 w-3" />
                         OFERTA ESPECIAL
                       </div>
                     )}
 
-                  {/* Nombre del proyecto en overlay */}
                   <div className="absolute bottom-4 left-4 right-4">
-                    <CardTitle className="mb-1 text-2xl font-bold text-white [text-shadow:_0_2px_4px_rgba(0,0,0,0.4)]">
+                    <CardTitle className="mb-1 text-2xl font-bold text-white text-shadow-dark">
                       {proyecto.nombre}
                     </CardTitle>
-                    <div className="flex items-center gap-1 text-white/90 [text-shadow:_0_1px_2px_rgba(0,0,0,0.3)]">
+                    <div className="flex items-center gap-1 text-white/90">
                       <MapPin className="h-4 w-4" />
                       <span className="text-sm">{proyecto.ubicacion}</span>
                     </div>
                   </div>
+
+                  {/* Borde inferior amarillo en hover */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 origin-left scale-x-0 bg-brand-primary transition-transform duration-300 group-hover:scale-x-100" />
                 </div>
               </CardHeader>
 
-              <CardFooter className="bg-white p-6">
+              <CardFooter className="bg-brand-card p-6">
                 <Button
                   onClick={() => handleProyectoClick(proyecto)}
-                  className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all duration-300 hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]"
+                  className="w-full rounded-xl bg-brand-primary py-6 font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all duration-300 hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
                 >
                   Cotizar mi apartamento
                 </Button>
@@ -144,24 +138,24 @@ export default function Home() {
           ))}
 
           {/* Tarjeta especial - ¿No está tu proyecto? */}
-          <Card className="group overflow-hidden border-2 border-dashed border-brand-primary bg-gradient-to-br from-brand-light to-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all duration-300 hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]">
+          <Card className="group overflow-hidden border-2 border-dashed border-brand-primary bg-brand-card shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all duration-300 hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]">
             <CardHeader className="relative overflow-hidden p-0">
               <div className="relative flex h-56 items-center justify-center bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10">
                 <div className="p-8 text-center">
-                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary shadow-[0_4px_14px_0_rgba(255,204,0,0.39)]">
+                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-brand-primary shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]">
                     <span className="text-4xl">🏢</span>
                   </div>
-                  <CardTitle className="mb-2 text-2xl font-bold text-brand-dark">
+                  <CardTitle className="mb-2 text-2xl font-bold text-brand-text">
                     ¿No está tu proyecto?
                   </CardTitle>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-brand-textSecondary">
                     Cotizamos en cualquier conjunto residencial de Bucaramanga
                   </p>
                 </div>
               </div>
             </CardHeader>
 
-            <CardFooter className="bg-white p-6">
+            <CardFooter className="bg-brand-card p-6">
               <Button
                 onClick={() =>
                   window.open(
@@ -169,7 +163,7 @@ export default function Home() {
                     "_blank"
                   )
                 }
-                className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all duration-300 hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]"
+                className="w-full rounded-xl bg-brand-primary py-6 font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all duration-300 hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
               >
                 Escríbenos por WhatsApp
               </Button>
@@ -179,41 +173,41 @@ export default function Home() {
       </section>
 
       {/* Sección de beneficios */}
-      <section className="bg-gradient-to-br from-brand-light to-white px-4 py-16">
+      <section className="border-t border-brand-border bg-brand-dark px-4 py-16">
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-8 md:grid-cols-3">
-            <div className="rounded-2xl bg-white p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary shadow-[0_4px_14px_0_rgba(255,204,0,0.39)]">
+            <div className="rounded-2xl border border-brand-border bg-brand-card p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]">
                 <span className="text-3xl">🏗️</span>
               </div>
-              <h3 className="mb-2 text-xl font-bold text-brand-dark">
+              <h3 className="mb-2 text-xl font-bold text-brand-text">
                 +4 Años de Experiencia
               </h3>
-              <p className="text-gray-600">
+              <p className="text-brand-textSecondary">
                 Remodelando apartamentos VIS en Bucaramanga
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary shadow-[0_4px_14px_0_rgba(255,204,0,0.39)]">
+            <div className="rounded-2xl border border-brand-border bg-brand-card p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]">
                 <span className="text-3xl">⚡</span>
               </div>
-              <h3 className="mb-2 text-xl font-bold text-brand-dark">
+              <h3 className="mb-2 text-xl font-bold text-brand-text">
                 Entrega Rápida
               </h3>
-              <p className="text-gray-600">
+              <p className="text-brand-textSecondary">
                 Desde 39 días hábiles según el plan elegido
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary shadow-[0_4px_14px_0_rgba(255,204,0,0.39)]">
+            <div className="rounded-2xl border border-brand-border bg-brand-card p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-primary shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]">
                 <span className="text-3xl">✨</span>
               </div>
-              <h3 className="mb-2 text-xl font-bold text-brand-dark">
+              <h3 className="mb-2 text-xl font-bold text-brand-text">
                 Garantía de Calidad
               </h3>
-              <p className="text-gray-600">
+              <p className="text-brand-textSecondary">
                 Todos nuestros proyectos incluyen garantía y seguimiento
               </p>
             </div>
@@ -222,21 +216,20 @@ export default function Home() {
       </section>
 
       {/* Sección de Testimonios */}
-      <section className="mx-auto max-w-6xl px-4 py-16">
+      <section className="mx-auto max-w-6xl border-t border-brand-border px-4 py-16">
         <div className="mb-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-brand-dark md:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-brand-text md:text-4xl">
             Lo Que Dicen Nuestros Clientes
           </h2>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-brand-textSecondary">
             Más de 100 familias ya confían en nosotros
           </p>
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
-          {/* Testimonial 1 */}
-          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+          <div className="rounded-2xl border border-brand-border bg-brand-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
             <div className="mb-4 flex items-center gap-4">
-              <div className="h-16 w-16 overflow-hidden rounded-full bg-gray-200">
+              <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-cement">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/testimonios/cliente-1.jpg"
@@ -244,25 +237,24 @@ export default function Home() {
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src =
-                      "https://placehold.co/64x64/FFCC00/1A1A1A?text=👤";
+                      "https://placehold.co/64x64/FFB800/0C0C0C?text=👤";
                   }}
                 />
               </div>
               <div>
-                <h4 className="font-bold text-brand-dark">María González</h4>
-                <div className="text-sm text-yellow-500">★★★★★</div>
+                <h4 className="font-bold text-brand-text">María González</h4>
+                <div className="text-sm text-brand-primary">★★★★★</div>
               </div>
             </div>
-            <p className="italic text-gray-600">
+            <p className="italic text-brand-textSecondary">
               &quot;Excelente trabajo, muy profesionales. Mi apartamento quedó
               hermoso y lo entregaron en el tiempo prometido.&quot;
             </p>
           </div>
 
-          {/* Testimonial 2 */}
-          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+          <div className="rounded-2xl border border-brand-border bg-brand-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
             <div className="mb-4 flex items-center gap-4">
-              <div className="h-16 w-16 overflow-hidden rounded-full bg-gray-200">
+              <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-cement">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/testimonios/cliente-2.jpg"
@@ -270,25 +262,24 @@ export default function Home() {
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src =
-                      "https://placehold.co/64x64/FFCC00/1A1A1A?text=👤";
+                      "https://placehold.co/64x64/FFB800/0C0C0C?text=👤";
                   }}
                 />
               </div>
               <div>
-                <h4 className="font-bold text-brand-dark">Carlos Ramírez</h4>
-                <div className="text-sm text-yellow-500">★★★★★</div>
+                <h4 className="font-bold text-brand-text">Carlos Ramírez</h4>
+                <div className="text-sm text-brand-primary">★★★★★</div>
               </div>
             </div>
-            <p className="italic text-gray-600">
+            <p className="italic text-brand-textSecondary">
               &quot;La mejor inversión que hice. El equipo fue muy atento y el
               resultado superó mis expectativas.&quot;
             </p>
           </div>
 
-          {/* Testimonial 3 */}
-          <div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+          <div className="rounded-2xl border border-brand-border bg-brand-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
             <div className="mb-4 flex items-center gap-4">
-              <div className="h-16 w-16 overflow-hidden rounded-full bg-gray-200">
+              <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-cement">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/testimonios/cliente-3.jpg"
@@ -296,16 +287,16 @@ export default function Home() {
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src =
-                      "https://placehold.co/64x64/FFCC00/1A1A1A?text=👤";
+                      "https://placehold.co/64x64/FFB800/0C0C0C?text=👤";
                   }}
                 />
               </div>
               <div>
-                <h4 className="font-bold text-brand-dark">Laura Díaz</h4>
-                <div className="text-sm text-yellow-500">★★★★★</div>
+                <h4 className="font-bold text-brand-text">Laura Díaz</h4>
+                <div className="text-sm text-brand-primary">★★★★★</div>
               </div>
             </div>
-            <p className="italic text-gray-600">
+            <p className="italic text-brand-textSecondary">
               &quot;Todo el proceso fue transparente desde el inicio. Recomiendo
               100% sus servicios.&quot;
             </p>

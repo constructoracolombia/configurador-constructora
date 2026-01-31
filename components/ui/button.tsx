@@ -14,7 +14,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
           {
-            "bg-gradient-to-r from-brand-primary to-brand-secondary text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]":
+            "bg-brand-primary text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]":
               variant === "default",
             "bg-destructive text-destructive-foreground hover:bg-destructive/90":
               variant === "destructive",

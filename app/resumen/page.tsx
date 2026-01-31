@@ -6,8 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { planesBase, proyectos } from "@/lib/data/catalogo";
-import { formatoPrecio, generarMensajeWhatsApp, enviarWhatsApp } from "@/lib/utils/format";
+import {
+  planesBase,
+  proyectos
+} from "@/lib/data/catalogo";
+import {
+  formatoPrecio,
+  generarMensajeWhatsApp,
+  enviarWhatsApp
+} from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +34,10 @@ const formSchema = z.object({
   email: z
     .string()
     .optional()
-    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), "Email inválido")
+    .refine(
+      (val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+      "Email inválido"
+    )
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -65,7 +75,10 @@ export default function ResumenPage() {
       proyecto: nombreProyecto,
       planNombre: plan.nombre,
       planPrecio: getPrecioPlanBase(),
-      adicionales: adicionales.map((a) => ({ nombre: a.nombre, precio: a.precio })),
+      adicionales: adicionales.map((a) => ({
+        nombre: a.nombre,
+        precio: a.precio
+      })),
       total: getTotal()
     });
 
@@ -75,69 +88,88 @@ export default function ResumenPage() {
 
   if (!planBase || !plan) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-        <p className="text-center text-lg text-muted-foreground">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-brand-dark px-4">
+        <p className="text-center text-lg text-brand-textSecondary">
           No has seleccionado un plan
         </p>
-        <Button onClick={() => router.push("/")}>Volver al inicio</Button>
+        <Button
+          onClick={() => router.push("/")}
+          className="bg-brand-primary text-black hover:bg-brand-secondary"
+        >
+          Volver al inicio
+        </Button>
       </div>
     );
   }
 
-  const precioAdicionales = adicionales.reduce((sum, a) => sum + a.precio, 0);
+  const precioAdicionales = adicionales.reduce(
+    (sum, a) => sum + a.precio,
+    0
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-light/30 via-white to-gray-50 px-4 py-8">
+    <div className="min-h-screen bg-brand-dark px-4 py-8">
       <div className="mx-auto max-w-5xl">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {/* Columna Izquierda - Resumen */}
-          <Card className="border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+          <Card className="border border-brand-border bg-brand-card shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
             <CardHeader>
-              <h2 className="text-xl font-semibold">Resumen de tu Cotización</h2>
+              <h2 className="text-xl font-semibold text-brand-text">
+                Resumen de tu Cotización
+              </h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Proyecto</p>
-                <p className="font-medium">{nombreProyecto}</p>
+                <p className="text-sm text-brand-textSecondary">Proyecto</p>
+                <p className="font-medium text-brand-text">{nombreProyecto}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Plan seleccionado</p>
-                <p className="font-medium">{plan.nombre}</p>
+                <p className="text-sm text-brand-textSecondary">
+                  Plan seleccionado
+                </p>
+                <p className="font-medium text-brand-text">{plan.nombre}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Precio plan</p>
-                <p className="font-medium">{formatoPrecio(getPrecioPlanBase())}</p>
+                <p className="text-sm text-brand-textSecondary">Precio plan</p>
+                <p className="font-medium text-brand-primary">
+                  {formatoPrecio(getPrecioPlanBase())}
+                </p>
               </div>
 
               {adicionales.length > 0 && (
                 <>
                   <div>
-                    <p className="mb-2 font-medium">Adicionales</p>
+                    <p className="mb-2 font-medium text-brand-text">
+                      Adicionales
+                    </p>
                     <ul className="space-y-1">
                       {adicionales.map((item) => (
                         <li
                           key={item.codigo}
-                          className="flex justify-between text-sm"
+                          className="flex justify-between text-sm text-brand-textSecondary"
                         >
                           <span>{item.nombre}</span>
-                          <span>{formatoPrecio(item.precio)}</span>
+                          <span className="text-brand-primary">
+                            {formatoPrecio(item.precio)}
+                          </span>
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Subtotal adicionales: {formatoPrecio(precioAdicionales)}
+                    <p className="mt-2 text-sm text-brand-textSecondary">
+                      Subtotal adicionales:{" "}
+                      {formatoPrecio(precioAdicionales)}
                     </p>
                   </div>
                 </>
               )}
 
-              <Separator />
+              <Separator className="bg-brand-border" />
 
               <div>
                 <p className="text-3xl font-bold text-brand-primary">
                   Total: {formatoPrecio(getTotal())}
                 </p>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 text-sm text-brand-textSecondary">
                   Tiempo estimado: {plan.tiempoEntrega} días hábiles
                 </p>
               </div>
@@ -145,9 +177,11 @@ export default function ResumenPage() {
           </Card>
 
           {/* Columna Derecha - Formulario */}
-          <Card className="border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+          <Card className="border border-brand-border bg-brand-card shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
             <CardHeader>
-              <h2 className="text-xl font-semibold">Tus Datos</h2>
+              <h2 className="text-xl font-semibold text-brand-text">
+                Tus Datos
+              </h2>
             </CardHeader>
             <CardContent>
               <form
@@ -157,7 +191,7 @@ export default function ResumenPage() {
                 <div>
                   <label
                     htmlFor="nombre"
-                    className="mb-1 block text-sm font-medium"
+                    className="mb-1 block text-sm font-medium text-brand-text"
                   >
                     Nombre completo *
                   </label>
@@ -165,7 +199,9 @@ export default function ResumenPage() {
                     id="nombre"
                     placeholder="Tu nombre completo"
                     {...form.register("nombre")}
-                    className={form.formState.errors.nombre ? "border-destructive" : ""}
+                    className={`border-brand-border bg-brand-dark text-brand-text placeholder:text-brand-textSecondary ${
+                      form.formState.errors.nombre ? "border-destructive" : ""
+                    }`}
                   />
                   {form.formState.errors.nombre && (
                     <p className="mt-1 text-sm text-destructive">
@@ -177,7 +213,7 @@ export default function ResumenPage() {
                 <div>
                   <label
                     htmlFor="telefono"
-                    className="mb-1 block text-sm font-medium"
+                    className="mb-1 block text-sm font-medium text-brand-text"
                   >
                     Teléfono *
                   </label>
@@ -186,7 +222,9 @@ export default function ResumenPage() {
                     type="tel"
                     placeholder="300 123 4567"
                     {...form.register("telefono")}
-                    className={form.formState.errors.telefono ? "border-destructive" : ""}
+                    className={`border-brand-border bg-brand-dark text-brand-text placeholder:text-brand-textSecondary ${
+                      form.formState.errors.telefono ? "border-destructive" : ""
+                    }`}
                   />
                   {form.formState.errors.telefono && (
                     <p className="mt-1 text-sm text-destructive">
@@ -198,7 +236,7 @@ export default function ResumenPage() {
                 <div>
                   <label
                     htmlFor="email"
-                    className="mb-1 block text-sm font-medium"
+                    className="mb-1 block text-sm font-medium text-brand-text"
                   >
                     Email (opcional)
                   </label>
@@ -207,7 +245,9 @@ export default function ResumenPage() {
                     type="email"
                     placeholder="correo@ejemplo.com"
                     {...form.register("email")}
-                    className={form.formState.errors.email ? "border-destructive" : ""}
+                    className={`border-brand-border bg-brand-dark text-brand-text placeholder:text-brand-textSecondary ${
+                      form.formState.errors.email ? "border-destructive" : ""
+                    }`}
                   />
                   {form.formState.errors.email && (
                     <p className="mt-1 text-sm text-destructive">
@@ -218,7 +258,7 @@ export default function ResumenPage() {
 
                 <Button
                   type="submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 text-base font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]"
+                  className="w-full rounded-xl bg-brand-primary py-6 text-base font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
                 >
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Enviar Cotización por WhatsApp

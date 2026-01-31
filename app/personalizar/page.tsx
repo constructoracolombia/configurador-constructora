@@ -14,61 +14,104 @@ import { Button } from "@/components/ui/button";
 
 export default function PersonalizarPage() {
   const router = useRouter();
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<
+    string | null
+  >(null);
+
   const {
     proyecto: proyectoId,
     adicionales,
     addAdicional,
     removeAdicional,
-    getTotal,
-    getCantidadAdicionales
+    getCantidadAdicionales,
+    getTotal
   } = useCotizador();
 
   const proyectoNombre =
     proyectoId && proyectos.find((p) => p.id === proyectoId)?.nombre;
 
-  // Debug: asegurar que el estado es reactivo (solo en desarrollo)
+  // Debug en consola (opcional, puedes eliminarlo después)
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
-      console.log("Adicionales actuales:", adicionales);
-      console.log("Cantidad:", getCantidadAdicionales());
-      console.log("Total:", getTotal());
+      console.log("✅ Adicionales actualizados:", adicionales);
+      console.log("📊 Cantidad:", getCantidadAdicionales());
+      console.log("💰 Total:", getTotal());
     }
   }, [adicionales]);
-
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<
-    string | null
-  >(null);
 
   const productosFiltrados = categoriaSeleccionada
     ? productos.filter((p) => p.categoria === categoriaSeleccionada)
     : productos;
 
-  const isProductoAgregado = (codigo: number) =>
-    adicionales.some((p) => p.codigo === codigo);
+  const isProductoAgregado = (codigo: number): boolean =>
+    adicionales.some((a) => a.codigo === codigo);
 
-  const handleAgregar = (producto: Producto) => {
-    addAdicional(producto);
+  const handleToggleProducto = (producto: Producto) => {
+    if (isProductoAgregado(producto.codigo)) {
+      removeAdicional(producto.codigo);
+      if (process.env.NODE_ENV === "development") {
+        console.log("❌ Removido:", producto.nombre);
+      }
+    } else {
+      addAdicional(producto);
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Agregado:", producto.nombre);
+      }
+    }
   };
 
-  const handleRemover = (codigo: number) => {
-    removeAdicional(codigo);
+  const handleVerResumen = () => {
+    router.push("/resumen");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-light/20 via-white to-gray-50 pb-32">
+    <main className="min-h-screen bg-brand-dark pb-32">
       <div className="mx-auto max-w-7xl px-4 py-8">
+        <h1 className="mb-2 text-4xl font-bold text-brand-text">
+          Personaliza tu Remodelación
+        </h1>
+        <p className="mb-8 text-brand-textSecondary">
+          Agrega los acabados premium que desees
+        </p>
+
+        {/* Banner de urgencia */}
+        <div className="mb-8 rounded-xl border-l-4 border-brand-primary bg-gradient-to-r from-red-900/30 to-orange-900/30 p-4 shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] animate-[pulse_3s_cubic-bezier(0.4,0,0.6,1)_infinite] glass-effect">
+          <div className="flex items-center gap-3">
+            <div className="shrink-0">
+              <span className="text-2xl">🔥</span>
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-brand-text">
+                7 personas ya reservaron su remodelación en{" "}
+                {proyectoNombre || "tu proyecto"} este mes
+              </p>
+              <p className="mt-1 text-sm text-brand-textSecondary">
+                Nos quedan solo{" "}
+                <span className="font-bold text-brand-primary">
+                  3 cupos disponibles
+                </span>{" "}
+                para este mes. ¡No te quedes por fuera!
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col gap-8 lg:flex-row">
-          {/* Sidebar - Categorías (oculto en móvil) */}
-          <aside className="hidden shrink-0 lg:block lg:w-64">
-            <div className="sticky top-4 rounded-xl border bg-card p-4 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
-              <h2 className="mb-4 font-semibold">Categorías</h2>
-              <div className="space-y-1">
+          {/* Sidebar de categorías */}
+          <aside className="shrink-0 lg:w-64">
+            <Card className="sticky top-4 border border-brand-border bg-brand-card">
+              <CardHeader>
+                <h2 className="text-xl font-bold text-brand-text">
+                  Categorías
+                </h2>
+              </CardHeader>
+              <CardContent className="space-y-2">
                 <button
                   onClick={() => setCategoriaSeleccionada(null)}
-                  className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                    !categoriaSeleccionada
-                      ? "bg-brand-primary/10 font-medium text-brand-primary"
-                      : "hover:bg-muted"
+                  className={`w-full rounded-lg px-4 py-2 text-left transition-all ${
+                    categoriaSeleccionada === null
+                      ? "bg-brand-primary font-semibold text-black"
+                      : "text-brand-textSecondary hover:bg-brand-border"
                   }`}
                 >
                   Todas
@@ -77,120 +120,111 @@ export default function PersonalizarPage() {
                   <button
                     key={cat}
                     onClick={() => setCategoriaSeleccionada(cat)}
-                    className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                    className={`w-full rounded-lg px-4 py-2 text-left transition-all ${
                       categoriaSeleccionada === cat
-                        ? "bg-brand-primary/10 font-medium text-brand-primary"
-                        : "hover:bg-muted"
+                        ? "bg-brand-primary font-semibold text-black"
+                        : "text-brand-textSecondary hover:bg-brand-border"
                     }`}
                   >
                     {cat}
                   </button>
                 ))}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </aside>
 
           {/* Grid de productos */}
-          <main className="flex-1">
-            {/* Banner de urgencia */}
-            <div className="mb-8 rounded-lg border-l-4 border-brand-primary bg-gradient-to-r from-red-50 to-orange-50 p-4 shadow-md animate-[pulse_3s_cubic-bezier(0.4,0,0.6,1)_infinite]">
-              <div className="flex items-center gap-3">
-                <div className="shrink-0">
-                  <span className="text-2xl">🔥</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-brand-dark">
-                    7 personas ya reservaron su remodelación en{" "}
-                    {proyectoNombre || "tu proyecto"} este mes
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    Nos quedan solo{" "}
-                    <span className="font-bold text-red-600">
-                      3 cupos disponibles
-                    </span>{" "}
-                    para este mes. ¡No te quedes por fuera!
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex-1">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {productosFiltrados.map((producto) => {
                 const agregado = isProductoAgregado(producto.codigo);
+
                 return (
                   <Card
                     key={producto.codigo}
-                    className="overflow-hidden border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+                    className="group overflow-hidden border border-brand-border bg-brand-card transition-all hover:border-brand-primary"
                   >
-                    <ImagenOptimizada
-                      src={producto.imagen}
-                      alt={producto.nombre}
-                      width={300}
-                      height={200}
-                      className="w-full h-40 object-cover rounded-t-lg"
-                    />
-                    <CardHeader className="pb-2">
-                      <h3 className="font-semibold">{producto.nombre}</h3>
-                      <p
-                        className="line-clamp-2 text-sm text-gray-600"
-                        title={producto.descripcion}
-                      >
+                    <CardHeader className="relative p-0">
+                      <div className="relative h-40 overflow-hidden">
+                        <ImagenOptimizada
+                          src={producto.imagen}
+                          alt={producto.nombre}
+                          width={300}
+                          height={200}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute right-2 top-2">
+                          <Badge className="bg-brand-primary text-xs text-black">
+                            {producto.categoria}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="p-4">
+                      <h3 className="mb-1 line-clamp-2 font-semibold text-brand-text">
+                        {producto.nombre}
+                      </h3>
+                      <p className="mb-3 line-clamp-2 text-sm text-brand-textSecondary">
                         {producto.descripcion}
                       </p>
-                      <p className="text-xl font-bold">
+                      <p className="text-2xl font-bold text-brand-primary">
                         {formatoPrecio(producto.precio)}
                       </p>
-                      <Badge variant="secondary" className="w-fit text-xs">
-                        {producto.categoria}
-                      </Badge>
-                    </CardHeader>
-                    <CardFooter>
-                      {agregado ? (
-                        <Button
-                          disabled
-                          className="w-full bg-green-600 text-white hover:bg-green-600"
-                        >
-                          <Check className="mr-2 h-4 w-4" />
-                          Agregado
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          className="w-full border-brand-primary/50 text-brand-dark hover:bg-brand-primary/10 hover:border-brand-primary"
-                          onClick={() => handleAgregar(producto)}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Agregar
-                        </Button>
-                      )}
+                    </CardContent>
+
+                    <CardFooter className="p-4 pt-0">
+                      <Button
+                        onClick={() => handleToggleProducto(producto)}
+                        className={`w-full rounded-xl font-semibold transition-all duration-300 ${
+                          agregado
+                            ? "bg-green-600 text-white hover:bg-red-600"
+                            : "bg-brand-primary text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
+                        }`}
+                      >
+                        {agregado ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4" />
+                            Agregado (Click para quitar)
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Agregar
+                          </>
+                        )}
+                      </Button>
                     </CardFooter>
                   </Card>
                 );
               })}
             </div>
-          </main>
+          </div>
         </div>
       </div>
 
-      {/* Floating Bar dorada */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-brand-primary/20 bg-white/95 shadow-[0_-4px_20px_rgba(255,204,0,0.15)] backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm text-gray-600">
-              {getCantidadAdicionales()} productos agregados
+      {/* Floating bar con glass effect */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 glass-effect shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+          <div className="flex-1">
+            <p className="text-sm text-brand-textSecondary">
+              {getCantidadAdicionales()}{" "}
+              {getCantidadAdicionales() === 1
+                ? "producto agregado"
+                : "productos agregados"}
             </p>
-            <p className="text-2xl font-bold text-brand-dark">
+            <p className="text-3xl font-bold text-brand-primary">
               Total: {formatoPrecio(getTotal())}
             </p>
           </div>
           <Button
-            className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)] md:w-auto md:min-w-[200px]"
-            onClick={() => router.push("/resumen")}
+            onClick={handleVerResumen}
+            className="rounded-xl bg-brand-primary px-8 py-6 font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
           >
             Ver Resumen
           </Button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
