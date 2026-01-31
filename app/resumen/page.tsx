@@ -218,7 +218,7 @@ export default function ResumenPage() {
 
                 <Button
                   type="submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 text-base font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)]"
+                  className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 text-base font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]"
                 >
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Enviar Cotización por WhatsApp

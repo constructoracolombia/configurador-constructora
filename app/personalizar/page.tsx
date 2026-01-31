@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check } from "lucide-react";
-import { productos, categorias } from "@/lib/data/catalogo";
+import { productos, categorias, proyectos } from "@/lib/data/catalogo";
 import type { Producto } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
@@ -15,12 +15,25 @@ import { Button } from "@/components/ui/button";
 export default function PersonalizarPage() {
   const router = useRouter();
   const {
+    proyecto: proyectoId,
     adicionales,
     addAdicional,
     removeAdicional,
     getTotal,
     getCantidadAdicionales
   } = useCotizador();
+
+  const proyectoNombre =
+    proyectoId && proyectos.find((p) => p.id === proyectoId)?.nombre;
+
+  // Debug: asegurar que el estado es reactivo (solo en desarrollo)
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Adicionales actuales:", adicionales);
+      console.log("Cantidad:", getCantidadAdicionales());
+      console.log("Total:", getTotal());
+    }
+  }, [adicionales]);
 
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<
     string | null
@@ -79,6 +92,28 @@ export default function PersonalizarPage() {
 
           {/* Grid de productos */}
           <main className="flex-1">
+            {/* Banner de urgencia */}
+            <div className="mb-8 rounded-lg border-l-4 border-brand-primary bg-gradient-to-r from-red-50 to-orange-50 p-4 shadow-md animate-[pulse_3s_cubic-bezier(0.4,0,0.6,1)_infinite]">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0">
+                  <span className="text-2xl">🔥</span>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-brand-dark">
+                    7 personas ya reservaron su remodelación en{" "}
+                    {proyectoNombre || "tu proyecto"} este mes
+                  </p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Nos quedan solo{" "}
+                    <span className="font-bold text-red-600">
+                      3 cupos disponibles
+                    </span>{" "}
+                    para este mes. ¡No te quedes por fuera!
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {productosFiltrados.map((producto) => {
                 const agregado = isProductoAgregado(producto.codigo);
@@ -138,7 +173,7 @@ export default function PersonalizarPage() {
       </div>
 
       {/* Floating Bar dorada */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-brand-primary/20 bg-white/95 shadow-[0_-4px_20px_rgba(245,166,35,0.15)] backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-brand-primary/20 bg-white/95 shadow-[0_-4px_20px_rgba(255,204,0,0.15)] backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm text-gray-600">
@@ -149,7 +184,7 @@ export default function PersonalizarPage() {
             </p>
           </div>
           <Button
-            className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)] md:w-auto md:min-w-[200px]"
+            className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)] md:w-auto md:min-w-[200px]"
             onClick={() => router.push("/resumen")}
           >
             Ver Resumen

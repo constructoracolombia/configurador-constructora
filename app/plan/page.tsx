@@ -82,7 +82,7 @@ function PlanPageContent() {
         {/* Comparador de planes */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Plan Básico */}
-          <Card className="border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+          <Card className="relative border-2 border-gray-300 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
             <CardHeader>
               <Badge variant="secondary">Básico Esencial</Badge>
               <p className="mt-2 text-3xl font-bold">
@@ -122,7 +122,7 @@ function PlanPageContent() {
             <CardFooter>
               <Button
                 variant="outline"
-                className="w-full rounded-xl border-brand-primary/50 text-brand-dark hover:bg-brand-primary/10 hover:border-brand-primary"
+                className="w-full rounded-xl border-2 border-gray-400 py-6 font-semibold text-gray-700 transition-all hover:border-gray-500 hover:bg-gray-100"
                 onClick={() => handleElegirPlan("basico")}
               >
                 Elegir Plan Básico
@@ -131,9 +131,9 @@ function PlanPageContent() {
           </Card>
 
           {/* Plan Intermedio Plus */}
-          <Card className="border-2 border-brand-primary shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)]">
+          <Card className="border-2 border-brand-primary shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]">
             <CardHeader>
-              <Badge className="bg-gradient-to-r from-brand-primary to-brand-secondary text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)]">
+              <Badge className="bg-gradient-to-r from-brand-primary to-brand-secondary text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)]">
                 Más Popular
               </Badge>
               <p className="mt-2 text-3xl font-bold">
@@ -177,7 +177,7 @@ function PlanPageContent() {
             </CardContent>
             <CardFooter>
               <Button
-                className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)]"
+                className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(255,204,0,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,204,0,0.45)]"
                 onClick={() => handleElegirPlan("intermedio")}
               >
                 Elegir Plan Plus

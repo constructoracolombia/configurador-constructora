@@ -33,13 +33,17 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
-  --color-brand-primary: #F5A623;
-  --color-brand-secondary: #D4871E;
-  --color-brand-accent: #FFB84D;
-  --color-brand-light: #FFF8E7;
+  --color-brand-primary: #FFCC00;
+  --color-brand-secondary: #E6B800;
+  --color-brand-accent: #FFD633;
+  --color-brand-light: #FFF9E6;
   --color-brand-dark: #2C3E50;
-  --shadow-gold: 0 4px 14px 0 rgba(245, 166, 35, 0.39);
-  --shadow-gold-lg: 0 10px 40px 0 rgba(245, 166, 35, 0.45);
+  --shadow-gold: 0 4px 14px 0 rgba(255, 204, 0, 0.39);
+  --shadow-gold-lg: 0 10px 40px 0 rgba(255, 204, 0, 0.45);
+  --text-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --text-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
   --animate-fade-in: fadeIn 0.5s ease-in;
@@ -138,6 +142,11 @@
 @keyframes scaleIn {
   0% { transform: scale(0.95); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 @layer base {

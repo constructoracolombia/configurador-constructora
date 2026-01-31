@@ -54,12 +54,6 @@ export const proyectos = [
     nombre: "Fontana de la Sierra",
     ubicacion: "Bucaramanga",
     imagen: "/proyectos/fontana-de-la-sierra.jpg.jpeg"
-  },
-  {
-    id: "paseo-bulevar",
-    nombre: "Paseo Bulevar",
-    ubicacion: "Bucaramanga",
-    imagen: "/placeholder.svg"
   }
 ] as const;
 
