@@ -11,18 +11,13 @@ import {
   CardTitle
 } from "@/components/ui/card";
 
-function getProyectoSlug(nombre: string): string {
-  return nombre.toLowerCase().replace(/\s+/g, "-");
-}
-
 export default function Home() {
   const router = useRouter();
   const setProyecto = useCotizador((state) => state.setProyecto);
 
   const handleCotizar = (proyecto: (typeof proyectos)[number]) => {
-    const nombre = proyecto.nombre;
-    setProyecto(nombre);
-    router.push(`/plan?proyecto=${encodeURIComponent(getProyectoSlug(nombre))}`);
+    setProyecto(proyecto.id);
+    router.push(`/plan?proyecto=${encodeURIComponent(proyecto.id)}`);
   };
 
   return (
@@ -43,14 +38,12 @@ export default function Home() {
       <section className="px-4 py-12 md:py-16">
         <div className="mx-auto max-w-6xl">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {proyectos.map((proyecto) => {
-              const nombre = proyecto.nombre;
-              return (
-                <Card key={nombre} className="overflow-hidden">
+            {proyectos.map((proyecto) => (
+                <Card key={proyecto.id} className="overflow-hidden">
                   <div className="h-48 bg-gray-200" />
                   <CardHeader>
-                    <CardTitle className="text-xl font-bold">{nombre}</CardTitle>
-                    <p className="text-sm text-gray-600">Bogotá, Colombia</p>
+                    <CardTitle className="text-xl font-bold">{proyecto.nombre}</CardTitle>
+                    <p className="text-sm text-gray-600">{proyecto.ubicacion}</p>
                   </CardHeader>
                   <CardFooter>
                     <Button
@@ -61,8 +54,7 @@ export default function Home() {
                     </Button>
                   </CardFooter>
                 </Card>
-              );
-            })}
+            ))}
           </div>
         </div>
       </section>

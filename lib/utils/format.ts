@@ -1,62 +1,42 @@
-/**
- * Formatea un valor numérico como precio en pesos colombianos
- * @example formatoPrecio(14900000) // "$14.900.000"
- */
 export function formatoPrecio(valor: number): string {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
   }).format(valor);
 }
 
-export interface ParamsMensajeWhatsApp {
+export function generarMensajeWhatsApp(params: {
   nombreCliente: string;
   telefono: string;
   proyecto: string;
   planNombre: string;
   planPrecio: number;
-  adicionales: { nombre: string; precio: number }[];
+  adicionales: Array<{ nombre: string; precio: number }>;
   total: number;
-}
-
-/**
- * Genera mensaje formateado para enviar por WhatsApp con emojis
- */
-export function generarMensajeWhatsApp(params: ParamsMensajeWhatsApp): string {
+}): string {
   const { nombreCliente, telefono, proyecto, planNombre, planPrecio, adicionales, total } = params;
 
-  const lineas: string[] = [
-    "🏗️ *COTIZACIÓN CONSTRUCTORA COLOMBIA*",
-    "",
-    "📍 Proyecto: " + proyecto,
-    "📦 Plan: " + planNombre,
-    "💰 Valor plan: " + formatoPrecio(planPrecio)
-  ];
+  let mensaje = `🏗️ *COTIZACIÓN CONSTRUCTORA COLOMBIA*\n\n`;
+  mensaje += `📍 *Proyecto:* ${proyecto}\n`;
+  mensaje += `📦 *Plan:* ${planNombre}\n`;
+  mensaje += `💰 *Valor plan:* ${formatoPrecio(planPrecio)}\n`;
 
   if (adicionales.length > 0) {
-    lineas.push("", "✨ ADICIONALES:");
-    adicionales.forEach((item) => {
-      lineas.push(`   • ${item.nombre}: ${formatoPrecio(item.precio)}`);
+    mensaje += `\n✨ *ADICIONALES SELECCIONADOS:*\n`;
+    adicionales.forEach((item, index) => {
+      mensaje += `${index + 1}. ${item.nombre}: ${formatoPrecio(item.precio)}\n`;
     });
   }
 
-  lineas.push(
-    "",
-    "💵 INVERSIÓN TOTAL: " + formatoPrecio(total),
-    "",
-    "👤 Cliente: " + nombreCliente,
-    "📱 Teléfono: " + telefono
-  );
+  mensaje += `\n💵 *INVERSIÓN TOTAL: ${formatoPrecio(total)}*\n`;
+  mensaje += `\n👤 *Cliente:* ${nombreCliente}\n`;
+  mensaje += `📱 *Teléfono:* ${telefono}\n`;
 
-  return lineas.join("\n");
+  return mensaje;
 }
 
-/**
- * Abre WhatsApp en nueva ventana con el mensaje prellenado
- */
-export function enviarWhatsApp(mensaje: string, numeroWhatsApp: string = "573001234567"): void {
+export function enviarWhatsApp(mensaje: string, numeroWhatsApp: string = '573175639674') {
   const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.open(url, '_blank');
 }

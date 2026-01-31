@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { MessageCircle } from "lucide-react";
 import { toast } from "sonner";
-import { planesBase } from "@/lib/data/catalogo";
+import { planesBase, proyectos } from "@/lib/data/catalogo";
 import { formatoPrecio, generarMensajeWhatsApp, enviarWhatsApp } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -43,7 +43,9 @@ export default function ResumenPage() {
   } = useCotizador();
 
   const plan = planBase ? planesBase[planBase] : null;
-  const nombreProyecto = proyecto ?? "Proyecto no seleccionado";
+  const nombreProyecto = proyecto
+    ? (proyectos.find((p) => p.id === proyecto)?.nombre ?? proyecto)
+    : "Proyecto no seleccionado";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

@@ -11,27 +11,20 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-function getProyectoNombre(slug: string | null): string {
-  if (!slug) return "";
-  const normalized = slug.toLowerCase().replace(/\s+/g, "-");
-  const proyecto = proyectos.find(
-    (p) => p.nombre.toLowerCase().replace(/\s+/g, "-") === normalized
-  );
-  return proyecto?.nombre ?? slug;
+function getProyectoNombre(proyectoId: string | null): string {
+  if (!proyectoId) return "";
+  const proyecto = proyectos.find((p) => p.id === proyectoId);
+  return proyecto?.nombre ?? proyectoId;
 }
 
-function getPrecioPlanIntermedio(proyectoSlug: string | null): number {
-  const isCiudadelaVerde =
-    (proyectoSlug?.toLowerCase().replace(/\s+/g, "-") ?? "") === "ciudadela-verde";
-  return isCiudadelaVerde
+function getPrecioPlanIntermedio(proyectoId: string | null): number {
+  return proyectoId === "ciudadela-verde"
     ? planesBase.intermedio.precioCiudadelaVerde
     : planesBase.intermedio.precio;
 }
 
-function isCiudadelaVerde(proyectoSlug: string | null): boolean {
-  return (
-    (proyectoSlug?.toLowerCase().replace(/\s+/g, "-") ?? "") === "ciudadela-verde"
-  );
+function isCiudadelaVerde(proyectoId: string | null): boolean {
+  return proyectoId === "ciudadela-verde";
 }
 
 function PlanPageContent() {
@@ -44,10 +37,10 @@ function PlanPageContent() {
   const setPlanBase = useCotizador((s) => s.setPlanBase);
 
   useEffect(() => {
-    if (proyectoId && proyectoNombre && !useCotizador.getState().proyecto) {
-      setProyecto(proyectoNombre);
+    if (proyectoId && !useCotizador.getState().proyecto) {
+      setProyecto(proyectoId);
     }
-  }, [proyectoId, proyectoNombre, setProyecto]);
+  }, [proyectoId, setProyecto]);
 
   const precioIntermedio = getPrecioPlanIntermedio(proyectoId);
   const mostrarAhorro = isCiudadelaVerde(proyectoId);
@@ -87,7 +80,7 @@ function PlanPageContent() {
                 {formatoPrecio(planesBase.basico.precio)}
               </p>
               <p className="text-sm text-muted-foreground">
-                Solución funcional para habitar inmediatamente
+                {planesBase.basico.subtitulo}
               </p>
               <p className="text-sm text-gray-600">
                 Tiempo de entrega: 39 días hábiles
@@ -143,7 +136,7 @@ function PlanPageContent() {
                 </p>
               )}
               <p className="text-sm text-muted-foreground">
-                Apartamento completamente terminado con acabados premium
+                {planesBase.intermedio.subtitulo}
               </p>
               <p className="text-sm text-gray-600">
                 Tiempo de entrega: 59 días hábiles
