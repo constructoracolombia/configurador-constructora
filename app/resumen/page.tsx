@@ -87,11 +87,11 @@ export default function ResumenPage() {
   const precioAdicionales = adicionales.reduce((sum, a) => sum + a.precio, 0);
 
   return (
-    <div className="min-h-screen px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-brand-light/30 via-white to-gray-50 px-4 py-8">
       <div className="mx-auto max-w-5xl">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
           {/* Columna Izquierda - Resumen */}
-          <Card>
+          <Card className="border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
             <CardHeader>
               <h2 className="text-xl font-semibold">Resumen de tu Cotización</h2>
             </CardHeader>
@@ -145,7 +145,7 @@ export default function ResumenPage() {
           </Card>
 
           {/* Columna Derecha - Formulario */}
-          <Card>
+          <Card className="border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
             <CardHeader>
               <h2 className="text-xl font-semibold">Tus Datos</h2>
             </CardHeader>
@@ -218,7 +218,7 @@ export default function ResumenPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-green-600 py-6 text-base hover:bg-green-700"
+                  className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 text-base font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)]"
                 >
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Enviar Cotización por WhatsApp

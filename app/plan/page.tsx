@@ -52,28 +52,37 @@ function PlanPageContent() {
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 md:py-12">
+    <div className="min-h-screen bg-gradient-to-b from-brand-light/30 via-white to-gray-50 px-4 py-8 md:py-12">
       <div className="mx-auto max-w-5xl">
-        {/* Breadcrumb */}
-        <nav className="mb-8 text-sm text-gray-600">
-          <Link href="/" className="hover:text-brand-primary">
-            HOME
-          </Link>
-          <span className="mx-2">/</span>
-          <span>{proyectoNombre || proyectoId || "Proyecto"}</span>
-          <span className="mx-2">/</span>
-          <span className="font-medium text-foreground">Elige tu plan</span>
-        </nav>
-
-        {/* Título */}
-        <h1 className="mb-10 text-2xl font-bold md:text-3xl">
-          Elige tu Plan de Remodelación
-        </h1>
+        {/* Hero dorado */}
+        <div className="relative mb-10 overflow-hidden rounded-2xl bg-gradient-to-br from-brand-primary via-brand-secondary to-brand-primary px-6 py-8 text-white md:py-10">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute left-0 top-0 h-64 w-64 rounded-full bg-white blur-3xl" />
+            <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-white blur-3xl" />
+          </div>
+          <div className="relative z-10">
+            <nav className="mb-4 text-sm text-white/80">
+              <Link href="/" className="hover:text-white">
+                HOME
+              </Link>
+              <span className="mx-2">/</span>
+              <span>{proyectoNombre || proyectoId || "Proyecto"}</span>
+              <span className="mx-2">/</span>
+              <span className="font-medium text-white">Elige tu plan</span>
+            </nav>
+            <h1 className="text-2xl font-bold md:text-3xl">
+              Elige tu Plan de Remodelación
+            </h1>
+            <p className="mt-2 text-white/90">
+              Personaliza tu apartamento con el plan que mejor se adapte a ti
+            </p>
+          </div>
+        </div>
 
         {/* Comparador de planes */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Plan Básico */}
-          <Card>
+          <Card className="border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
             <CardHeader>
               <Badge variant="secondary">Básico Esencial</Badge>
               <p className="mt-2 text-3xl font-bold">
@@ -113,7 +122,7 @@ function PlanPageContent() {
             <CardFooter>
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full rounded-xl border-brand-primary/50 text-brand-dark hover:bg-brand-primary/10 hover:border-brand-primary"
                 onClick={() => handleElegirPlan("basico")}
               >
                 Elegir Plan Básico
@@ -122,9 +131,9 @@ function PlanPageContent() {
           </Card>
 
           {/* Plan Intermedio Plus */}
-          <Card className="border-brand-primary md:border-2">
+          <Card className="border-2 border-brand-primary shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)]">
             <CardHeader>
-              <Badge className="bg-brand-primary text-white hover:bg-brand-primary/90">
+              <Badge className="bg-gradient-to-r from-brand-primary to-brand-secondary text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)]">
                 Más Popular
               </Badge>
               <p className="mt-2 text-3xl font-bold">
@@ -168,7 +177,7 @@ function PlanPageContent() {
             </CardContent>
             <CardFooter>
               <Button
-                className="w-full bg-brand-primary text-white hover:bg-brand-primary/90"
+                className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)]"
                 onClick={() => handleElegirPlan("intermedio")}
               >
                 Elegir Plan Plus

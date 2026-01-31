@@ -42,12 +42,12 @@ export default function PersonalizarPage() {
   };
 
   return (
-    <div className="min-h-screen pb-32">
+    <div className="min-h-screen bg-gradient-to-b from-brand-light/20 via-white to-gray-50 pb-32">
       <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Sidebar - Categorías (oculto en móvil) */}
           <aside className="hidden shrink-0 lg:block lg:w-64">
-            <div className="sticky top-4 rounded-lg border bg-card p-4">
+            <div className="sticky top-4 rounded-xl border bg-card p-4 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
               <h2 className="mb-4 font-semibold">Categorías</h2>
               <div className="space-y-1">
                 <button
@@ -83,7 +83,10 @@ export default function PersonalizarPage() {
               {productosFiltrados.map((producto) => {
                 const agregado = isProductoAgregado(producto.codigo);
                 return (
-                  <Card key={producto.codigo} className="overflow-hidden">
+                  <Card
+                    key={producto.codigo}
+                    className="overflow-hidden border-0 shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+                  >
                     <ImagenOptimizada
                       src={producto.imagen}
                       alt={producto.nombre}
@@ -118,7 +121,7 @@ export default function PersonalizarPage() {
                       ) : (
                         <Button
                           variant="outline"
-                          className="w-full"
+                          className="w-full border-brand-primary/50 text-brand-dark hover:bg-brand-primary/10 hover:border-brand-primary"
                           onClick={() => handleAgregar(producto)}
                         >
                           <Plus className="mr-2 h-4 w-4" />
@@ -134,19 +137,19 @@ export default function PersonalizarPage() {
         </div>
       </div>
 
-      {/* Floating Bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+      {/* Floating Bar dorada */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-brand-primary/20 bg-white/95 shadow-[0_-4px_20px_rgba(245,166,35,0.15)] backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm text-gray-600">
               {getCantidadAdicionales()} productos agregados
             </p>
-            <p className="text-2xl font-bold">
+            <p className="text-2xl font-bold text-brand-dark">
               Total: {formatoPrecio(getTotal())}
             </p>
           </div>
           <Button
-            className="w-full bg-brand-primary text-white hover:bg-brand-primary/90 md:w-auto md:min-w-[200px]"
+            className="w-full rounded-xl bg-gradient-to-r from-brand-primary to-brand-secondary py-6 font-semibold text-brand-dark shadow-[0_4px_14px_0_rgba(245,166,35,0.39)] transition-all hover:-translate-y-0.5 hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(245,166,35,0.45)] md:w-auto md:min-w-[200px]"
             onClick={() => router.push("/resumen")}
           >
             Ver Resumen
