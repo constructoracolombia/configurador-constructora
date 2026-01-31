@@ -7,6 +7,7 @@ import { productos, categorias } from "@/lib/data/catalogo";
 import type { Producto } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
+import { ImagenOptimizada } from "@/components/ImagenOptimizada";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,7 +84,13 @@ export default function PersonalizarPage() {
                 const agregado = isProductoAgregado(producto.codigo);
                 return (
                   <Card key={producto.codigo} className="overflow-hidden">
-                    <div className="h-40 bg-gray-200" />
+                    <ImagenOptimizada
+                      src={producto.imagen}
+                      alt={producto.nombre}
+                      width={300}
+                      height={200}
+                      className="w-full h-40 object-cover rounded-t-lg"
+                    />
                     <CardHeader className="pb-2">
                       <h3 className="font-semibold">{producto.nombre}</h3>
                       <p

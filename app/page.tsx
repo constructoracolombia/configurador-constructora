@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { proyectos } from "@/lib/data/catalogo";
 import { useCotizador } from "@/lib/store/cotizador";
+import { ImagenOptimizada } from "@/components/ImagenOptimizada";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,7 +41,13 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {proyectos.map((proyecto) => (
                 <Card key={proyecto.id} className="overflow-hidden">
-                  <div className="h-48 bg-gray-200" />
+                  <ImagenOptimizada
+                    src={proyecto.imagen}
+                    alt={proyecto.nombre}
+                    width={400}
+                    height={300}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                  />
                   <CardHeader>
                     <CardTitle className="text-xl font-bold">{proyecto.nombre}</CardTitle>
                     <p className="text-sm text-gray-600">{proyecto.ubicacion}</p>
