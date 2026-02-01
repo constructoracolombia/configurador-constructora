@@ -189,21 +189,6 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
             }
           })
           .catch((err) => console.error("Error verificando PDF:", err));
-
-        setTimeout(() => {
-          const descargar = confirm(
-            "Tu cotización se envió por WhatsApp con el link del PDF.\n\nDeseas descargar una copia en tu dispositivo?"
-          );
-
-          if (descargar) {
-            const url = URL.createObjectURL(pdfBlob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = fileName;
-            link.click();
-            URL.revokeObjectURL(url);
-          }
-        }, 2000);
       } else {
         console.error("Error subiendo PDF:", uploadError);
         console.error("Detalles del error:", uploadError);
@@ -383,46 +368,6 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
                 </CardContent>
               </Card>
             )}
-
-            {/* Testimonios */}
-            <Card className="border-brand-border bg-brand-card">
-              <CardHeader>
-                <CardTitle className="text-center text-brand-text">
-                  Lo Que Dicen Nuestros Clientes
-                </CardTitle>
-                <p className="text-center text-brand-textSecondary">
-                  Más de 100 familias ya confían en nosotros
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-6 md:grid-cols-3">
-                  {/* Testimonial 1 */}
-                  <TestimonialCard
-                    src="/testimonios/michael-correa.jpg"
-                    alt="Michael Correa"
-                    nombre="Michael Correa"
-                    fallback="MC"
-                    texto="Excelente trabajo, muy profesionales. Mi apartamento quedó hermoso y lo entregaron en el tiempo prometido."
-                  />
-                  {/* Testimonial 2 */}
-                  <TestimonialCard
-                    src="/testimonios/liliana-sanchez.jpg"
-                    alt="Liliana Sánchez"
-                    nombre="Liliana Sánchez"
-                    fallback="LS"
-                    texto="La mejor inversión que hice. El equipo fue muy atento y el resultado superó mis expectativas."
-                  />
-                  {/* Testimonial 3 */}
-                  <TestimonialCard
-                    src="/testimonios/alexandra-pimiento.JPG"
-                    alt="Alexandra Pimiento"
-                    nombre="Alexandra Pimiento"
-                    fallback="AP"
-                    texto="Todo el proceso fue transparente desde el inicio. Recomiendo 100% sus servicios."
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Columna lateral - Total sticky */}
@@ -482,6 +427,43 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
           onConsultar={() => generarYCompartirPDF("whatsapp")}
           generandoPDF={generandoPDF}
         />
+
+        {/* Testimonios al final de la página */}
+        <Card className="mt-8 border-brand-border bg-brand-card">
+          <CardHeader>
+            <CardTitle className="text-center text-2xl text-brand-text">
+              Lo Que Dicen Nuestros Clientes
+            </CardTitle>
+            <p className="text-center text-brand-textSecondary">
+              Más de 100 familias ya confían en nosotros
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-3">
+              <TestimonialCard
+                src="/testimonios/michael-correa.jpg"
+                alt="Michael Correa"
+                nombre="Michael Correa"
+                fallback="MC"
+                texto="Excelente trabajo, muy profesionales. Mi apartamento quedó hermoso y lo entregaron en el tiempo prometido."
+              />
+              <TestimonialCard
+                src="/testimonios/liliana-sanchez.jpg"
+                alt="Liliana Sánchez"
+                nombre="Liliana Sánchez"
+                fallback="LS"
+                texto="La mejor inversión que hice. El equipo fue muy atento y el resultado superó mis expectativas."
+              />
+              <TestimonialCard
+                src="/testimonios/alexandra-pimiento.JPG"
+                alt="Alexandra Pimiento"
+                nombre="Alexandra Pimiento"
+                fallback="AP"
+                texto="Todo el proceso fue transparente desde el inicio. Recomiendo 100% sus servicios."
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
