@@ -6,6 +6,7 @@ import { useCotizador } from "@/lib/store/cotizador";
 import { planesBase, proyectos } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
+import { subirPresupuesto } from "@/lib/utils/storage-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Clock, ArrowLeft } from "lucide-react";
@@ -86,6 +87,7 @@ export default function ResumenPage() {
 
     try {
       const numeroCotizacion = `COT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, "0")}`;
+      const fileName = `Cotizacion_${(proyectoData?.nombre ?? "Proyecto").replace(/\s/g, "_")}_${numeroCotizacion}.pdf`;
 
       const pdfData = {
         numeroConsecutivo: numeroCotizacion,
@@ -117,41 +119,101 @@ export default function ResumenPage() {
         total: getTotal(),
       };
 
+      console.log("📄 Generando PDF...");
       const pdfBlob = await generarCotizacionPDF(pdfData);
 
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Cotizacion_${(proyectoData?.nombre ?? "Proyecto").replace(/\s/g, "_")}_${numeroCotizacion}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
+      console.log("☁️ Subiendo a Supabase...");
+      const {
+        success,
+        publicUrl,
+        error: uploadError,
+      } = await subirPresupuesto(pdfBlob, fileName);
 
-      setTimeout(() => {
-        const mensaje =
-          tipo === "reserva"
-            ? `🎉 ¡Quiero RESERVAR mi cupo!
+      let mensaje = "";
 
-📋 Cotización: ${numeroCotizacion}
-🏢 Proyecto: ${proyectoData?.nombre}
-💰 Total: ${formatoPrecio(getTotal())}
+      if (tipo === "reserva") {
+        mensaje = `¡Hola Constructora Colombia! 🏗️ 
 
-📎 Adjunto PDF con el detalle completo.
+Acabo de finalizar mi presupuesto personalizado.
 
-💵 Abono de reserva: $500.000`
-            : `Hola, acabo de generar mi cotización:
+${success ? `🔗 *Podés ver el detalle oficial aquí:*\n${publicUrl}\n` : "⚠️ El PDF se generó pero hubo un problema al subirlo. Por favor envíenmelo por email.\n"}
+━━━━━━━━━━━━━━━━━━━━━━
 
-📋 Cotización: ${numeroCotizacion}
-🏢 Proyecto: ${proyectoData?.nombre}
-📦 Plan: ${planData.nombre}
-💰 Total: ${formatoPrecio(getTotal())}
+📋 *Cotización:* ${numeroCotizacion}
+🏢 *Proyecto:* ${proyectoData?.nombre}
+📍 *Ubicación:* ${proyectoData?.ubicacion}
+💰 *Inversión Total:* ${formatoPrecio(getTotal())}
 
-📎 Adjunto PDF con el detalle. ¿Podrían ayudarme con algunas preguntas?`;
+━━━━━━━━━━━━━━━━━━━━━━
+✨ *QUIERO RESERVAR MI CUPO*
+━━━━━━━━━━━━━━━━━━━━━━
 
-        const whatsappUrl = `https://wa.me/573175639674?text=${encodeURIComponent(mensaje)}`;
-        window.open(whatsappUrl, "_blank");
-      }, 1000);
+Quiero aprovechar la oferta, congelar el precio de los materiales y reservar mi cupo para este mes.
+
+💵 *Abono de reserva:* $500.000
+
+¿Me ayudan con el siguiente paso? 🙏`;
+      } else {
+        mensaje = `¡Hola! 👋
+
+Acabo de generar mi presupuesto de remodelación.
+
+${success ? `🔗 *Ver presupuesto completo:*\n${publicUrl}\n` : "⚠️ Tuve un problema al generar el link del PDF.\n"}
+━━━━━━━━━━━━━━━━━━━━━━
+
+📋 *Cotización:* ${numeroCotizacion}
+🏢 *Mi proyecto:* ${proyectoData?.nombre}
+📦 *Plan:* ${planData.nombre}
+💰 *Inversión estimada:* ${formatoPrecio(getTotal())}
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Me gustaría resolver algunas dudas antes de continuar. ¿Podrían ayudarme? 🙏`;
+      }
+
+      const whatsappNumber =
+        process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
+      window.open(whatsappUrl, "_blank");
+
+      if (success) {
+        console.log("✅ PDF subido exitosamente:", publicUrl);
+
+        setTimeout(() => {
+          const descargar = confirm(
+            "✅ Tu cotización se envió por WhatsApp con el link del PDF.\n\n¿Deseas descargar una copia en tu dispositivo?"
+          );
+
+          if (descargar) {
+            const url = URL.createObjectURL(pdfBlob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            link.click();
+            URL.revokeObjectURL(url);
+          }
+        }, 2000);
+      } else {
+        console.error("❌ Error subiendo PDF:", uploadError);
+
+        alert(
+          `⚠️ El PDF se generó correctamente pero hubo un problema al subirlo.\n\nDe todas formas, el mensaje se envió por WhatsApp.\n\nError: ${uploadError}`
+        );
+      }
     } catch (error) {
-      console.error("Error generando PDF:", error);
+      console.error("Error en el proceso de cotización:", error);
+
+      const enviarDeTodasFormas = confirm(
+        "❌ Hubo un error generando la cotización.\n\n¿Deseas enviar el mensaje por WhatsApp de todas formas?"
+      );
+
+      if (enviarDeTodasFormas) {
+        const whatsappNumber =
+          process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
+        const mensajeBasico = `Hola, estoy interesado en una cotización de remodelación para ${proyectoData?.nombre ?? "mi proyecto"}.\n\n¿Podrían ayudarme?`;
+        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensajeBasico)}`;
+        window.open(whatsappUrl, "_blank");
+      }
     } finally {
       setGenerandoPDF(false);
     }
@@ -404,9 +466,9 @@ export default function ResumenPage() {
         <CierreVentaExpress
           nombreCliente=""
           telefonoCliente=""
-          isLoading={generandoPDF}
           onReservar={() => generarYCompartirPDF("reserva")}
           onConsultar={() => generarYCompartirPDF("whatsapp")}
+          generandoPDF={generandoPDF}
         />
       </div>
     </main>
