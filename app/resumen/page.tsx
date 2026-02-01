@@ -86,7 +86,7 @@ export default function ResumenPage() {
       total: getTotal()
     });
 
-    enviarWhatsApp(mensaje);
+    enviarWhatsApp(mensaje, "573175639674");
     toast.success("Redirigiendo a WhatsApp...");
   };
 
