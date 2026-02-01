@@ -132,43 +132,43 @@ export default function ResumenPage() {
       let mensaje = "";
 
       if (tipo === "reserva") {
-        mensaje = `¡Hola Constructora Colombia! 🏗️ 
+        mensaje = `Hola Constructora Colombia!
 
 Acabo de finalizar mi presupuesto personalizado.
 
-${success ? `🔗 *Podés ver el detalle oficial aquí:*\n${publicUrl}\n` : "⚠️ El PDF se generó pero hubo un problema al subirlo. Por favor envíenmelo por email.\n"}
+${success ? `VER PRESUPUESTO COMPLETO:\n${publicUrl}\n` : "El PDF se generó pero hubo un problema al subirlo. Por favor envíenmelo por email.\n"}
 ━━━━━━━━━━━━━━━━━━━━━━
 
-📋 *Cotización:* ${numeroCotizacion}
-🏢 *Proyecto:* ${proyectoData?.nombre}
-📍 *Ubicación:* ${proyectoData?.ubicacion}
-💰 *Inversión Total:* ${formatoPrecio(getTotal())}
+*COTIZACIÓN:* ${numeroCotizacion}
+*PROYECTO:* ${proyectoData?.nombre}
+*UBICACIÓN:* ${proyectoData?.ubicacion}
+*INVERSIÓN TOTAL:* ${formatoPrecio(getTotal())}
 
 ━━━━━━━━━━━━━━━━━━━━━━
-✨ *QUIERO RESERVAR MI CUPO*
+*QUIERO RESERVAR MI CUPO*
 ━━━━━━━━━━━━━━━━━━━━━━
 
 Quiero aprovechar la oferta, congelar el precio de los materiales y reservar mi cupo para este mes.
 
-💵 *Abono de reserva:* $500.000
+*ABONO DE RESERVA:* $500.000
 
-¿Me ayudan con el siguiente paso? 🙏`;
+Me ayudan con el siguiente paso?`;
       } else {
-        mensaje = `¡Hola! 👋
+        mensaje = `Hola!
 
 Acabo de generar mi presupuesto de remodelación.
 
-${success ? `🔗 *Ver presupuesto completo:*\n${publicUrl}\n` : "⚠️ Tuve un problema al generar el link del PDF.\n"}
+${success ? `VER PRESUPUESTO COMPLETO:\n${publicUrl}\n` : "Tuve un problema al generar el link del PDF.\n"}
 ━━━━━━━━━━━━━━━━━━━━━━
 
-📋 *Cotización:* ${numeroCotizacion}
-🏢 *Mi proyecto:* ${proyectoData?.nombre}
-📦 *Plan:* ${planData.nombre}
-💰 *Inversión estimada:* ${formatoPrecio(getTotal())}
+*COTIZACIÓN:* ${numeroCotizacion}
+*PROYECTO:* ${proyectoData?.nombre}
+*PLAN:* ${planData.nombre}
+*INVERSIÓN ESTIMADA:* ${formatoPrecio(getTotal())}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
-Me gustaría resolver algunas dudas antes de continuar. ¿Podrían ayudarme? 🙏`;
+Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
       }
 
       const whatsappNumber =
@@ -177,11 +177,22 @@ Me gustaría resolver algunas dudas antes de continuar. ¿Podrían ayudarme? �
       window.open(whatsappUrl, "_blank");
 
       if (success) {
-        console.log("✅ PDF subido exitosamente:", publicUrl);
+        console.log("PDF subido exitosamente");
+        console.log("URL pública:", publicUrl);
+
+        fetch(publicUrl ?? "", { method: "HEAD" })
+          .then((response) => {
+            if (response.ok) {
+              console.log("PDF accesible públicamente");
+            } else {
+              console.error("PDF no accesible:", response.status);
+            }
+          })
+          .catch((err) => console.error("Error verificando PDF:", err));
 
         setTimeout(() => {
           const descargar = confirm(
-            "✅ Tu cotización se envió por WhatsApp con el link del PDF.\n\n¿Deseas descargar una copia en tu dispositivo?"
+            "Tu cotización se envió por WhatsApp con el link del PDF.\n\nDeseas descargar una copia en tu dispositivo?"
           );
 
           if (descargar) {
@@ -194,17 +205,18 @@ Me gustaría resolver algunas dudas antes de continuar. ¿Podrían ayudarme? �
           }
         }, 2000);
       } else {
-        console.error("❌ Error subiendo PDF:", uploadError);
+        console.error("Error subiendo PDF:", uploadError);
+        console.error("Detalles del error:", uploadError);
 
         alert(
-          `⚠️ El PDF se generó correctamente pero hubo un problema al subirlo.\n\nDe todas formas, el mensaje se envió por WhatsApp.\n\nError: ${uploadError}`
+          `El PDF se generó correctamente pero hubo un problema al subirlo a nuestros servidores.\n\nDe todas formas, el mensaje se envió por WhatsApp.\n\nError técnico: ${uploadError}`
         );
       }
     } catch (error) {
       console.error("Error en el proceso de cotización:", error);
 
       const enviarDeTodasFormas = confirm(
-        "❌ Hubo un error generando la cotización.\n\n¿Deseas enviar el mensaje por WhatsApp de todas formas?"
+        "Hubo un error generando la cotización.\n\nDeseas enviar el mensaje por WhatsApp de todas formas?"
       );
 
       if (enviarDeTodasFormas) {

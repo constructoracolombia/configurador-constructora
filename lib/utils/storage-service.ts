@@ -8,14 +8,18 @@ export async function subirPresupuesto(
   fileName: string
 ): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
   try {
-    // Generar nombre único con timestamp
+    console.log("Iniciando subida de PDF...");
+    console.log("Tamaño del archivo:", blob.size, "bytes");
+    console.log("Nombre del archivo:", fileName);
+
     const timestamp = Date.now();
     const sanitizedFileName = fileName
       .replace(/[^a-zA-Z0-9._-]/g, "_")
       .replace(/_{2,}/g, "_");
     const uniqueFileName = `${timestamp}_${sanitizedFileName}`;
 
-    // 1. Subir el archivo al bucket 'presupuestos'
+    console.log("Nombre único generado:", uniqueFileName);
+
     const { data, error: uploadError } = await supabase.storage
       .from("presupuestos")
       .upload(uniqueFileName, blob, {
@@ -25,38 +29,46 @@ export async function subirPresupuesto(
       });
 
     if (uploadError) {
-      console.error("Error subiendo archivo:", uploadError);
+      console.error("Error en la subida:", uploadError);
+      console.error("Código de error:", uploadError.statusCode);
+      console.error("Mensaje:", uploadError.message);
       return {
         success: false,
-        error: uploadError.message,
+        error: `${uploadError.message} (Código: ${uploadError.statusCode ?? "N/A"})`,
       };
     }
 
     if (!data) {
+      console.error("No se recibió confirmación de la subida");
       return {
         success: false,
         error: "No se recibió confirmación de la subida",
       };
     }
 
-    // 2. Obtener la URL pública
+    console.log("Archivo subido exitosamente");
+    console.log("Path:", data.path);
+
     const { data: urlData } = supabase.storage
       .from("presupuestos")
       .getPublicUrl(data.path);
 
     if (!urlData || !urlData.publicUrl) {
+      console.error("No se pudo obtener URL pública");
       return {
         success: false,
         error: "No se pudo obtener la URL pública",
       };
     }
 
+    console.log("URL pública generada:", urlData.publicUrl);
+
     return {
       success: true,
       publicUrl: urlData.publicUrl,
     };
   } catch (error) {
-    console.error("Error inesperado al subir presupuesto:", error);
+    console.error("Error inesperado:", error);
     return {
       success: false,
       error:
