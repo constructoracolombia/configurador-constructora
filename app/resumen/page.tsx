@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { CierreVentaExpress } from "@/components/CierreVentaExpress";
 
 const formSchema = z.object({
   nombre: z.string().min(3, "Mínimo 3 caracteres").max(100),
@@ -348,6 +349,16 @@ export default function ResumenPage() {
             </CardContent>
           </Card>
         </div>
+
+        {planBase && (
+          <div className="mt-8">
+            <CierreVentaExpress
+              nombreCliente={form.watch("nombre") || ""}
+              telefonoCliente={form.watch("telefono") || ""}
+              emailCliente={form.watch("email")}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
