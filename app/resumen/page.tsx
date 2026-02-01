@@ -1,22 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MessageCircle, Download } from "lucide-react";
-import { toast } from "sonner";
-import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
 import {
   planesBase,
   proyectos
 } from "@/lib/data/catalogo";
-import {
-  formatoPrecio,
-  generarMensajeWhatsApp,
-  enviarWhatsApp
-} from "@/lib/utils/format";
+import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,84 +60,6 @@ export default function ResumenPage() {
       email: ""
     }
   });
-
-  const [generandoPDF, setGenerandoPDF] = useState(false);
-
-  const onSubmit = (data: FormValues) => {
-    if (!planBase || !plan) return;
-
-    const mensaje = generarMensajeWhatsApp({
-      nombreCliente: data.nombre,
-      telefono: data.telefono,
-      proyecto: nombreProyecto,
-      planNombre: plan.nombre,
-      planPrecio: getPrecioPlanBase(),
-      adicionales: adicionales.map((a) => ({
-        nombre: a.nombre,
-        precio: a.precio
-      })),
-      total: getTotal()
-    });
-
-    enviarWhatsApp(mensaje, "573175639674");
-    toast.success("Redirigiendo a WhatsApp...");
-  };
-
-  const handleDescargarPDF = async () => {
-    if (!planBase || !plan) return;
-
-    setGenerandoPDF(true);
-    try {
-      const proyectoData = proyectos.find((p) => p.id === proyecto);
-      const numeroCotizacion = `COT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, "0")}`;
-
-      const pdfData = {
-        numeroConsecutivo: numeroCotizacion,
-        fecha: new Date().toLocaleDateString("es-CO", {
-          day: "numeric",
-          month: "long",
-          year: "numeric"
-        }),
-        cliente: {
-          nombre: form.getValues("nombre") || "Por definir",
-          telefono: form.getValues("telefono") || "",
-          email: form.getValues("email") || undefined
-        },
-        proyecto: {
-          nombre: proyectoData?.nombre ?? "Proyecto",
-          ubicacion: proyectoData?.ubicacion ?? "Bucaramanga"
-        },
-        plan: {
-          nombre: plan.nombre,
-          precio: getPrecioPlanBase(),
-          tiempoEntrega: plan.tiempoEntrega,
-          incluye: plan.incluye,
-          bonus: plan.bonus
-        },
-        adicionales: adicionales.map((a) => ({
-          nombre: a.nombre,
-          precio: a.precio
-        })),
-        total: getTotal()
-      };
-
-      const pdfBlob = await generarCotizacionPDF(pdfData);
-
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Cotizacion_${(proyectoData?.nombre ?? "Proyecto").replace(/\s/g, "_")}_${numeroCotizacion}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-
-      toast.success("¡PDF generado exitosamente!");
-    } catch (error) {
-      console.error("Error generando PDF:", error);
-      toast.error("Error al generar el PDF. Intenta nuevamente.");
-    } finally {
-      setGenerandoPDF(false);
-    }
-  };
 
   if (!planBase || !plan) {
     return (
@@ -246,7 +160,7 @@ export default function ResumenPage() {
             </CardHeader>
             <CardContent>
               <form
-                onSubmit={form.handleSubmit(onSubmit)}
+                onSubmit={(e) => e.preventDefault()}
                 className="space-y-4"
               >
                 <div>
@@ -315,35 +229,6 @@ export default function ResumenPage() {
                       {form.formState.errors.email.message}
                     </p>
                   )}
-                </div>
-
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <Button
-                    type="button"
-                    onClick={handleDescargarPDF}
-                    disabled={generandoPDF}
-                    className="flex-1 rounded-xl border-2 border-brand-primary bg-brand-card py-6 font-bold text-brand-text transition-all hover:scale-105 hover:border-brand-primary hover:bg-brand-primary hover:text-black disabled:opacity-70"
-                  >
-                    {generandoPDF ? (
-                      <>
-                        <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
-                        Generando PDF...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="mr-2 h-5 w-5" />
-                        Descargar PDF
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    type="submit"
-                    className="flex-1 rounded-xl bg-green-600 py-6 text-base font-bold text-white shadow-[0_4px_20px_0_rgba(34,197,94,0.3)] transition-all hover:scale-105 hover:bg-green-700 hover:shadow-[0_10px_40px_0_rgba(34,197,94,0.4)]"
-                  >
-                    <MessageCircle className="mr-2 h-5 w-5" />
-                    Enviar por WhatsApp
-                  </Button>
                 </div>
               </form>
             </CardContent>
