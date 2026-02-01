@@ -285,7 +285,7 @@ export default function Home() {
               <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/testimonios/alexandra-pimiento.jpg"
+                  src="/testimonios/alexandra-pimiento.JPG"
                   alt="Alexandra Pimiento"
                   className="h-full w-full object-cover"
                   onError={(e) => {
