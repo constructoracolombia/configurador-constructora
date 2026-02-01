@@ -19,8 +19,8 @@ interface CotizacionData {
     nombre: string;
     precio: number;
     tiempoEntrega: number;
-    incluye: string[];
-    bonus: string[];
+    incluye: readonly string[];
+    bonus: readonly string[];
   };
   adicionales: Array<{
     nombre: string;
