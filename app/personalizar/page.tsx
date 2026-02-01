@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check } from "lucide-react";
 import { productos, categorias, proyectos } from "@/lib/data/catalogo";
@@ -18,51 +18,31 @@ export default function PersonalizarPage() {
     string | null
   >(null);
 
-  const {
-    proyecto: proyectoId,
-    adicionales,
-    addAdicional,
-    removeAdicional,
-    getCantidadAdicionales,
-    getTotal
-  } = useCotizador();
-
-  const proyectoNombre =
-    proyectoId && proyectos.find((p) => p.id === proyectoId)?.nombre;
-
-  // Debug en consola (opcional, puedes eliminarlo después)
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("✅ Adicionales actualizados:", adicionales);
-      console.log("📊 Cantidad:", getCantidadAdicionales());
-      console.log("💰 Total:", getTotal());
-    }
-  }, [adicionales]);
+  // CRÍTICO: Usar el store directamente - NO destructurar para máxima reactividad
+  const store = useCotizador();
 
   const productosFiltrados = categoriaSeleccionada
     ? productos.filter((p) => p.categoria === categoriaSeleccionada)
     : productos;
 
   const isProductoAgregado = (codigo: number): boolean =>
-    adicionales.some((a) => a.codigo === codigo);
+    store.adicionales.some((a) => a.codigo === codigo);
 
   const handleToggleProducto = (producto: Producto) => {
     if (isProductoAgregado(producto.codigo)) {
-      removeAdicional(producto.codigo);
-      if (process.env.NODE_ENV === "development") {
-        console.log("❌ Removido:", producto.nombre);
-      }
+      store.removeAdicional(producto.codigo);
     } else {
-      addAdicional(producto);
-      if (process.env.NODE_ENV === "development") {
-        console.log("✅ Agregado:", producto.nombre);
-      }
+      store.addAdicional(producto);
     }
   };
 
   const handleVerResumen = () => {
     router.push("/resumen");
   };
+
+  const proyectoNombre = store.proyecto
+    ? (proyectos.find((p) => p.id === store.proyecto)?.nombre ?? "tu proyecto")
+    : "tu proyecto";
 
   return (
     <main className="min-h-screen bg-brand-dark pb-32">
@@ -82,22 +62,22 @@ export default function PersonalizarPage() {
             </div>
             <div className="flex-1">
               <p className="font-semibold text-brand-text">
-                7 personas ya reservaron su remodelación en{" "}
-                {proyectoNombre || "tu proyecto"} este mes
+                7 personas ya reservaron su remodelación en {proyectoNombre}{" "}
+                este mes
               </p>
               <p className="mt-1 text-sm text-brand-textSecondary">
                 Nos quedan solo{" "}
                 <span className="font-bold text-brand-primary">
                   3 cupos disponibles
-                </span>{" "}
-                para este mes. ¡No te quedes por fuera!
+                </span>
+                . ¡No te quedes por fuera!
               </p>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col gap-8 lg:flex-row">
-          {/* Sidebar de categorías */}
+          {/* Sidebar */}
           <aside className="shrink-0 lg:w-64">
             <Card className="sticky top-4 border border-brand-border bg-brand-card">
               <CardHeader>
@@ -153,11 +133,9 @@ export default function PersonalizarPage() {
                           height={200}
                           className="h-full w-full object-cover"
                         />
-                        <div className="absolute right-2 top-2">
-                          <Badge className="bg-brand-primary text-xs text-black">
-                            {producto.categoria}
-                          </Badge>
-                        </div>
+                        <Badge className="absolute right-2 top-2 bg-brand-primary text-xs text-black">
+                          {producto.categoria}
+                        </Badge>
                       </div>
                     </CardHeader>
 
@@ -203,18 +181,18 @@ export default function PersonalizarPage() {
         </div>
       </div>
 
-      {/* Floating bar con glass effect */}
+      {/* Floating bar REACTIVO */}
       <div className="fixed bottom-0 left-0 right-0 z-50 glass-effect shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex-1">
             <p className="text-sm text-brand-textSecondary">
-              {getCantidadAdicionales()}{" "}
-              {getCantidadAdicionales() === 1
+              {store.getCantidadAdicionales()}{" "}
+              {store.getCantidadAdicionales() === 1
                 ? "producto agregado"
                 : "productos agregados"}
             </p>
             <p className="text-3xl font-bold text-brand-primary">
-              Total: {formatoPrecio(getTotal())}
+              Total: {formatoPrecio(store.getTotal())}
             </p>
           </div>
           <Button

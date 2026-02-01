@@ -227,22 +227,23 @@ export default function Home() {
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
+          {/* Testimonial 1 - Michael Correa */}
           <div className="rounded-2xl border border-brand-border bg-brand-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
             <div className="mb-4 flex items-center gap-4">
-              <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-cement">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/testimonios/cliente-1.jpg"
-                  alt="Cliente"
+                  src="/testimonios/michael-correa.jpg"
+                  alt="Michael Correa"
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src =
-                      "https://placehold.co/64x64/FFB800/0C0C0C?text=👤";
+                      "https://placehold.co/64x64/FFB800/0C0C0C?text=MC";
                   }}
                 />
               </div>
               <div>
-                <h4 className="font-bold text-brand-text">María González</h4>
+                <h4 className="font-bold text-brand-text">Michael Correa</h4>
                 <div className="text-sm text-brand-primary">★★★★★</div>
               </div>
             </div>
@@ -252,22 +253,23 @@ export default function Home() {
             </p>
           </div>
 
+          {/* Testimonial 2 - Liliana Sánchez */}
           <div className="rounded-2xl border border-brand-border bg-brand-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
             <div className="mb-4 flex items-center gap-4">
-              <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-cement">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/testimonios/cliente-2.jpg"
-                  alt="Cliente"
+                  src="/testimonios/liliana-sanchez.jpg"
+                  alt="Liliana Sánchez"
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src =
-                      "https://placehold.co/64x64/FFB800/0C0C0C?text=👤";
+                      "https://placehold.co/64x64/FFB800/0C0C0C?text=LS";
                   }}
                 />
               </div>
               <div>
-                <h4 className="font-bold text-brand-text">Carlos Ramírez</h4>
+                <h4 className="font-bold text-brand-text">Liliana Sánchez</h4>
                 <div className="text-sm text-brand-primary">★★★★★</div>
               </div>
             </div>
@@ -277,22 +279,23 @@ export default function Home() {
             </p>
           </div>
 
+          {/* Testimonial 3 - Alexandra Pimiento */}
           <div className="rounded-2xl border border-brand-border bg-brand-card p-6 shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-all hover:border-brand-primary hover:shadow-[0_8px_24px_rgba(255,184,0,0.2)]">
             <div className="mb-4 flex items-center gap-4">
-              <div className="h-16 w-16 overflow-hidden rounded-full bg-brand-cement">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/testimonios/cliente-3.jpg"
-                  alt="Cliente"
+                  src="/testimonios/alexandra-pimiento.jpg"
+                  alt="Alexandra Pimiento"
                   className="h-full w-full object-cover"
                   onError={(e) => {
                     e.currentTarget.src =
-                      "https://placehold.co/64x64/FFB800/0C0C0C?text=👤";
+                      "https://placehold.co/64x64/FFB800/0C0C0C?text=AP";
                   }}
                 />
               </div>
               <div>
-                <h4 className="font-bold text-brand-text">Laura Díaz</h4>
+                <h4 className="font-bold text-brand-text">Alexandra Pimiento</h4>
                 <div className="text-sm text-brand-primary">★★★★★</div>
               </div>
             </div>

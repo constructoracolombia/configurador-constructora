@@ -128,60 +128,49 @@ export const planesBase = {
   }
 } as const;
 
+// Categorías reorganizadas por áreas
 export const categorias = [
+  "General",
+  "Cocina",
+  "Baños",
   "Carpintería",
   "Granitos y piedras",
-  "Baños",
-  "Cocina",
   "Vidrios y espejos",
-  "Enchape",
   "Iluminación",
-  "Puntos gas, eléctrico, agua",
   "Seguridad",
-  "Zona húmeda"
+  "Otros"
 ] as const;
 
+// Productos reorganizados por áreas (usando rutas reales de public/productos/)
 export const productos: Producto[] = [
+  // GENERAL
   {
-    codigo: 64,
-    categoria: "Carpintería",
-    nombre: "Closet habitación principal melamina RH",
-    descripcion: "Closet principal",
-    precio: 3_190_000,
-    imagen: "/productos/64-closet-principal.jpg.JPG"
+    codigo: 7,
+    categoria: "General",
+    nombre: "Porcelanato piso completo",
+    descripcion: "Enchape porcelanato 60mil/m²",
+    precio: 5_298_800
   },
+
+  // COCINA
   {
     codigo: 61,
-    categoria: "Carpintería",
+    categoria: "Cocina",
     nombre: "Mueble cocina RH completo",
     descripcion: "Mueble cocina superior e inferior",
     precio: 2_750_000,
     imagen: "/productos/61-mueble-cocina.jpg.JPG"
   },
   {
-    codigo: 66,
-    categoria: "Carpintería",
-    nombre: "Closet secundario RH",
-    descripcion: "Closet habitación secundaria",
-    precio: 2_090_000,
-    imagen: "/productos/66-closet-secundario.jpg.JPG"
+    codigo: 24,
+    categoria: "Cocina",
+    nombre: "Estufa instalada",
+    descripcion: "Estufa con instalación",
+    precio: 520_000,
+    imagen: "/productos/24. estufa.jpeg"
   },
-  {
-    codigo: 40,
-    categoria: "Granitos y piedras",
-    nombre: "Mesón Granito/Quartzone blanco",
-    descripcion: "Mesón cocina",
-    precio: 950_400,
-    imagen: "/productos/40. mesón.JPG"
-  },
-  {
-    codigo: 41,
-    categoria: "Granitos y piedras",
-    nombre: "Barra Granito con soporte",
-    descripcion: "Barra desayunador",
-    precio: 844_800,
-    imagen: "/productos/41. Barra-soporte.JPG"
-  },
+
+  // BAÑOS
   {
     codigo: 12,
     categoria: "Baños",
@@ -198,6 +187,44 @@ export const productos: Producto[] = [
     precio: 730_400,
     imagen: "/productos/13. Combo-basico.jfif"
   },
+
+  // CARPINTERÍA
+  {
+    codigo: 64,
+    categoria: "Carpintería",
+    nombre: "Closet habitación principal melamina RH",
+    descripcion: "Closet principal",
+    precio: 3_190_000,
+    imagen: "/productos/64-closet-principal.jpg.JPG"
+  },
+  {
+    codigo: 66,
+    categoria: "Carpintería",
+    nombre: "Closet secundario RH",
+    descripcion: "Closet habitación secundaria",
+    precio: 2_090_000,
+    imagen: "/productos/66-closet-secundario.jpg.JPG"
+  },
+
+  // GRANITOS Y PIEDRAS
+  {
+    codigo: 40,
+    categoria: "Granitos y piedras",
+    nombre: "Mesón Granito/Quartzone blanco",
+    descripcion: "Mesón cocina",
+    precio: 950_400,
+    imagen: "/productos/40. mesón.JPG"
+  },
+  {
+    codigo: 41,
+    categoria: "Granitos y piedras",
+    nombre: "Barra Granito con soporte",
+    descripcion: "Barra desayunador",
+    precio: 844_800,
+    imagen: "/productos/41. Barra-soporte.JPG"
+  },
+
+  // VIDRIOS Y ESPEJOS
   {
     codigo: 57,
     categoria: "Vidrios y espejos",
@@ -206,21 +233,8 @@ export const productos: Producto[] = [
     precio: 715_000,
     imagen: "/productos/57.division-vidrio.JPG"
   },
-  {
-    codigo: 24,
-    categoria: "Cocina",
-    nombre: "Estufa instalada",
-    descripcion: "Estufa con instalación",
-    precio: 520_000,
-    imagen: "/productos/24. estufa.jpeg"
-  },
-  {
-    codigo: 21,
-    categoria: "Seguridad",
-    nombre: "Cerradura inteligente",
-    descripcion: "Cerradura + forrado madera",
-    precio: 1_755_000
-  },
+
+  // ILUMINACIÓN
   {
     codigo: 18,
     categoria: "Iluminación",
@@ -228,11 +242,13 @@ export const productos: Producto[] = [
     descripcion: "Cambio plafones LED",
     precio: 128_700
   },
+
+  // SEGURIDAD
   {
-    codigo: 7,
-    categoria: "Enchape",
-    nombre: "Porcelanato piso completo",
-    descripcion: "Enchape porcelanato 60mil/m²",
-    precio: 5_298_800
+    codigo: 21,
+    categoria: "Seguridad",
+    nombre: "Cerradura inteligente",
+    descripcion: "Cerradura + forrado madera",
+    precio: 1_755_000
   }
 ];

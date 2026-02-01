@@ -125,7 +125,7 @@ function PlanPageContent() {
             <CardFooter>
               <Button
                 variant="outline"
-                className="w-full rounded-xl border-2 border-brand-border py-6 font-semibold text-brand-text transition-all hover:border-brand-textSecondary hover:bg-brand-cement"
+                className="w-full rounded-xl border-2 border-gray-400 bg-white py-6 font-semibold text-black transition-all hover:border-gray-500 hover:bg-gray-100"
                 onClick={() => handleElegirPlan("basico")}
               >
                 Elegir Plan Básico
