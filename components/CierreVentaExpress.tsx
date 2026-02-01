@@ -28,12 +28,18 @@ interface CierreVentaExpressProps {
   nombreCliente: string;
   telefonoCliente: string;
   emailCliente?: string;
+  isLoading?: boolean;
+  onReservar?: () => void | Promise<void>;
+  onConsultar?: () => void | Promise<void>;
 }
 
 export function CierreVentaExpress({
   nombreCliente,
   telefonoCliente,
   emailCliente,
+  isLoading = false,
+  onReservar,
+  onConsultar,
 }: CierreVentaExpressProps) {
   const { proyecto, planBase, adicionales, getTotal } = useCotizador();
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -45,7 +51,11 @@ export function CierreVentaExpress({
   const montoReserva = 500_000;
 
   const handleReservar = () => {
-    setMostrarModal(true);
+    if (onReservar) {
+      void onReservar();
+    } else {
+      setMostrarModal(true);
+    }
   };
 
   const handleConfirmarReserva = async () => {
@@ -206,13 +216,23 @@ Quiero asegurar mi cupo para este mes y congelar el precio actual de los materia
           <div className="pt-4">
             <Button
               onClick={handleReservar}
-              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-brand-primary via-yellow-400 to-brand-primary py-8 text-xl font-bold text-black shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] transition-all duration-300 hover:scale-[1.02] hover:from-brand-secondary hover:via-yellow-500 hover:to-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
+              disabled={isLoading}
+              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-brand-primary via-yellow-400 to-brand-primary py-8 text-xl font-bold text-black shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] transition-all duration-300 hover:scale-[1.02] hover:from-brand-secondary hover:via-yellow-500 hover:to-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] disabled:opacity-70"
             >
               <div className="absolute inset-0 -translate-x-[200%] bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 group-hover:translate-x-[200%]" />
               <span className="relative flex items-center justify-center gap-3">
-                <Sparkles className="h-6 w-6" />
-                RESERVAR MI CUPO AHORA
-                <Sparkles className="h-6 w-6" />
+                {isLoading ? (
+                  <>
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-black border-t-transparent" />
+                    Generando PDF...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-6 w-6" />
+                    RESERVAR MI CUPO AHORA
+                    <Sparkles className="h-6 w-6" />
+                  </>
+                )}
               </span>
             </Button>
             <p className="mt-3 text-center text-xs text-brand-textSecondary">
@@ -231,7 +251,10 @@ Quiero asegurar mi cupo para este mes y congelar el precio actual de los materia
             {/* Botón secundario de WhatsApp */}
             <Button
               onClick={() => {
-                const mensajeConsulta = `Hola, estoy revisando mi cotización para ${proyectoData?.nombre || "un proyecto"} y me gustaría hablar con un asesor experto antes de reservar.
+                if (onConsultar) {
+                  void onConsultar();
+                } else {
+                  const mensajeConsulta = `Hola, estoy revisando mi cotización para ${proyectoData?.nombre || "un proyecto"} y me gustaría hablar con un asesor experto antes de reservar.
 
 📋 *Cotización:* ${formatoPrecio(getTotal())}
 👤 *Mi nombre:* ${nombreCliente}
@@ -239,11 +262,13 @@ Quiero asegurar mi cupo para este mes y congelar el precio actual de los materia
 
 ¿Podrían ayudarme a resolver algunas dudas?`;
 
-                const whatsappUrl = `https://wa.me/573175639674?text=${encodeURIComponent(mensajeConsulta)}`;
-                window.open(whatsappUrl, "_blank");
+                  const whatsappUrl = `https://wa.me/573175639674?text=${encodeURIComponent(mensajeConsulta)}`;
+                  window.open(whatsappUrl, "_blank");
+                }
               }}
               variant="outline"
-              className="group w-full rounded-xl border-2 border-brand-primary bg-transparent py-6 font-semibold text-brand-text transition-all duration-300 hover:bg-brand-primary/10"
+              disabled={isLoading}
+              className="group w-full rounded-xl border-2 border-brand-primary bg-transparent py-6 font-semibold text-brand-text transition-all duration-300 hover:bg-brand-primary/10 disabled:opacity-70"
             >
               <svg
                 className="mr-3 h-6 w-6 text-green-400 transition-transform group-hover:scale-110"
