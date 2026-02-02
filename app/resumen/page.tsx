@@ -96,7 +96,9 @@ export default function ResumenPage() {
     if (!clienteNombre || !clienteEmail || !planData || !planBase) return;
 
     try {
-      const { error } = await supabase.from("cotizaciones").insert({
+      console.log("💾 Guardando cotización en base de datos...");
+
+      const { data, error } = await supabase.from("cotizaciones").insert({
         cliente_nombre: clienteNombre,
         cliente_email: clienteEmail,
         cliente_telefono: clienteTelefono || null,
@@ -114,16 +116,19 @@ export default function ResumenPage() {
           nombre: a.nombre,
           precio: a.precio,
         })),
-        user_agent: navigator.userAgent,
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       });
 
       if (error) {
-        console.error("Error guardando en DB:", error);
-      } else {
-        console.log("✅ Cotización guardada en DB");
+        console.error("❌ Error guardando en DB:", error);
+        throw error;
       }
+
+      console.log("✅ Cotización guardada exitosamente en DB");
+      return { success: true, data };
     } catch (error) {
-      console.error("Error:", error);
+      console.error("❌ Error:", error);
+      return { success: false, error };
     }
   };
 
@@ -290,59 +295,7 @@ export default function ResumenPage() {
         error: uploadError,
       } = await subirPresupuesto(pdfBlob, fileName);
 
-      // 5. Construir mensaje de WhatsApp con o sin link
-      let mensaje = "";
-
-      if (tipo === "reserva") {
-        mensaje = `Hola! Vengo de la web de Constructora Colombia. 🏗️
-
-Ya tengo mi presupuesto listo para ${proyectoData?.nombre} (${numeroCotizacion}).
-
-${success ? `🔗 Ver Detalle:\n${publicUrl}\n` : ""}
-━━━━━━━━━━━━━━━━━━━━━━
-
-Quiero asegurar mi precio actual antes de que suban los insumos. Sigue disponible el cupo de reserva por $500.000 para este mes? ⏳💸
-
-*DATOS DE CONTACTO:*
-Nombre: ${clienteNombre || "Por definir"}
-Telefono: ${clienteTelefono || "Por definir"}
-${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
-      } else {
-        mensaje = `Hola!
-
-Acabo de generar mi presupuesto de remodelación.
-
-${success ? `VER PRESUPUESTO COMPLETO:\n${publicUrl}\n` : "Tuve un problema al generar el link del PDF.\n"}
-━━━━━━━━━━━━━━━━━━━━━━
-
-*COTIZACIÓN:* ${numeroCotizacion}
-*PROYECTO:* ${proyectoData?.nombre}
-*PLAN:* ${planData.nombre}
-*INVERSIÓN ESTIMADA:* ${formatoPrecio(getTotal())}
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
-      }
-
-      // 6. Abrir WhatsApp (ahora SÍ con el link completo)
-      const whatsappNumber =
-        process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
-      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
-
-      // Detectar si es móvil
-      const isMobile =
-        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-      if (isMobile) {
-        // En móvil: usar window.location.href (más confiable que window.open)
-        window.location.href = whatsappUrl;
-      } else {
-        // En desktop: usar window.open en nueva pestaña
-        window.open(whatsappUrl, "_blank");
-      }
-
-      // 7. Guardar en DB y enviar email automáticamente si hay éxito
+      // 5. Guardar en DB y enviar email ANTES de abrir WhatsApp
       if (success && publicUrl) {
         console.log("✅ PDF subido exitosamente:", publicUrl);
         await guardarCotizacionEnDB(numeroCotizacion, publicUrl);
@@ -356,22 +309,63 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
             .update({ estado_crm: "CORREO_ENVIADO" })
             .eq("numero_cotizacion", numeroCotizacion);
         }
-        console.log("📎 URL del PDF:", publicUrl);
-        console.log("📱 Abriendo WhatsApp...");
       } else {
         console.error("❌ Error subiendo PDF:", uploadError);
       }
-    } catch (error) {
-      console.error("❌ Error en el proceso:", error);
 
-      // Si falla todo, al menos intentar abrir WhatsApp con mensaje básico
-      const mensajeBasico = `Hola, estoy interesado en una cotización de remodelación para ${proyectoData?.nombre || "mi proyecto"}.
+      // 6. Construir mensaje de WhatsApp (sin emojis para evitar encodeURIComponent)
+      let mensaje = "";
 
-Tuve un problema técnico generando el PDF. Podrían ayudarme?
+      if (tipo === "reserva") {
+        mensaje = `Hola! Vengo de la web de Constructora Colombia.
+
+Ya tengo mi presupuesto listo para *${proyectoData?.nombre}* (${numeroCotizacion}).
+
+${success ? `Ver Detalle:\n${publicUrl}\n\n` : ""}Quiero asegurar mi precio actual antes de que suban los insumos. Sigue disponible el cupo de reserva por $500.000 para este mes?
 
 *DATOS DE CONTACTO:*
 Nombre: ${clienteNombre || "Por definir"}
-Teléfono: ${clienteTelefono || "Por definir"}
+Telefono: ${clienteTelefono || "Por WhatsApp"}
+${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
+      } else {
+        mensaje = `Hola!
+
+Acabo de generar mi presupuesto de remodelacion.
+
+${success ? `Ver Detalle:\n${publicUrl}\n\n` : ""}*COTIZACION:* ${numeroCotizacion}
+*PROYECTO:* ${proyectoData?.nombre}
+*PLAN:* ${planData.nombre}
+*INVERSION ESTIMADA:* ${formatoPrecio(getTotal())}
+
+Me gustaria resolver algunas dudas antes de continuar. Podrian ayudarme?`;
+      }
+
+      // 7. Abrir WhatsApp
+      const whatsappNumber =
+        process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
+
+      const isMobile =
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (isMobile) {
+        window.location.href = whatsappUrl;
+      } else {
+        window.open(whatsappUrl, "_blank");
+      }
+
+      console.log("✅ Proceso completado");
+    } catch (error) {
+      console.error("❌ Error en el proceso:", error);
+
+      // Si falla todo, al menos intentar abrir WhatsApp con mensaje básico (sin emojis)
+      const mensajeBasico = `Hola, estoy interesado en una cotizacion de remodelacion para ${proyectoData?.nombre || "mi proyecto"}.
+
+Tuve un problema tecnico generando el PDF. Podrian ayudarme?
+
+*DATOS DE CONTACTO:*
+Nombre: ${clienteNombre || "Por definir"}
+Telefono: ${clienteTelefono || "Por WhatsApp"}
 ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
       const whatsappNumber =
         process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";

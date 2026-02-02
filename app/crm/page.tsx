@@ -282,13 +282,13 @@ export default function CRMPage() {
     if (!lead.cliente_telefono) {
       alert("Cliente no registró teléfono. Usando número de la empresa.");
     }
-    const mensaje = `Hola ${lead.cliente_nombre}! 👋
+    const mensaje = `Hola ${lead.cliente_nombre}!
 
-Te contacto desde Constructora Colombia. Vi que generaste tu presupuesto para ${lead.proyecto_nombre} (${lead.numero_cotizacion}).
+Te contacto desde Constructora Colombia. Vi que generaste tu presupuesto para *${lead.proyecto_nombre}* (${lead.numero_cotizacion}).
 
-🔗 Tu presupuesto: ${lead.pdf_url || ""}
+Tu presupuesto: ${lead.pdf_url || ""}
 
-¿Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponible el cupo de reserva por $500.000 para este mes. ⏳💸`;
+Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponible el cupo de reserva por $500.000 para este mes.`;
 
     window.open(
       `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`,
