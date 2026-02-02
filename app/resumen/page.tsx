@@ -7,6 +7,7 @@ import { planesBase, proyectos } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
 import { subirPresupuesto } from "@/lib/utils/storage-service";
+import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Clock, ArrowLeft } from "lucide-react";
@@ -83,6 +84,42 @@ export default function ResumenPage() {
       router.push("/");
     }
   }, [planBase, proyecto, router]);
+
+  const guardarCotizacionEnDB = async (
+    numeroCotizacion: string,
+    pdfUrl: string
+  ) => {
+    if (!clienteNombre || !clienteEmail || !planData || !planBase) return;
+
+    try {
+      const { error } = await supabase.from("cotizaciones").insert({
+        cliente_nombre: clienteNombre,
+        cliente_email: clienteEmail,
+        cliente_telefono: clienteTelefono || null,
+        proyecto_id: proyecto,
+        proyecto_nombre: proyectoData?.nombre,
+        plan_tipo: planBase,
+        plan_nombre: planData.nombre,
+        precio_plan: getPrecioPlanBase(),
+        total: getTotal(),
+        pdf_url: pdfUrl,
+        numero_cotizacion: numeroCotizacion,
+        adicionales: adicionales.map((a) => ({
+          nombre: a.nombre,
+          precio: a.precio,
+        })),
+        user_agent: navigator.userAgent,
+      });
+
+      if (error) {
+        console.error("Error guardando en DB:", error);
+      } else {
+        console.log("✅ Cotización guardada en DB");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
   const enviarPresupuestoPorEmail = async (
     pdfUrl: string,
@@ -164,6 +201,7 @@ export default function ResumenPage() {
       const { success, publicUrl } = await subirPresupuesto(pdfBlob, fileName);
 
       if (success && publicUrl) {
+        await guardarCotizacionEnDB(numeroCotizacion, publicUrl);
         await enviarPresupuestoPorEmail(publicUrl, numeroCotizacion);
       }
     } catch (error) {
@@ -286,9 +324,10 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
         window.open(whatsappUrl, "_blank");
       }
 
-      // 7. Enviar email automáticamente si hay éxito
+      // 7. Guardar en DB y enviar email automáticamente si hay éxito
       if (success && publicUrl) {
         console.log("✅ PDF subido exitosamente:", publicUrl);
+        await guardarCotizacionEnDB(numeroCotizacion, publicUrl);
         await enviarPresupuestoPorEmail(publicUrl, numeroCotizacion);
         console.log("📎 URL del PDF:", publicUrl);
         console.log("📱 Abriendo WhatsApp...");

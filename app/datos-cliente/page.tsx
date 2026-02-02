@@ -10,21 +10,21 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
   User,
-  Phone,
   Mail,
   Sparkles,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function DatosClientePage() {
   const router = useRouter();
-  const { proyecto, setClienteInfo, clienteNombre } = useCotizador();
+  const { proyecto, setClienteInfo, clienteNombre, clienteEmail } = useCotizador();
   const proyectoData = proyectos.find((p) => p.id === proyecto);
 
   const [nombre, setNombre] = useState(clienteNombre || "");
-  const [telefono, setTelefono] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(clienteEmail || "");
+  const [emailError, setEmailError] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
 
@@ -37,19 +37,12 @@ export default function DatosClientePage() {
       type: "text",
     },
     {
-      field: "telefono",
-      icon: Phone,
-      label: "¿Tu número de WhatsApp?",
-      placeholder: "Ej: 300 123 4567",
-      type: "tel",
-    },
-    {
       field: "email",
       icon: Mail,
-      label: "¿Y tu correo electrónico?",
+      label: "¿Cuál es tu correo electrónico?",
       placeholder: "Ej: maria@email.com",
       type: "email",
-      optional: true,
+      subtitle: "Aquí te enviaremos tu presupuesto detallado en PDF",
     },
   ];
 
@@ -59,14 +52,20 @@ export default function DatosClientePage() {
     }
   }, [proyecto, router]);
 
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email.toLowerCase());
+  };
+
   const handleContinue = () => {
+    if (!isCurrentStepValid()) return;
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Guardar y continuar
       setIsValidating(true);
       setTimeout(() => {
-        setClienteInfo(nombre, telefono, email);
+        setClienteInfo(nombre, "", email);
         router.push("/plan");
       }, 800);
     }
@@ -83,8 +82,6 @@ export default function DatosClientePage() {
       case 0:
         return nombre;
       case 1:
-        return telefono;
-      case 2:
         return email;
       default:
         return "";
@@ -97,17 +94,28 @@ export default function DatosClientePage() {
         setNombre(value);
         break;
       case 1:
-        setTelefono(value);
-        break;
-      case 2:
         setEmail(value);
+        setEmailError("");
         break;
     }
   };
 
   const isCurrentStepValid = () => {
     const value = getCurrentValue();
-    if (currentStep === 2 && !value) return true; // Email opcional
+
+    if (currentStep === 1) {
+      if (!value.trim()) {
+        setEmailError("El correo es obligatorio");
+        return false;
+      }
+      if (!validateEmail(value)) {
+        setEmailError("Ingresa un correo válido");
+        return false;
+      }
+      setEmailError("");
+      return true;
+    }
+
     return value.trim().length > 0;
   };
 
@@ -172,10 +180,16 @@ export default function DatosClientePage() {
                 </h1>
 
                 <p className="text-brand-textSecondary">
-                  Para preparar tu cotización personalizada de{" "}
-                  <span className="font-semibold text-brand-primary">
-                    {proyectoData.nombre}
-                  </span>
+                  {currentStepData.subtitle ? (
+                    <>{currentStepData.subtitle}</>
+                  ) : (
+                    <>
+                      Para preparar tu cotización personalizada de{" "}
+                      <span className="font-semibold text-brand-primary">
+                        {proyectoData.nombre}
+                      </span>
+                    </>
+                  )}
                 </p>
               </div>
 
@@ -191,43 +205,42 @@ export default function DatosClientePage() {
                     autoFocus
                     className="h-16 rounded-xl border-2 border-brand-border bg-brand-dark px-6 text-lg text-brand-text transition-all focus:border-brand-primary"
                   />
-                  {currentStepData.optional && (
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 rounded bg-brand-card px-2 py-1 text-xs text-brand-textSecondary">
-                      Opcional
-                    </span>
-                  )}
                 </div>
+                {emailError && currentStep === 1 && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 flex items-center gap-2 text-sm text-red-400"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    {emailError}
+                  </motion.p>
+                )}
 
                 {/* Pasos completados */}
                 {currentStep > 0 && (
                   <div className="space-y-2 rounded-xl bg-brand-dark/50 p-4">
-                    {steps.slice(0, currentStep).map((step, idx) => {
-                      const StepIcon = step.icon;
-                      const value =
-                        idx === 0 ? nombre : idx === 1 ? telefono : email;
-
-                      return (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-3 text-sm"
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          <StepIcon className="h-4 w-4 text-brand-primary" />
-                          <span className="text-brand-textSecondary">
-                            {value}
-                          </span>
-                        </motion.div>
-                      );
-                    })}
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 text-sm"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <User className="h-4 w-4 text-brand-primary" />
+                      <span className="text-brand-textSecondary">{nombre}</span>
+                    </motion.div>
                   </div>
                 )}
 
                 {/* Botón de continuar */}
                 <Button
                   onClick={handleContinue}
-                  disabled={!isCurrentStepValid() || isValidating}
+                  disabled={
+                    (currentStep === 0 && !nombre.trim()) ||
+                    (currentStep === 1 &&
+                      (!email.trim() || !validateEmail(email))) ||
+                    isValidating
+                  }
                   className="h-14 w-full rounded-xl bg-gradient-to-r from-brand-primary via-yellow-400 to-brand-primary text-lg font-bold text-black shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] transition-all hover:scale-[1.02] hover:from-brand-secondary hover:via-yellow-500 hover:to-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isValidating ? (
