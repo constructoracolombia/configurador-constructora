@@ -43,35 +43,9 @@ import {
 import { formatoPrecio } from "@/lib/utils/format";
 import { LeadCard } from "@/components/crm/LeadCard";
 import { KanbanColumn } from "@/components/crm/KanbanColumn";
+import type { Lead, Nota, Estado } from "@/lib/types/crm";
 
-interface Lead {
-  id: string;
-  created_at: string;
-  cliente_nombre: string;
-  cliente_email: string;
-  cliente_telefono: string | null;
-  proyecto_nombre: string;
-  plan_tipo: string;
-  plan_nombre: string;
-  total: number;
-  pdf_url: string | null;
-  numero_cotizacion: string;
-  estado_crm: string;
-  ultima_interaccion: string;
-  pdf_abierto: boolean;
-  prioridad: string;
-  posicion_kanban: number;
-}
-
-interface Nota {
-  id: string;
-  created_at: string;
-  nota: string;
-  tipo: string;
-  autor: string;
-}
-
-const ESTADOS = [
+const ESTADOS: Estado[] = [
   { id: "NUEVO", nombre: "Nuevos", color: "bg-blue-500", icon: "📨" },
   {
     id: "CORREO_ENVIADO",

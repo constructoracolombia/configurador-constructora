@@ -20,11 +20,10 @@ import {
   EyeOff,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
-
-import type { KanbanLead } from "./KanbanColumn";
+import type { Lead } from "@/lib/types/crm";
 
 interface LeadCardProps {
-  lead: KanbanLead;
+  lead: Lead;
   onClick: () => void;
   onWhatsApp: () => void;
   onReenviarEmail: () => void;

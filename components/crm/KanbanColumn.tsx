@@ -6,35 +6,14 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LeadCard } from "./LeadCard";
-
-export interface KanbanLead {
-  id: string;
-  cliente_nombre: string;
-  cliente_email: string;
-  cliente_telefono?: string | null;
-  proyecto_nombre: string;
-  plan_nombre: string;
-  total: number;
-  pdf_url?: string | null;
-  numero_cotizacion: string;
-  estado_crm?: string;
-  created_at: string;
-  pdf_abierto?: boolean;
-}
-
-interface Estado {
-  id: string;
-  nombre: string;
-  color: string;
-  icon: string;
-}
+import type { Lead, Estado } from "@/lib/types/crm";
 
 interface KanbanColumnProps {
   estado: Estado;
-  leads: KanbanLead[];
-  onLeadClick: (lead: KanbanLead) => void | Promise<void>;
-  onWhatsApp: (lead: KanbanLead) => void;
-  onReenviarEmail: (lead: KanbanLead) => void;
+  leads: Lead[];
+  onLeadClick: (lead: Lead) => void | Promise<void>;
+  onWhatsApp: (lead: Lead) => void;
+  onReenviarEmail: (lead: Lead) => void;
 }
 
 export function KanbanColumn({
