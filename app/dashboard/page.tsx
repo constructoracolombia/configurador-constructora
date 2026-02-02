@@ -20,18 +20,36 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { proyectos, productos } from "@/lib/data/catalogo";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [autenticado, setAutenticado] = useState(false);
   const [password, setPassword] = useState("");
   const [mostrarLogin, setMostrarLogin] = useState(true);
+  const [totalLeads, setTotalLeads] = useState(0);
+
+  const cargarStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("cotizaciones")
+        .select("id", { count: "exact" });
+
+      if (!error && data) {
+        setTotalLeads(data.length);
+      }
+    } catch (error) {
+      console.error("Error cargando stats:", error);
+    }
+  };
 
   useEffect(() => {
     const auth = localStorage.getItem("admin_auth");
     if (auth === "true") {
       setAutenticado(true);
       setMostrarLogin(false);
+      void cargarStats();
     }
   }, []);
 
@@ -40,10 +58,16 @@ export default function DashboardPage() {
       setAutenticado(true);
       setMostrarLogin(false);
       localStorage.setItem("admin_auth", "true");
+      void cargarStats();
     } else {
       alert("Contraseña incorrecta");
     }
   };
+
+  // Valores dinámicos
+  const numProyectos = proyectos.length;
+  const numAdicionales = productos.length;
+  const numEstados = 6;
 
   const apps = [
     {
@@ -55,9 +79,9 @@ export default function DashboardPage() {
       ruta: "/",
       destacado: true,
       stats: [
-        { label: "Proyectos", valor: "5" },
+        { label: "Proyectos", valor: String(numProyectos) },
         { label: "Planes", valor: "2" },
-        { label: "Adicionales", valor: "20+" },
+        { label: "Adicionales", valor: String(numAdicionales) },
       ],
       caracteristicas: [
         "PDF automático profesional",
@@ -75,9 +99,9 @@ export default function DashboardPage() {
       ruta: "/crm",
       destacado: true,
       stats: [
-        { label: "Estados", valor: "6" },
+        { label: "Estados", valor: String(numEstados) },
         { label: "Drag & Drop", valor: "✓" },
-        { label: "Notas", valor: "∞" },
+        { label: "Leads Activos", valor: String(totalLeads) },
       ],
       caracteristicas: [
         "Tablero Kanban visual",
@@ -298,22 +322,20 @@ export default function DashboardPage() {
 
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    variant="outline"
                     onClick={() => router.push("/")}
-                    className="border-brand-border text-brand-text hover:bg-brand-dark"
+                    className="border-brand-border bg-white font-semibold text-black hover:bg-gray-200"
                   >
                     <Calculator className="mr-2 h-4 w-4" />
                     Cotizador Web
                   </Button>
 
                   <Button
-                    variant="outline"
                     onClick={() => {
                       localStorage.removeItem("admin_auth");
                       setMostrarLogin(true);
                       setAutenticado(false);
                     }}
-                    className="border-red-500/50 text-red-400 hover:bg-red-900/20"
+                    className="bg-red-600 font-semibold text-white hover:bg-red-700"
                   >
                     <Lock className="mr-2 h-4 w-4" />
                     Cerrar Sesión

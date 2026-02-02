@@ -213,39 +213,41 @@ export default function AdminDashboard() {
               Panel de control de cotizaciones
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
-              variant="outline"
-              size="sm"
               onClick={() => router.push("/dashboard")}
-              className="border-brand-border text-brand-textSecondary"
+              className="bg-white font-semibold text-black hover:bg-gray-200"
             >
               <LayoutDashboard className="mr-2 h-4 w-4" />
               Dashboard
             </Button>
             <Button
-              variant="outline"
-              size="sm"
               onClick={() => router.push("/crm")}
-              className="border-brand-border text-brand-textSecondary"
+              className="bg-white font-semibold text-black hover:bg-gray-200"
             >
+              <Users className="mr-2 h-4 w-4" />
               CRM Kanban
             </Button>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/")}
-              className="border-brand-border text-brand-textSecondary"
+              onClick={() => window.open("/", "_blank")}
+              className="bg-white font-semibold text-black hover:bg-gray-200"
             >
+              <ExternalLink className="mr-2 h-4 w-4" />
               Ir al sitio
             </Button>
             <Button
-              variant="outline"
+              onClick={() => void cargarDatos()}
+              disabled={cargando}
+              className="bg-brand-primary font-semibold text-black hover:bg-brand-secondary"
+            >
+              {cargando ? "Cargando..." : "Actualizar"}
+            </Button>
+            <Button
               onClick={() => {
                 localStorage.removeItem("admin_auth");
                 setAutenticado(false);
               }}
-              className="border-brand-border text-brand-textSecondary"
+              className="bg-red-600 font-semibold text-white hover:bg-red-700"
             >
               Cerrar Sesión
             </Button>

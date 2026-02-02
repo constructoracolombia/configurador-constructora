@@ -40,6 +40,7 @@ import {
   ExternalLink,
   FileText,
   LayoutDashboard,
+  BarChart3,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import { LeadCard } from "@/components/crm/LeadCard";
@@ -360,28 +361,32 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
           </div>
           <div className="flex gap-3">
             <Button
-              variant="outline"
               onClick={() => router.push("/dashboard")}
-              className="border-brand-border text-brand-text"
+              className="bg-white font-semibold text-black hover:bg-gray-200"
             >
               <LayoutDashboard className="mr-2 h-4 w-4" />
               Dashboard
             </Button>
             <Button
+              onClick={() => router.push("/admin")}
+              className="bg-white font-semibold text-black hover:bg-gray-200"
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Panel Admin
+            </Button>
+            <Button
               onClick={() => void cargarLeads()}
               disabled={cargando}
-              variant="outline"
-              className="border-brand-border text-brand-text"
+              className="bg-brand-primary font-semibold text-black hover:bg-brand-secondary"
             >
               {cargando ? "Cargando..." : "Actualizar"}
             </Button>
             <Button
-              variant="outline"
               onClick={() => {
                 localStorage.removeItem("admin_auth");
                 setAutenticado(false);
               }}
-              className="border-brand-border text-brand-textSecondary"
+              className="bg-red-600 font-semibold text-white hover:bg-red-700"
             >
               Cerrar Sesión
             </Button>
