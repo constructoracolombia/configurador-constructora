@@ -82,8 +82,12 @@ export default function ResumenPage() {
   useEffect(() => {
     if (!planBase || !proyecto) {
       router.push("/");
+      return;
     }
-  }, [planBase, proyecto, router]);
+    if (!clienteNombre?.trim() || !clienteEmail?.trim()) {
+      router.push("/datos-cliente");
+    }
+  }, [planBase, proyecto, clienteNombre, clienteEmail, router]);
 
   const guardarCotizacionEnDB = async (
     numeroCotizacion: string,

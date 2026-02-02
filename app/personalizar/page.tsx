@@ -37,7 +37,7 @@ export default function PersonalizarPage() {
   };
 
   const handleVerResumen = () => {
-    router.push("/resumen");
+    router.push("/datos-cliente");
   };
 
   const proyectoNombre = store.proyecto

@@ -167,7 +167,7 @@ export const productos: Producto[] = [
     nombre: "Estufa instalada",
     descripcion: "Estufa con instalación",
     precio: 520_000,
-    imagen: "/productos/24. estufa.jpeg"
+    imagen: "/productos/24. Estufa.jpg"
   },
 
   // BAÑOS
@@ -185,7 +185,7 @@ export const productos: Producto[] = [
     nombre: "Combo básico baño",
     descripcion: "Sanitario, lavamanos, grifería",
     precio: 730_400,
-    imagen: "/productos/13. Combo-basico.jfif"
+    imagen: "/productos/13.Baño-basico.jpg"
   },
 
   // CARPINTERÍA
@@ -240,7 +240,8 @@ export const productos: Producto[] = [
     categoria: "Iluminación",
     nombre: "Luminarias LED",
     descripcion: "Cambio plafones LED",
-    precio: 128_700
+    precio: 128_700,
+    imagen: "/productos/18. Luminarias.jpg"
   },
 
   // SEGURIDAD
@@ -249,6 +250,7 @@ export const productos: Producto[] = [
     categoria: "Seguridad",
     nombre: "Cerradura inteligente",
     descripcion: "Cerradura + forrado madera",
-    precio: 1_755_000
+    precio: 1_755_000,
+    imagen: "/productos/21. Cerradura-inteligente.jpg"
   }
 ];

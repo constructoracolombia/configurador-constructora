@@ -11,6 +11,7 @@ import {
   ArrowRight,
   User,
   Mail,
+  Phone,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -19,11 +20,13 @@ import { motion } from "framer-motion";
 
 export default function DatosClientePage() {
   const router = useRouter();
-  const { proyecto, setClienteInfo, clienteNombre, clienteEmail } = useCotizador();
+  const { proyecto, setClienteInfo, clienteNombre, clienteTelefono, clienteEmail } = useCotizador();
   const proyectoData = proyectos.find((p) => p.id === proyecto);
 
   const [nombre, setNombre] = useState(clienteNombre || "");
+  const [telefono, setTelefono] = useState(clienteTelefono || "");
   const [email, setEmail] = useState(clienteEmail || "");
+  const [telefonoError, setTelefonoError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
@@ -37,6 +40,14 @@ export default function DatosClientePage() {
       type: "text",
     },
     {
+      field: "telefono",
+      icon: Phone,
+      label: "¿Cuál es tu número de teléfono?",
+      placeholder: "Ej: 3001234567 (solo números)",
+      type: "tel",
+      subtitle: "Para contactarte sobre tu presupuesto",
+    },
+    {
       field: "email",
       icon: Mail,
       label: "¿Cuál es tu correo electrónico?",
@@ -46,15 +57,26 @@ export default function DatosClientePage() {
     },
   ];
 
+  const planBase = useCotizador((s) => s.planBase);
+
   useEffect(() => {
     if (!proyecto) {
       router.push("/");
+      return;
     }
-  }, [proyecto, router]);
+    if (!planBase) {
+      router.push("/plan");
+    }
+  }, [proyecto, planBase, router]);
 
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email.toLowerCase());
+  };
+
+  const validateTelefono = (tel: string) => {
+    const soloNumeros = tel.replace(/\D/g, "");
+    return soloNumeros.length >= 10 && soloNumeros.length <= 15;
   };
 
   const handleContinue = () => {
@@ -65,8 +87,9 @@ export default function DatosClientePage() {
     } else {
       setIsValidating(true);
       setTimeout(() => {
-        setClienteInfo(nombre, "", email);
-        router.push("/plan");
+        const telefonoLimpio = telefono.replace(/\D/g, "");
+        setClienteInfo(nombre, telefonoLimpio, email);
+        router.push("/resumen");
       }, 800);
     }
   };
@@ -82,6 +105,8 @@ export default function DatosClientePage() {
       case 0:
         return nombre;
       case 1:
+        return telefono;
+      case 2:
         return email;
       default:
         return "";
@@ -94,6 +119,10 @@ export default function DatosClientePage() {
         setNombre(value);
         break;
       case 1:
+        setTelefono(value);
+        setTelefonoError("");
+        break;
+      case 2:
         setEmail(value);
         setEmailError("");
         break;
@@ -104,6 +133,20 @@ export default function DatosClientePage() {
     const value = getCurrentValue();
 
     if (currentStep === 1) {
+      const soloNumeros = value.replace(/\D/g, "");
+      if (!soloNumeros) {
+        setTelefonoError("El teléfono es obligatorio");
+        return false;
+      }
+      if (soloNumeros.length < 10 || soloNumeros.length > 15) {
+        setTelefonoError("Ingresa entre 10 y 15 dígitos (solo números)");
+        return false;
+      }
+      setTelefonoError("");
+      return true;
+    }
+
+    if (currentStep === 2) {
       if (!value.trim()) {
         setEmailError("El correo es obligatorio");
         return false;
@@ -206,7 +249,17 @@ export default function DatosClientePage() {
                     className="h-16 rounded-xl border-2 border-brand-border bg-brand-dark px-6 text-lg text-brand-text transition-all focus:border-brand-primary"
                   />
                 </div>
-                {emailError && currentStep === 1 && (
+                {telefonoError && currentStep === 1 && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 flex items-center gap-2 text-sm text-red-400"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    {telefonoError}
+                  </motion.p>
+                )}
+                {emailError && currentStep === 2 && (
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -229,6 +282,17 @@ export default function DatosClientePage() {
                       <User className="h-4 w-4 text-brand-primary" />
                       <span className="text-brand-textSecondary">{nombre}</span>
                     </motion.div>
+                    {currentStep > 1 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-3 text-sm"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <Phone className="h-4 w-4 text-brand-primary" />
+                        <span className="text-brand-textSecondary">{telefono}</span>
+                      </motion.div>
+                    )}
                   </div>
                 )}
 
@@ -237,7 +301,8 @@ export default function DatosClientePage() {
                   onClick={handleContinue}
                   disabled={
                     (currentStep === 0 && !nombre.trim()) ||
-                    (currentStep === 1 &&
+                    (currentStep === 1 && !validateTelefono(telefono)) ||
+                    (currentStep === 2 &&
                       (!email.trim() || !validateEmail(email))) ||
                     isValidating
                   }
@@ -251,7 +316,7 @@ export default function DatosClientePage() {
                   ) : currentStep === steps.length - 1 ? (
                     <>
                       <Sparkles className="mr-2 h-5 w-5" />
-                      Comenzar a cotizar
+                      Ver mi presupuesto
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </>
                   ) : (

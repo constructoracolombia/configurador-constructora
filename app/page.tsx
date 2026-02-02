@@ -19,7 +19,7 @@ export default function Home() {
 
   const handleProyectoClick = (proyecto: (typeof proyectos)[number]) => {
     setProyecto(proyecto.id);
-    router.push("/datos-cliente");
+    router.push("/plan");
   };
 
   return (
