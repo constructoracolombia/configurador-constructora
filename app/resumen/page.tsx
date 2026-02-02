@@ -61,6 +61,9 @@ export default function ResumenPage() {
     adicionales,
     getPrecioPlanBase,
     getTotal,
+    clienteNombre,
+    clienteTelefono,
+    clienteEmail,
   } = useCotizador();
   const [generandoPDF, setGenerandoPDF] = useState(false);
 
@@ -98,9 +101,9 @@ export default function ResumenPage() {
           year: "numeric",
         }),
         cliente: {
-          nombre: "Cliente",
-          telefono: "",
-          email: undefined as string | undefined,
+          nombre: clienteNombre || "Cliente",
+          telefono: clienteTelefono || "",
+          email: clienteEmail || undefined,
         },
         proyecto: {
           nombre: proyectoData?.nombre || "Proyecto",
@@ -157,6 +160,11 @@ Quiero aprovechar la oferta, congelar el precio de los materiales y reservar mi 
 
 *ABONO DE RESERVA:* $500.000
 
+*DATOS DE CONTACTO:*
+Nombre: ${clienteNombre || "Por definir"}
+Teléfono: ${clienteTelefono || "Por definir"}
+${clienteEmail ? `Email: ${clienteEmail}` : ""}
+
 Me ayudan con el siguiente paso?`;
       } else {
         mensaje = `Hola!
@@ -207,7 +215,12 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
       // Si falla todo, al menos intentar abrir WhatsApp con mensaje básico
       const mensajeBasico = `Hola, estoy interesado en una cotización de remodelación para ${proyectoData?.nombre || "mi proyecto"}.
 
-Tuve un problema técnico generando el PDF. Podrían ayudarme?`;
+Tuve un problema técnico generando el PDF. Podrían ayudarme?
+
+*DATOS DE CONTACTO:*
+Nombre: ${clienteNombre || "Por definir"}
+Teléfono: ${clienteTelefono || "Por definir"}
+${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
       const whatsappNumber =
         process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensajeBasico)}`;
@@ -429,8 +442,8 @@ Tuve un problema técnico generando el PDF. Podrían ayudarme?`;
 
         {/* Componente de Cierre de Venta */}
         <CierreVentaExpress
-          nombreCliente=""
-          telefonoCliente=""
+          nombreCliente={clienteNombre}
+          telefonoCliente={clienteTelefono}
           onReservar={() => generarYCompartirPDF("reserva")}
           onConsultar={() => generarYCompartirPDF("whatsapp")}
           generandoPDF={generandoPDF}

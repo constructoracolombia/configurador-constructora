@@ -30,17 +30,25 @@ function isCiudadelaVerde(proyectoId: string | null): boolean {
 function PlanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const proyectoId = searchParams.get("proyecto");
+  const proyectoFromUrl = searchParams.get("proyecto");
+  const proyectoFromStore = useCotizador((s) => s.proyecto);
+  const proyectoId = proyectoFromUrl || proyectoFromStore;
   const proyectoNombre = getProyectoNombre(proyectoId);
 
   const setProyecto = useCotizador((s) => s.setProyecto);
   const setPlanBase = useCotizador((s) => s.setPlanBase);
 
   useEffect(() => {
-    if (proyectoId && !useCotizador.getState().proyecto) {
-      setProyecto(proyectoId);
+    if (proyectoFromUrl && !proyectoFromStore) {
+      setProyecto(proyectoFromUrl);
     }
-  }, [proyectoId, setProyecto]);
+  }, [proyectoFromUrl, proyectoFromStore, setProyecto]);
+
+  useEffect(() => {
+    if (!proyectoId) {
+      router.push("/");
+    }
+  }, [proyectoId, router]);
 
   const precioIntermedio = getPrecioPlanIntermedio(proyectoId);
   const mostrarAhorro = isCiudadelaVerde(proyectoId);

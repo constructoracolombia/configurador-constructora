@@ -9,6 +9,9 @@ interface CotizadorState {
   proyecto: string | null;
   planBase: "basico" | "intermedio" | null;
   adicionales: Producto[];
+  clienteNombre: string;
+  clienteTelefono: string;
+  clienteEmail: string;
 }
 
 interface CotizadorActions {
@@ -17,6 +20,7 @@ interface CotizadorActions {
   addAdicional: (producto: Producto) => void;
   removeAdicional: (codigo: number) => void;
   clearAdicionales: () => void;
+  setClienteInfo: (nombre: string, telefono: string, email: string) => void;
   reset: () => void;
   getPrecioPlanBase: () => number;
   getPrecioAdicionales: () => number;
@@ -33,6 +37,9 @@ export const useCotizador = create<CotizadorStore>()(
       proyecto: null,
       planBase: null,
       adicionales: [],
+      clienteNombre: "",
+      clienteTelefono: "",
+      clienteEmail: "",
 
       // Acciones
       setProyecto: (proyecto) => {
@@ -87,11 +94,29 @@ export const useCotizador = create<CotizadorStore>()(
         set({ adicionales: [] });
       },
 
+      setClienteInfo: (nombre, telefono, email) => {
+        if (process.env.NODE_ENV === "development") {
+          console.log("👤 Datos del cliente guardados:", { nombre, telefono, email });
+        }
+        set({
+          clienteNombre: nombre,
+          clienteTelefono: telefono,
+          clienteEmail: email,
+        });
+      },
+
       reset: () => {
         if (process.env.NODE_ENV === "development") {
           console.log("🔄 Reset completo del cotizador");
         }
-        set({ proyecto: null, planBase: null, adicionales: [] });
+        set({
+          proyecto: null,
+          planBase: null,
+          adicionales: [],
+          clienteNombre: "",
+          clienteTelefono: "",
+          clienteEmail: "",
+        });
       },
 
       // Getters
