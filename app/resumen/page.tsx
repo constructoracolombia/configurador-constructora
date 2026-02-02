@@ -104,6 +104,8 @@ export default function ResumenPage() {
         total: getTotal(),
         pdf_url: pdfUrl,
         numero_cotizacion: numeroCotizacion,
+        estado_crm: "NUEVO",
+        posicion_kanban: 0,
         adicionales: adicionales.map((a) => ({
           nombre: a.nombre,
           precio: a.precio,
@@ -124,8 +126,8 @@ export default function ResumenPage() {
   const enviarPresupuestoPorEmail = async (
     pdfUrl: string,
     numeroCotizacion: string
-  ) => {
-    if (!clienteEmail || emailEnviado) return;
+  ): Promise<boolean> => {
+    if (!clienteEmail || emailEnviado) return false;
 
     setEnviandoEmail(true);
 
@@ -148,11 +150,14 @@ export default function ResumenPage() {
       if (response.ok) {
         setEmailEnviado(true);
         console.log("✅ Email enviado exitosamente");
+        return true;
       } else {
         console.error("❌ Error enviando email");
+        return false;
       }
     } catch (error) {
       console.error("Error:", error);
+      return false;
     } finally {
       setEnviandoEmail(false);
     }
@@ -202,7 +207,16 @@ export default function ResumenPage() {
 
       if (success && publicUrl) {
         await guardarCotizacionEnDB(numeroCotizacion, publicUrl);
-        await enviarPresupuestoPorEmail(publicUrl, numeroCotizacion);
+        const emailOk = await enviarPresupuestoPorEmail(
+          publicUrl,
+          numeroCotizacion
+        );
+        if (emailOk) {
+          await supabase
+            .from("cotizaciones")
+            .update({ estado_crm: "CORREO_ENVIADO" })
+            .eq("numero_cotizacion", numeroCotizacion);
+        }
       }
     } catch (error) {
       console.error("Error enviando presupuesto automático:", error);
@@ -328,7 +342,16 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
       if (success && publicUrl) {
         console.log("✅ PDF subido exitosamente:", publicUrl);
         await guardarCotizacionEnDB(numeroCotizacion, publicUrl);
-        await enviarPresupuestoPorEmail(publicUrl, numeroCotizacion);
+        const emailOk = await enviarPresupuestoPorEmail(
+          publicUrl,
+          numeroCotizacion
+        );
+        if (emailOk) {
+          await supabase
+            .from("cotizaciones")
+            .update({ estado_crm: "CORREO_ENVIADO" })
+            .eq("numero_cotizacion", numeroCotizacion);
+        }
         console.log("📎 URL del PDF:", publicUrl);
         console.log("📱 Abriendo WhatsApp...");
       } else {

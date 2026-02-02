@@ -216,6 +216,14 @@ export default function AdminDashboard() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => router.push("/crm")}
+              className="border-brand-border text-brand-textSecondary"
+            >
+              CRM Kanban
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => router.push("/")}
               className="border-brand-border text-brand-textSecondary"
             >
