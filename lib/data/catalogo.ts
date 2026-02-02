@@ -149,7 +149,8 @@ export const productos: Producto[] = [
     categoria: "General",
     nombre: "Porcelanato piso completo",
     descripcion: "Enchape porcelanato 60mil/m²",
-    precio: 5_298_800
+    precio: 5_298_800,
+    imagen: "/productos/7. Porcelanato.jpg"
   },
 
   // COCINA
