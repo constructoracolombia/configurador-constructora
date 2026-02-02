@@ -86,9 +86,10 @@ export default function ResumenPage() {
     setGenerandoPDF(true);
 
     try {
+      // 1. Generar número de cotización único
       const numeroCotizacion = `COT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, "0")}`;
-      const fileName = `Cotizacion_${(proyectoData?.nombre ?? "Proyecto").replace(/\s/g, "_")}_${numeroCotizacion}.pdf`;
 
+      // 2. Preparar datos del PDF
       const pdfData = {
         numeroConsecutivo: numeroCotizacion,
         fecha: new Date().toLocaleDateString("es-CO", {
@@ -102,8 +103,8 @@ export default function ResumenPage() {
           email: undefined as string | undefined,
         },
         proyecto: {
-          nombre: proyectoData?.nombre ?? "Proyecto",
-          ubicacion: proyectoData?.ubicacion ?? "Bucaramanga",
+          nombre: proyectoData?.nombre || "Proyecto",
+          ubicacion: proyectoData?.ubicacion || "Bucaramanga",
         },
         plan: {
           nombre: planData.nombre,
@@ -119,16 +120,20 @@ export default function ResumenPage() {
         total: getTotal(),
       };
 
+      // 3. Generar PDF
       console.log("📄 Generando PDF...");
       const pdfBlob = await generarCotizacionPDF(pdfData);
 
+      // 4. Subir a Supabase Storage
       console.log("☁️ Subiendo a Supabase...");
+      const fileName = `Cotizacion_${(proyectoData?.nombre || "Proyecto").replace(/\s/g, "_")}_${numeroCotizacion}.pdf`;
       const {
         success,
         publicUrl,
         error: uploadError,
       } = await subirPresupuesto(pdfBlob, fileName);
 
+      // 5. Construir mensaje de WhatsApp con o sin link
       let mensaje = "";
 
       if (tipo === "reserva") {
@@ -171,44 +176,47 @@ ${success ? `VER PRESUPUESTO COMPLETO:\n${publicUrl}\n` : "Tuve un problema al g
 Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
       }
 
+      // 6. Abrir WhatsApp (ahora SÍ con el link completo)
       const whatsappNumber =
         process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensaje)}`;
-      window.open(whatsappUrl, "_blank");
 
-      if (success) {
-        console.log("PDF subido exitosamente");
-        console.log("URL pública:", publicUrl);
+      // Detectar si es móvil
+      const isMobile =
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        fetch(publicUrl ?? "", { method: "HEAD" })
-          .then((response) => {
-            if (response.ok) {
-              console.log("PDF accesible públicamente");
-            } else {
-              console.error("PDF no accesible:", response.status);
-            }
-          })
-          .catch((err) => console.error("Error verificando PDF:", err));
+      if (isMobile) {
+        // En móvil: usar window.location.href (más confiable que window.open)
+        window.location.href = whatsappUrl;
       } else {
-        console.error("Error subiendo PDF:", uploadError);
-        console.error("Detalles del error:", uploadError);
+        // En desktop: usar window.open en nueva pestaña
+        window.open(whatsappUrl, "_blank");
+      }
 
-        alert(
-          `El PDF se generó correctamente pero hubo un problema al subirlo a nuestros servidores.\n\nDe todas formas, el mensaje se envió por WhatsApp.\n\nError técnico: ${uploadError}`
-        );
+      // 7. Logs para debugging
+      if (success) {
+        console.log("✅ Proceso completado exitosamente");
+        console.log("📎 URL del PDF:", publicUrl);
+        console.log("📱 Abriendo WhatsApp...");
+      } else {
+        console.error("❌ Error subiendo PDF:", uploadError);
       }
     } catch (error) {
-      console.error("Error en el proceso de cotización:", error);
+      console.error("❌ Error en el proceso:", error);
 
-      const enviarDeTodasFormas = confirm(
-        "Hubo un error generando la cotización.\n\nDeseas enviar el mensaje por WhatsApp de todas formas?"
-      );
+      // Si falla todo, al menos intentar abrir WhatsApp con mensaje básico
+      const mensajeBasico = `Hola, estoy interesado en una cotización de remodelación para ${proyectoData?.nombre || "mi proyecto"}.
 
-      if (enviarDeTodasFormas) {
-        const whatsappNumber =
-          process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
-        const mensajeBasico = `Hola, estoy interesado en una cotización de remodelación para ${proyectoData?.nombre ?? "mi proyecto"}.\n\n¿Podrían ayudarme?`;
-        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensajeBasico)}`;
+Tuve un problema técnico generando el PDF. Podrían ayudarme?`;
+      const whatsappNumber =
+        process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "573175639674";
+      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensajeBasico)}`;
+
+      const isMobile =
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        window.location.href = whatsappUrl;
+      } else {
         window.open(whatsappUrl, "_blank");
       }
     } finally {
