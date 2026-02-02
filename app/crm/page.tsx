@@ -39,6 +39,7 @@ import {
   Mail,
   ExternalLink,
   FileText,
+  LayoutDashboard,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import { LeadCard } from "@/components/crm/LeadCard";
@@ -360,9 +361,10 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => router.push("/admin")}
+              onClick={() => router.push("/dashboard")}
               className="border-brand-border text-brand-text"
             >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
               Dashboard
             </Button>
             <Button

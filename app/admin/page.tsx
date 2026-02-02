@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Search,
   Lock,
+  LayoutDashboard,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import { motion } from "framer-motion";
@@ -213,6 +214,15 @@ export default function AdminDashboard() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/dashboard")}
+              className="border-brand-border text-brand-textSecondary"
+            >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Dashboard
+            </Button>
             <Button
               variant="outline"
               size="sm"
