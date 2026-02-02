@@ -140,32 +140,19 @@ export default function ResumenPage() {
       let mensaje = "";
 
       if (tipo === "reserva") {
-        mensaje = `Hola Constructora Colombia!
+        mensaje = `Hola! Vengo de la web de Constructora Colombia. 🏗️
 
-Acabo de finalizar mi presupuesto personalizado.
+Ya tengo mi presupuesto listo para ${proyectoData?.nombre} (${numeroCotizacion}).
 
-${success ? `VER PRESUPUESTO COMPLETO:\n${publicUrl}\n` : "El PDF se generó pero hubo un problema al subirlo. Por favor envíenmelo por email.\n"}
+${success ? `🔗 Ver Detalle:\n${publicUrl}\n` : ""}
 ━━━━━━━━━━━━━━━━━━━━━━
 
-*COTIZACIÓN:* ${numeroCotizacion}
-*PROYECTO:* ${proyectoData?.nombre}
-*UBICACIÓN:* ${proyectoData?.ubicacion}
-*INVERSIÓN TOTAL:* ${formatoPrecio(getTotal())}
-
-━━━━━━━━━━━━━━━━━━━━━━
-*QUIERO RESERVAR MI CUPO*
-━━━━━━━━━━━━━━━━━━━━━━
-
-Quiero aprovechar la oferta, congelar el precio de los materiales y reservar mi cupo para este mes.
-
-*ABONO DE RESERVA:* $500.000
+Quiero asegurar mi precio actual antes de que suban los insumos. Sigue disponible el cupo de reserva por $500.000 para este mes? ⏳💸
 
 *DATOS DE CONTACTO:*
 Nombre: ${clienteNombre || "Por definir"}
-Teléfono: ${clienteTelefono || "Por definir"}
-${clienteEmail ? `Email: ${clienteEmail}` : ""}
-
-Me ayudan con el siguiente paso?`;
+Telefono: ${clienteTelefono || "Por definir"}
+${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
       } else {
         mensaje = `Hola!
 
