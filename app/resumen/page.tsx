@@ -10,6 +10,7 @@ import { subirPresupuesto } from "@/lib/utils/storage-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Clock, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { CierreVentaExpress } from "@/components/CierreVentaExpress";
 
@@ -66,6 +67,8 @@ export default function ResumenPage() {
     clienteEmail,
   } = useCotizador();
   const [generandoPDF, setGenerandoPDF] = useState(false);
+  const [emailEnviado, setEmailEnviado] = useState(false);
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
 
   const proyectoData = proyectos.find((p) => p.id === proyecto);
   const planData =
@@ -80,6 +83,101 @@ export default function ResumenPage() {
       router.push("/");
     }
   }, [planBase, proyecto, router]);
+
+  const enviarPresupuestoPorEmail = async (
+    pdfUrl: string,
+    numeroCotizacion: string
+  ) => {
+    if (!clienteEmail || emailEnviado) return;
+
+    setEnviandoEmail(true);
+
+    try {
+      const response = await fetch("/api/enviar-presupuesto", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clienteNombre,
+          clienteEmail,
+          numeroCotizacion,
+          proyecto: proyectoData?.nombre,
+          total: formatoPrecio(getTotal()),
+          pdfUrl,
+        }),
+      });
+
+      if (response.ok) {
+        setEmailEnviado(true);
+        console.log("✅ Email enviado exitosamente");
+      } else {
+        console.error("❌ Error enviando email");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setEnviandoEmail(false);
+    }
+  };
+
+  const generarYEnviarPresupuestoAutomatico = async () => {
+    if (!planData || !proyectoData) return;
+
+    setEnviandoEmail(true);
+
+    try {
+      const numeroCotizacion = `COT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, "0")}`;
+
+      const pdfData = {
+        numeroConsecutivo: numeroCotizacion,
+        fecha: new Date().toLocaleDateString("es-CO", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+        cliente: {
+          nombre: clienteNombre || "Cliente",
+          telefono: clienteTelefono || "",
+          email: clienteEmail || undefined,
+        },
+        proyecto: {
+          nombre: proyectoData?.nombre || "Proyecto",
+          ubicacion: proyectoData?.ubicacion || "Bucaramanga",
+        },
+        plan: {
+          nombre: planData.nombre,
+          precio: getPrecioPlanBase(),
+          tiempoEntrega: planData.tiempoEntrega,
+          incluye: [...planData.incluye],
+          bonus: [...planData.bonus],
+        },
+        adicionales: adicionales.map((a) => ({
+          nombre: a.nombre,
+          precio: a.precio,
+        })),
+        total: getTotal(),
+      };
+
+      const pdfBlob = await generarCotizacionPDF(pdfData);
+      const fileName = `Cotizacion_${(proyectoData?.nombre || "Proyecto").replace(/\s/g, "_")}_${numeroCotizacion}.pdf`;
+      const { success, publicUrl } = await subirPresupuesto(pdfBlob, fileName);
+
+      if (success && publicUrl) {
+        await enviarPresupuestoPorEmail(publicUrl, numeroCotizacion);
+      }
+    } catch (error) {
+      console.error("Error enviando presupuesto automático:", error);
+    } finally {
+      setEnviandoEmail(false);
+    }
+  };
+
+  useEffect(() => {
+    if (planBase && proyecto && clienteEmail && !emailEnviado) {
+      void generarYEnviarPresupuestoAutomatico();
+    }
+  }, [planBase, proyecto, clienteEmail]);
 
   if (!planBase || !proyecto || !planData) {
     return null;
@@ -188,9 +286,10 @@ Me gustaría resolver algunas dudas antes de continuar. Podrían ayudarme?`;
         window.open(whatsappUrl, "_blank");
       }
 
-      // 7. Logs para debugging
-      if (success) {
-        console.log("✅ Proceso completado exitosamente");
+      // 7. Enviar email automáticamente si hay éxito
+      if (success && publicUrl) {
+        console.log("✅ PDF subido exitosamente:", publicUrl);
+        await enviarPresupuestoPorEmail(publicUrl, numeroCotizacion);
         console.log("📎 URL del PDF:", publicUrl);
         console.log("📱 Abriendo WhatsApp...");
       } else {
@@ -244,6 +343,42 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
             Revisa el detalle completo de tu remodelación
           </p>
         </div>
+
+        {/* Banner de confirmación de email */}
+        {emailEnviado && clienteEmail && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-xl border-2 border-green-500 bg-gradient-to-r from-green-900/30 to-emerald-900/30 p-4"
+          >
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-400" />
+              <div className="flex-1">
+                <h3 className="mb-1 font-bold text-brand-text">
+                  ✅ ¡Presupuesto enviado a tu correo!
+                </h3>
+                <p className="text-sm text-brand-textSecondary">
+                  Ya tienes el presupuesto detallado en{" "}
+                  <span className="font-semibold text-brand-primary">
+                    {clienteEmail}
+                  </span>{" "}
+                  para que lo revises con calma.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {enviandoEmail && !emailEnviado && (
+          <div className="mb-6 rounded-xl border-2 border-blue-500 bg-blue-900/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-brand-primary"></div>
+              <p className="text-sm text-brand-textSecondary">
+                Enviando presupuesto a tu correo...
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Columna principal - Resumen expandido */}
