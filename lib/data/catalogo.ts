@@ -663,28 +663,29 @@ export const adicionalesPorCategoria = (categoria: string) => {
   return adicionales.filter((p) => p.categoria === categoria);
 };
 
-// Items que no se muestran nunca como adicionales (ya van en el plan base)
+// Items que no se muestran nunca en personalizar (quitados de la página)
 const itemsExcluidosSiempre = [
-  "estuco",
-  "pintura",
-  "mortero",
-  "drywall",
-  "ceramica-piso",
-  "salpicadero",
-  "zona-humeda",
-  "nicho",
-  "luminarias",
+  "estuco",           // Estuco muros y techo
+  "pintura",          // Pintura 3 manos
+  "mortero",          // Mortero nivelación
+  "drywall",          // Drywall baños y cocina
+  "ceramica-piso",    // Enchape cerámica piso
+  "salpicadero",      // Enchape salpicadero
+  "zona-humeda",      // Enchapar zona húmeda
 ];
 
-// Items ya incluidos en Plan Intermedio (no mostrarlos como adicionales si plan es intermedio)
+// Solo para Plan Intermedio: no mostrar (ya incluidos en el plan)
 const itemsIncluidosIntermedio = [
-  "combo-basico",
-  "meson-granito",
-  "barra-soporte",
-  "mueble-cocina",
-  "closet-principal",
-  "closet-secundario",
-  "division-vidrio",
+  "enchape-bano-aux",   // Demolición + Enchape baño aux
+  "complementar-enchape", // Complementar enchape baño
+  "nicho",              // Nicho iluminado
+  "combo-basico",       // Combo básico baño
+  "meson-granito",      // Mesón granito cocina
+  "barra-soporte",      // Barra granito con soporte
+  "mueble-cocina",      // Mueble cocina RH completo
+  "closet-principal",   // Closet habitación principal
+  "closet-secundario",  // Closet habitación secundaria
+  "division-vidrio",    // División vidrio baño
 ];
 
 export const adicionalesFiltrados = (planTipo: "basico" | "intermedio") => {
