@@ -35,6 +35,8 @@ export default function AdicionalesPage() {
     }
   }, [proyecto, planBase, router]);
 
+  // Filtrado dinámico: planBase (selectedPlan) persiste desde /plan; evita mostrar
+  // lo que ya viene incluido en el plan (sobre todo Intermedio) para no cobrar doble.
   const productos = planBase ? adicionalesFiltrados(planBase) : [];
 
   const productosPorCategoria = categorias

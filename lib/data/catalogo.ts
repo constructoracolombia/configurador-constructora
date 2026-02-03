@@ -663,39 +663,52 @@ export const adicionalesPorCategoria = (categoria: string) => {
   return adicionales.filter((p) => p.categoria === categoria);
 };
 
-// Items que no se muestran nunca en personalizar (quitados de la página)
+// ═══════════════════════════════════════════════════════════════════════════
+// LÓGICA DE FILTRADO DINÁMICO: Plan vs. Adicionales (evitar duplicidad)
+// Lo que ya "viene incluido" en un plan NO debe aparecer como opción de compra.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** 1. Limpieza inicial – base estructural mínima. Eliminación permanente en /personalizar.
+ *   Códigos de referencia: 3.Estuco, 4.Pintura, 5.Mortero, 15.Salpicadero, 8.Drywall, 6.Ceramica, 16.Zona húmeda. */
 const itemsExcluidosSiempre = [
-  "estuco",           // Estuco muros y techo
-  "pintura",          // Pintura 3 manos
-  "mortero",          // Mortero nivelación
-  "drywall",          // Drywall baños y cocina
-  "ceramica-piso",    // Enchape cerámica piso
-  "salpicadero",      // Enchape salpicadero
-  "zona-humeda",      // Enchapar zona húmeda
+  "estuco",
+  "pintura",
+  "mortero",
+  "drywall",
+  "ceramica-piso",
+  "salpicadero",
+  "zona-humeda",
 ];
 
-// Solo para Plan Intermedio: no mostrar (ya incluidos en el plan)
+/** 2. Solo cuando plan === 'intermedio': ocultar (ya incluidos en el precio, no pagar doble).
+ *   Códigos: 10, 11, 12, 13, 40, 41, 63, 66, 68, 59. */
 const itemsIncluidosIntermedio = [
-  "enchape-bano-aux",   // Demolición + Enchape baño aux
-  "complementar-enchape", // Complementar enchape baño
-  "nicho",              // Nicho iluminado
-  "combo-basico",       // Combo básico baño
-  "meson-granito",      // Mesón granito cocina
-  "barra-soporte",      // Barra granito con soporte
-  "mueble-cocina",      // Mueble cocina RH completo
-  "closet-principal",   // Closet habitación principal
-  "closet-secundario",  // Closet habitación secundaria
-  "division-vidrio",    // División vidrio baño
+  "enchape-bano-aux",
+  "complementar-enchape",
+  "nicho",
+  "combo-basico",
+  "meson-granito",
+  "barra-soporte",
+  "mueble-cocina",
+  "closet-principal",
+  "closet-secundario",
+  "division-vidrio",
 ];
 
+/**
+ * Lista de adicionales visibles en /personalizar según el plan elegido.
+ * - BÁSICO: todos los ítems del catálogo excepto los 7 de itemsExcluidosSiempre.
+ * - INTERMEDIO: además se ocultan los 10 de itemsIncluidosIntermedio (ya vienen en el plan).
+ * @param planTipo Debe venir del estado global (selectedPlan / planBase) persistido entre /plan y /personalizar.
+ */
 export const adicionalesFiltrados = (planTipo: "basico" | "intermedio") => {
-  let filtrados = adicionales.filter(
+  const sinBase = adicionales.filter(
     (item) => !itemsExcluidosSiempre.includes(item.id)
   );
   if (planTipo === "intermedio") {
-    filtrados = filtrados.filter(
+    return sinBase.filter(
       (item) => !itemsIncluidosIntermedio.includes(item.id)
     );
   }
-  return filtrados;
+  return sinBase;
 };
