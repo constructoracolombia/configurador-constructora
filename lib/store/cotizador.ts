@@ -5,10 +5,14 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { Producto } from "@/lib/data/catalogo";
 import { planesBase } from "@/lib/data/catalogo";
 
+export interface ProductoConCantidad extends Producto {
+  cantidad?: number;
+}
+
 interface CotizadorState {
   proyecto: string | null;
   planBase: "basico" | "intermedio" | null;
-  adicionales: Producto[];
+  adicionales: ProductoConCantidad[];
   clienteNombre: string;
   clienteTelefono: string;
   clienteEmail: string;
@@ -19,6 +23,10 @@ interface CotizadorActions {
   setPlanBase: (plan: "basico" | "intermedio") => void;
   addAdicional: (producto: Producto) => void;
   removeAdicional: (id: string) => void;
+  toggleAdicional: (producto: Producto) => void;
+  incrementarCantidad: (id: string, max?: number) => void;
+  decrementarCantidad: (id: string) => void;
+  getCantidad: (id: string) => number;
   clearAdicionales: () => void;
   setClienteInfo: (nombre: string, telefono: string, email: string) => void;
   reset: () => void;
@@ -66,12 +74,62 @@ export const useCotizador = create<CotizadorStore>()(
           return;
         }
 
-        const nuevosAdicionales = [...state.adicionales, producto];
+        const nuevosAdicionales = [
+          ...state.adicionales,
+          { ...producto, cantidad: 1 },
+        ];
         if (process.env.NODE_ENV === "development") {
           console.log("✅ Producto agregado:", producto.nombre);
           console.log("📊 Adicionales actuales:", nuevosAdicionales.length);
         }
         set({ adicionales: nuevosAdicionales });
+      },
+
+      toggleAdicional: (producto) =>
+        set((state) => {
+          const existe = state.adicionales.find((p) => p.id === producto.id);
+          if (existe) {
+            return {
+              adicionales: state.adicionales.filter((p) => p.id !== producto.id),
+            };
+          }
+          return {
+            adicionales: [
+              ...state.adicionales,
+              { ...producto, cantidad: 1 } as ProductoConCantidad,
+            ],
+          };
+        }),
+
+      incrementarCantidad: (id, max = 10) =>
+        set((state) => {
+          const adicionales = state.adicionales.map((p) => {
+            if (p.id === id && (p.cantidad ?? 1) < max) {
+              return { ...p, cantidad: (p.cantidad ?? 1) + 1 };
+            }
+            return p;
+          });
+          return { adicionales };
+        }),
+
+      decrementarCantidad: (id) =>
+        set((state) => {
+          const adicionales = state.adicionales
+            .map((p) => {
+              if (p.id === id) {
+                const nuevaCantidad = (p.cantidad ?? 1) - 1;
+                if (nuevaCantidad <= 0) return null;
+                return { ...p, cantidad: nuevaCantidad };
+              }
+              return p;
+            })
+            .filter(Boolean) as ProductoConCantidad[];
+          return { adicionales };
+        }),
+
+      getCantidad: (id) => {
+        const producto = get().adicionales.find((p) => p.id === id);
+        return producto?.cantidad ?? 0;
       },
 
       removeAdicional: (id) => {
@@ -131,7 +189,7 @@ export const useCotizador = create<CotizadorStore>()(
       getPrecioAdicionales: () => {
         const state = get();
         return state.adicionales.reduce(
-          (sum, item) => sum + item.precio,
+          (sum, item) => sum + item.precio * (item.cantidad ?? 1),
           0
         );
       },

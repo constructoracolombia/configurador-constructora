@@ -112,10 +112,13 @@ export default function ResumenPage() {
         numero_cotizacion: numeroCotizacion,
         estado_crm: "NUEVO",
         posicion_kanban: 0,
-        adicionales: adicionales.map((a) => ({
-          nombre: a.nombre,
-          precio: a.precio,
-        })),
+        adicionales: adicionales.map((a) => {
+          const qty = a.cantidad ?? 1;
+          return {
+            nombre: qty > 1 ? `${a.nombre} (×${qty})` : a.nombre,
+            precio: a.precio * qty,
+          };
+        }),
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       });
 
@@ -203,10 +206,13 @@ export default function ResumenPage() {
           incluye: [...planData.incluye],
           bonus: [...planData.bonus],
         },
-        adicionales: adicionales.map((a) => ({
-          nombre: a.nombre,
-          precio: a.precio,
-        })),
+        adicionales: adicionales.map((a) => {
+          const qty = a.cantidad ?? 1;
+          return {
+            nombre: qty > 1 ? `${a.nombre} (×${qty})` : a.nombre,
+            precio: a.precio * qty,
+          };
+        }),
         total: getTotal(),
       };
 
@@ -275,10 +281,13 @@ export default function ResumenPage() {
           incluye: [...planData.incluye],
           bonus: [...planData.bonus],
         },
-        adicionales: adicionales.map((a) => ({
-          nombre: a.nombre,
-          precio: a.precio,
-        })),
+        adicionales: adicionales.map((a) => {
+          const qty = a.cantidad ?? 1;
+          return {
+            nombre: qty > 1 ? `${a.nombre} (×${qty})` : a.nombre,
+            precio: a.precio * qty,
+          };
+        }),
         total: getTotal(),
       };
 
@@ -554,19 +563,28 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {adicionales.map((adicional, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between border-b border-brand-border py-2 last:border-0"
-                      >
-                        <span className="text-brand-textSecondary">
-                          {adicional.nombre}
-                        </span>
-                        <span className="font-semibold text-brand-primary">
-                          {formatoPrecio(adicional.precio)}
-                        </span>
-                      </div>
-                    ))}
+                    {adicionales.map((adicional, index) => {
+                      const qty = adicional.cantidad ?? 1;
+                      const lineTotal = adicional.precio * qty;
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between border-b border-brand-border py-2 last:border-0"
+                        >
+                          <span className="text-brand-textSecondary">
+                            {adicional.nombre}
+                            {qty > 1 && (
+                              <span className="ml-1 text-brand-primary">
+                                ×{qty}
+                              </span>
+                            )}
+                          </span>
+                          <span className="font-semibold text-brand-primary">
+                            {formatoPrecio(lineTotal)}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -610,7 +628,11 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                         </span>
                         <span className="text-brand-text">
                           {formatoPrecio(
-                            adicionales.reduce((sum, a) => sum + a.precio, 0)
+                            adicionales.reduce(
+                              (sum, a) =>
+                                sum + a.precio * (a.cantidad ?? 1),
+                              0
+                            )
                           )}
                         </span>
                       </div>

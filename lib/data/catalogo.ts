@@ -84,6 +84,7 @@ export const planesBase = {
       "Aseo final",
     ],
     bonus: [
+      "Nicho iluminado en ducha",
       "Tendedero abatible",
       "Ducha elegante + mezclador",
       "Asesoría arquitectónica",
@@ -114,6 +115,7 @@ export const planesBase = {
       "Closet secundario RH",
     ],
     bonus: [
+      "Nicho iluminado en ducha",
       "Tendedero abatible",
       "Ducha elegante + mezclador",
       "Asesoría arquitectónica",
@@ -135,6 +137,8 @@ export interface Producto {
   categoria: string;
   imagen: string;
   codigo?: string;
+  permiteMultiples?: boolean;
+  maxCantidad?: number;
 }
 
 export const adicionales: Producto[] = [
@@ -155,7 +159,7 @@ export const adicionales: Producto[] = [
     descripcion: "Pintura blanca profesional tipo 1 y 2",
     precio: 1_660_800,
     categoria: "Preliminares",
-    imagen: "/productos/4. Pintura.jpg",
+    imagen: "/productos/4.Pintura.jpg",
   },
   {
     id: "mortero",
@@ -192,16 +196,16 @@ export const adicionales: Producto[] = [
     descripcion: "Piso general con guardaescobas + balcón",
     precio: 4_567_200,
     categoria: "Enchapes",
-    imagen: "/productos/6. Ceramica.jpg",
+    imagen: "/productos/6.Ceramica.jpg",
   },
   {
     id: "porcelanato",
     codigo: "7",
-    nombre: "Porcelanato piso completo",
+    nombre: "Mejorar a porcelanato",
     descripcion: "Upgrade a porcelanato 60x60 con guardaescobas",
     precio: 1_428_000,
     categoria: "Enchapes",
-    imagen: "/productos/7. Porcelanato.jpg",
+    imagen: "/productos/7.Mejorar-Porcelanato.jpg",
   },
   {
     id: "enchape-bano-principal",
@@ -275,6 +279,8 @@ export const adicionales: Producto[] = [
     precio: 1_696_800,
     categoria: "Baños",
     imagen: "/productos/14.Baño-premium.jpg",
+    permiteMultiples: true,
+    maxCantidad: 2,
   },
   {
     id: "tuberia-agua-caliente",
@@ -283,7 +289,7 @@ export const adicionales: Producto[] = [
     descripcion: "Acometida a 2 duchas + punto calentador",
     precio: 1_800_000,
     categoria: "Baños",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/19.Tubería-agua-caliente-2-duchas.jpg",
   },
   {
     id: "calentador",
@@ -292,7 +298,7 @@ export const adicionales: Producto[] = [
     descripcion: "Calentador a batería instalado",
     precio: 1_080_000,
     categoria: "Baños",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/20.Calentador.jpg",
   },
   {
     id: "lavadero-enchapado",
@@ -466,7 +472,9 @@ export const adicionales: Producto[] = [
     descripcion: "Puerta con marco melamina mate",
     precio: 960_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/61. Puerta.jpg",
+    permiteMultiples: true,
+    maxCantidad: 4,
   },
   {
     id: "puerta-corredera",
@@ -493,7 +501,7 @@ export const adicionales: Producto[] = [
     descripcion: "Melamina RH completo",
     precio: 3_480_000,
     categoria: "Carpintería",
-    imagen: "/productos/64-closet-principal.jpg.JPG",
+    imagen: "/productos/66-closet-principal.jpg.JPG",
   },
   {
     id: "closet-espaldar",
@@ -575,7 +583,9 @@ export const adicionales: Producto[] = [
     descripcion: "Espejo iluminado moderno",
     precio: 420_000,
     categoria: "Vidrios",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/56.Espejo.jpg",
+    permiteMultiples: true,
+    maxCantidad: 3,
   },
   {
     id: "division-vidrio",
@@ -594,7 +604,7 @@ export const adicionales: Producto[] = [
     descripcion: "Cambio de 10 plafones por LED",
     precio: 144_000,
     categoria: "Otros",
-    imagen: "/productos/18. Luminarias.jpg",
+    imagen: "/productos/17.Luminarias.jpg",
   },
   {
     id: "cerradura-inteligente",
@@ -603,7 +613,7 @@ export const adicionales: Producto[] = [
     descripcion: "Con enchape madera interno",
     precio: 1_020_000,
     categoria: "Otros",
-    imagen: "/productos/21. Cerradura-inteligente.jpg",
+    imagen: "/productos/21.Cerradura-inteligente.jpg",
   },
   {
     id: "malla-seguridad",
@@ -651,4 +661,40 @@ export const categorias = [
 
 export const adicionalesPorCategoria = (categoria: string) => {
   return adicionales.filter((p) => p.categoria === categoria);
+};
+
+// Items que no se muestran nunca como adicionales (ya van en el plan base)
+const itemsExcluidosSiempre = [
+  "estuco",
+  "pintura",
+  "mortero",
+  "drywall",
+  "ceramica-piso",
+  "salpicadero",
+  "zona-humeda",
+  "nicho",
+  "luminarias",
+];
+
+// Items ya incluidos en Plan Intermedio (no mostrarlos como adicionales si plan es intermedio)
+const itemsIncluidosIntermedio = [
+  "combo-basico",
+  "meson-granito",
+  "barra-soporte",
+  "mueble-cocina",
+  "closet-principal",
+  "closet-secundario",
+  "division-vidrio",
+];
+
+export const adicionalesFiltrados = (planTipo: "basico" | "intermedio") => {
+  let filtrados = adicionales.filter(
+    (item) => !itemsExcluidosSiempre.includes(item.id)
+  );
+  if (planTipo === "intermedio") {
+    filtrados = filtrados.filter(
+      (item) => !itemsIncluidosIntermedio.includes(item.id)
+    );
+  }
+  return filtrados;
 };

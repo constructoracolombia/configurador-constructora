@@ -1,316 +1,296 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCotizador } from "@/lib/store/cotizador";
-import {
-  adicionales as adicionalesCatalogo,
-  categorias,
-  adicionalesPorCategoria,
-} from "@/lib/data/catalogo";
+import { adicionalesFiltrados, categorias } from "@/lib/data/catalogo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-  TrendingUp,
-} from "lucide-react";
+import { Check, Sparkles, TrendingUp, Plus, Minus } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
-import { motion, AnimatePresence } from "framer-motion";
-import { ImagenOptimizada } from "@/components/ImagenOptimizada";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function AdicionalesPage() {
   const router = useRouter();
-  const store = useCotizador();
-  const seleccionados = store.adicionales;
-  const [categoriasAbiertas, setCategoriasAbiertas] = useState<string[]>([
-    categorias[0],
-  ]);
-  const [progresoCategoria, setProgresoCategoria] = useState(0);
+  const {
+    adicionales: seleccionados,
+    toggleAdicional,
+    incrementarCantidad,
+    decrementarCantidad,
+    getCantidad,
+    getTotal,
+    planBase,
+    proyecto,
+  } = useCotizador();
+
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [totalAnimado, setTotalAnimado] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!store.proyecto || !store.planBase) {
+    if (!proyecto || !planBase) {
       router.push("/");
     }
-  }, [store.proyecto, store.planBase, router]);
+  }, [proyecto, planBase, router]);
 
-  // Calcular progreso (% de categorías exploradas)
-  useEffect(() => {
-    const progreso = (categoriasAbiertas.length / categorias.length) * 100;
-    setProgresoCategoria(progreso);
-  }, [categoriasAbiertas]);
+  const productos = planBase ? adicionalesFiltrados(planBase) : [];
 
-  // Animar contador de total (solo adicionales)
+  const productosPorCategoria = categorias
+    .map((cat) => ({
+      categoria: cat,
+      productos: productos.filter((p) => p.categoria === cat),
+    }))
+    .filter((g) => g.productos.length > 0);
+
   useEffect(() => {
-    const totalFinal = seleccionados.reduce((sum, p) => sum + p.precio, 0);
-    const diff = totalFinal - totalAnimado;
-    if (Math.abs(diff) < 1) {
-      setTotalAnimado(totalFinal);
-      return;
-    }
-    const duracion = 400;
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const trackLength = documentHeight - windowHeight;
+      if (trackLength <= 0) {
+        setScrollProgress(100);
+        return;
+      }
+      const progress = (scrollTop / trackLength) * 100;
+      setScrollProgress(Math.min(100, Math.max(0, progress)));
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [productosPorCategoria.length]);
+
+  useEffect(() => {
+    const totalFinal = seleccionados.reduce(
+      (sum, p) => sum + p.precio * (p.cantidad ?? 1),
+      0
+    );
+    const duracion = 500;
     const steps = Math.max(1, Math.floor(duracion / 16));
-    const incremento = diff / steps;
     let step = 0;
     const interval = setInterval(() => {
-      step += 1;
       setTotalAnimado((prev) => {
+        const diff = totalFinal - prev;
+        const incremento = diff / (steps - step || 1);
+        step += 1;
         const siguiente = prev + incremento;
         if (step >= steps) return totalFinal;
         return siguiente;
       });
-      if (step >= steps) clearInterval(interval);
     }, 16);
     return () => clearInterval(interval);
   }, [seleccionados]);
-
-  const toggleCategoria = (cat: string) => {
-    setCategoriasAbiertas((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
-  };
 
   const estaSeleccionado = (id: string) => {
     return seleccionados.some((p) => p.id === id);
   };
 
-  const toggleAdicional = (producto: (typeof adicionalesCatalogo)[number]) => {
-    if (estaSeleccionado(producto.id)) {
-      store.removeAdicional(producto.id);
-    } else {
-      store.addAdicional(producto);
-    }
+  const getCantidadItem = (id: string) => {
+    return getCantidad(id);
   };
 
-  if (!store.proyecto || !store.planBase) {
+  if (!planBase || !proyecto) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-dark via-black to-brand-dark pb-20">
-      {/* Barra de progreso superior */}
+    <div
+      ref={containerRef}
+      className="min-h-screen bg-gradient-to-br from-brand-dark via-black to-brand-dark pb-32"
+    >
+      {/* Barra de progreso superior FIJA */}
       <div className="fixed left-0 right-0 top-0 z-50 border-b border-brand-border bg-brand-dark/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-4xl p-4">
+        <div className="mx-auto max-w-6xl p-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs text-brand-textSecondary">
-              Explorado: {categoriasAbiertas.length} / {categorias.length} áreas
+              Progreso de personalización
             </span>
             <span className="text-xs font-bold text-brand-primary">
-              {Math.round(progresoCategoria)}%
+              {Math.round(scrollProgress)}%
             </span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-brand-border">
             <motion.div
-              className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary"
-              initial={{ width: 0 }}
-              animate={{ width: `${progresoCategoria}%` }}
-              transition={{ duration: 0.5 }}
+              className="h-full bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-primary"
+              style={{ width: `${scrollProgress}%` }}
+              transition={{ duration: 0.1 }}
             />
           </div>
         </div>
       </div>
 
-      {/* Contenido principal */}
-      <div className="mx-auto max-w-4xl px-4 pb-32 pt-24">
+      {/* Header */}
+      <div className="mx-auto max-w-6xl px-4 pb-8 pt-24">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 text-center"
+          className="text-center"
         >
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/50 bg-brand-primary/20 px-4 py-2">
             <Sparkles className="h-4 w-4 text-brand-primary" />
             <span className="text-sm font-semibold text-brand-primary">
-              Personaliza tu hogar
+              Personaliza tu{" "}
+              {planBase === "basico" ? "Plan Básico" : "Plan Intermedio Plus"}
             </span>
           </div>
           <h1 className="mb-2 text-3xl font-bold text-brand-text md:text-4xl">
             Arma tu Remodelación Perfecta
           </h1>
           <p className="text-brand-textSecondary">
-            Selecciona los acabados premium que desees agregar
+            Agrega los acabados premium que desees • Scroll para explorar
           </p>
         </motion.div>
-
-        {/* Categorías colapsables */}
-        <div className="space-y-4">
-          {categorias.map((categoria, idx) => {
-            const productos = adicionalesPorCategoria(categoria);
-            const abierta = categoriasAbiertas.includes(categoria);
-            const seleccionadosEnCategoria = productos.filter((p) =>
-              estaSeleccionado(p.id)
-            ).length;
-
-            return (
-              <motion.div
-                key={categoria}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-              >
-                <Card
-                  className={`border-2 bg-brand-card transition-all ${
-                    abierta
-                      ? "border-brand-primary shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
-                      : "border-brand-border"
-                  }`}
-                >
-                  {/* Header de categoría */}
-                  <button
-                    type="button"
-                    onClick={() => toggleCategoria(categoria)}
-                    className="flex w-full items-center justify-between p-4 transition-colors hover:bg-brand-dark/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                          seleccionadosEnCategoria > 0
-                            ? "bg-brand-primary text-black"
-                            : "bg-brand-dark text-brand-textSecondary"
-                        }`}
-                      >
-                        {seleccionadosEnCategoria > 0 ? (
-                          <span className="font-bold">
-                            {seleccionadosEnCategoria}
-                          </span>
-                        ) : (
-                          <span className="text-lg">✨</span>
-                        )}
-                      </div>
-                      <div className="text-left">
-                        <h3 className="font-bold text-brand-text">
-                          {categoria}
-                        </h3>
-                        <p className="text-xs text-brand-textSecondary">
-                          {productos.length} opciones disponibles
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {seleccionadosEnCategoria > 0 && (
-                        <Badge className="bg-brand-primary text-black">
-                          {seleccionadosEnCategoria} agregados
-                        </Badge>
-                      )}
-                      {abierta ? (
-                        <ChevronUp className="h-5 w-5 text-brand-primary" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-brand-textSecondary" />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Grid de productos */}
-                  <AnimatePresence>
-                    {abierta && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="grid grid-cols-1 gap-3 p-4 pt-0 md:grid-cols-2">
-                          {productos.map((producto) => {
-                            const seleccionado = estaSeleccionado(producto.id);
-
-                            return (
-                              <motion.div
-                                key={producto.id}
-                                layout
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                              >
-                                <Card
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={() => toggleAdicional(producto)}
-                                  onKeyDown={(e) => {
-                                    if (
-                                      e.key === "Enter" ||
-                                      e.key === " "
-                                    ) {
-                                      e.preventDefault();
-                                      toggleAdicional(producto);
-                                    }
-                                  }}
-                                  className={`cursor-pointer transition-all ${
-                                    seleccionado
-                                      ? "border-2 border-brand-primary bg-brand-primary/10 shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
-                                      : "border border-brand-border bg-brand-dark hover:border-brand-primary/50"
-                                  }`}
-                                >
-                                  <CardContent className="p-3">
-                                    <div className="flex gap-3">
-                                      {/* Imagen */}
-                                      <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-brand-border">
-                                        {!producto.imagen.includes(
-                                          "placeholder"
-                                        ) ? (
-                                          <ImagenOptimizada
-                                            src={producto.imagen}
-                                            alt={producto.nombre}
-                                            width={80}
-                                            height={80}
-                                            className="h-full w-full object-cover"
-                                          />
-                                        ) : (
-                                          <div className="flex h-full w-full items-center justify-center text-2xl text-brand-textSecondary">
-                                            🏗️
-                                          </div>
-                                        )}
-                                        {seleccionado && (
-                                          <div className="absolute inset-0 flex items-center justify-center bg-brand-primary/90">
-                                            <Check className="h-8 w-8 text-black" />
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* Info */}
-                                      <div className="min-w-0 flex-1">
-                                        <h4 className="mb-1 truncate text-sm font-semibold text-brand-text">
-                                          {producto.nombre}
-                                        </h4>
-                                        <p className="mb-2 line-clamp-2 text-xs text-brand-textSecondary">
-                                          {producto.descripcion}
-                                        </p>
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-sm font-bold text-brand-primary">
-                                            {formatoPrecio(producto.precio)}
-                                          </span>
-                                          {producto.codigo && (
-                                            <span className="text-xs text-brand-textSecondary">
-                                              #{producto.codigo}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </motion.div>
-                            );
-                          })}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Footer sticky con total animado */}
-      <div className="fixed bottom-0 left-0 right-0 border-t-2 border-brand-primary bg-brand-dark/95 p-4 shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] backdrop-blur-sm">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
+      {/* Contenido principal - Layout vertical por categorías */}
+      <div className="mx-auto max-w-6xl space-y-12 px-4">
+        {productosPorCategoria.map((grupo, grupoIdx) => (
+          <motion.div
+            key={grupo.categoria}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ delay: grupoIdx * 0.05 }}
+          >
+            <div className="mb-6">
+              <h2 className="mb-2 text-2xl font-bold text-brand-text">
+                {grupo.categoria}
+              </h2>
+              <div className="h-1 w-20 rounded-full bg-brand-primary" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {grupo.productos.map((producto, idx) => {
+                const seleccionado = estaSeleccionado(producto.id);
+                const cantidad = getCantidadItem(producto.id);
+                const permiteMultiples = producto.permiteMultiples;
+
+                return (
+                  <motion.div
+                    key={producto.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.02 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Card
+                      onClick={() =>
+                        !permiteMultiples && toggleAdicional(producto)
+                      }
+                      className={`h-full cursor-pointer transition-all ${
+                        seleccionado
+                          ? "border-2 border-brand-primary bg-brand-primary/10 shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
+                          : "border border-brand-border bg-brand-card hover:border-brand-primary/50"
+                      }`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="relative mb-3 aspect-[3/2] w-full overflow-hidden rounded-lg bg-brand-border">
+                          {producto.imagen &&
+                          !producto.imagen.includes("placeholder") ? (
+                            <Image
+                              src={producto.imagen}
+                              alt={producto.nombre}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-4xl text-brand-textSecondary">
+                              🏗️
+                            </div>
+                          )}
+
+                          <div className="absolute right-2 top-2">
+                            <Badge className="bg-brand-primary text-xs text-black">
+                              {producto.categoria}
+                            </Badge>
+                          </div>
+
+                          {seleccionado && !permiteMultiples && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-brand-primary/90">
+                              <Check className="h-12 w-12 text-black" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="mb-1 text-sm font-semibold text-brand-text">
+                            {producto.nombre}
+                          </h4>
+                          <p className="mb-3 line-clamp-2 text-xs text-brand-textSecondary">
+                            {producto.descripcion}
+                          </p>
+
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className="text-base font-bold text-brand-primary">
+                              {formatoPrecio(producto.precio)}
+                            </span>
+                            {producto.codigo && (
+                              <span className="text-xs text-brand-textSecondary">
+                                #{producto.codigo}
+                              </span>
+                            )}
+                          </div>
+
+                          {permiteMultiples && (
+                            <div className="mt-3 flex items-center justify-center gap-3">
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  decrementarCantidad(producto.id);
+                                }}
+                                disabled={cantidad === 0}
+                                className="h-8 w-8 bg-brand-dark p-0 hover:bg-brand-border"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+
+                              <span className="w-8 text-center text-lg font-bold text-brand-text">
+                                {cantidad}
+                              </span>
+
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (cantidad === 0) {
+                                    toggleAdicional(producto);
+                                  }
+                                  incrementarCantidad(
+                                    producto.id,
+                                    producto.maxCantidad ?? 10
+                                  );
+                                }}
+                                disabled={
+                                  cantidad >= (producto.maxCantidad ?? 10)
+                                }
+                                className="h-8 w-8 bg-brand-primary p-0 text-black hover:bg-brand-secondary"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Footer sticky con total */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t-2 border-brand-primary bg-brand-dark/95 p-4 shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div>
             <p className="mb-1 text-xs text-brand-textSecondary">
-              {seleccionados.length} adicionales seleccionados
+              {seleccionados.length} adicionales • {Math.round(scrollProgress)}%
+              explorado
             </p>
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-brand-primary" />
@@ -321,7 +301,7 @@ export default function AdicionalesPage() {
           </div>
           <Button
             onClick={() => router.push("/datos-cliente")}
-            className="rounded-lg bg-gradient-to-r from-brand-primary to-brand-secondary px-8 py-6 text-lg font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
+            className="rounded-lg bg-gradient-to-r from-brand-primary to-brand-secondary px-8 py-6 text-lg font-bold text-black shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] transition-all hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_4px_20px_0_rgba(255,184,0,0.3)]"
           >
             Continuar →
           </Button>
