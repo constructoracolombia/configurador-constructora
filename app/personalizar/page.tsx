@@ -25,12 +25,12 @@ export default function PersonalizarPage() {
     ? productos.filter((p) => p.categoria === categoriaSeleccionada)
     : productos;
 
-  const isProductoAgregado = (codigo: number): boolean =>
-    store.adicionales.some((a) => a.codigo === codigo);
+  const isProductoAgregado = (id: string): boolean =>
+    store.adicionales.some((a) => a.id === id);
 
   const handleToggleProducto = (producto: Producto) => {
-    if (isProductoAgregado(producto.codigo)) {
-      store.removeAdicional(producto.codigo);
+    if (isProductoAgregado(producto.id)) {
+      store.removeAdicional(producto.id);
     } else {
       store.addAdicional(producto);
     }
@@ -117,11 +117,11 @@ export default function PersonalizarPage() {
           <div className="flex-1">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {productosFiltrados.map((producto) => {
-                const agregado = isProductoAgregado(producto.codigo);
+                const agregado = isProductoAgregado(producto.id);
 
                 return (
                   <Card
-                    key={producto.codigo}
+                    key={producto.id}
                     className="group overflow-hidden border border-brand-border bg-brand-card transition-all hover:border-brand-primary"
                   >
                     <CardHeader className="relative p-0">

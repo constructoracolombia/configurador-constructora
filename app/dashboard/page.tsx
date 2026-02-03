@@ -21,7 +21,7 @@ import {
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { proyectos, productos } from "@/lib/data/catalogo";
+import { proyectos, adicionales } from "@/lib/data/catalogo";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
   // Valores dinámicos
   const numProyectos = proyectos.length;
-  const numAdicionales = productos.length;
+  const numAdicionales = adicionales.length;
   const numEstados = 6;
 
   const apps = [

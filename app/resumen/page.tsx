@@ -624,10 +624,7 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
 
         {/* Componente de Cierre de Venta */}
         <CierreVentaExpress
-          nombreCliente={clienteNombre}
-          telefonoCliente={clienteTelefono}
           onReservar={() => generarYCompartirPDF("reserva")}
-          onConsultar={() => generarYCompartirPDF("whatsapp")}
           generandoPDF={generandoPDF}
         />
 

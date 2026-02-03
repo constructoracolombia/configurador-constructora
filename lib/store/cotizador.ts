@@ -18,7 +18,7 @@ interface CotizadorActions {
   setProyecto: (proyecto: string) => void;
   setPlanBase: (plan: "basico" | "intermedio") => void;
   addAdicional: (producto: Producto) => void;
-  removeAdicional: (codigo: number) => void;
+  removeAdicional: (id: string) => void;
   clearAdicionales: () => void;
   setClienteInfo: (nombre: string, telefono: string, email: string) => void;
   reset: () => void;
@@ -58,7 +58,7 @@ export const useCotizador = create<CotizadorStore>()(
 
       addAdicional: (producto) => {
         const state = get();
-        const existe = state.adicionales.some((a) => a.codigo === producto.codigo);
+        const existe = state.adicionales.some((a) => a.id === producto.id);
         if (existe) {
           if (process.env.NODE_ENV === "development") {
             console.log("⚠️ Producto ya existe:", producto.nombre);
@@ -74,12 +74,10 @@ export const useCotizador = create<CotizadorStore>()(
         set({ adicionales: nuevosAdicionales });
       },
 
-      removeAdicional: (codigo) => {
+      removeAdicional: (id) => {
         const state = get();
-        const producto = state.adicionales.find((a) => a.codigo === codigo);
-        const nuevosAdicionales = state.adicionales.filter(
-          (a) => a.codigo !== codigo
-        );
+        const producto = state.adicionales.find((a) => a.id === id);
+        const nuevosAdicionales = state.adicionales.filter((a) => a.id !== id);
         if (process.env.NODE_ENV === "development") {
           console.log("❌ Producto removido:", producto?.nombre);
           console.log("📊 Adicionales restantes:", nuevosAdicionales.length);

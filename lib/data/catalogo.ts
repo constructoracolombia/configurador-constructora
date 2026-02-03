@@ -1,71 +1,67 @@
-// PROYECTOS DISPONIBLES
+// ═══════════════════════════════════════
+// PROYECTOS (para landing y flujo)
+// ═══════════════════════════════════════
 export const proyectos = [
   {
     id: "ciudadela-verde",
     nombre: "Ciudadela Verde",
     ubicacion: "Bucaramanga",
     precioIntermedioEspecial: true,
-    imagen: "/proyectos/ciudadela-verde.jpg.jpeg"
+    imagen: "/proyectos/ciudadela-verde.jpg.jpeg",
   },
   {
     id: "beltramonto",
     nombre: "Beltramonto",
     ubicacion: "Bucaramanga",
-    imagen: "/proyectos/beltramonto.jpg.jpeg"
+    imagen: "/proyectos/beltramonto.jpg.jpeg",
   },
   {
     id: "fiore",
     nombre: "Fiore",
     ubicacion: "Bucaramanga",
-    imagen: "/proyectos/fiore.jpg.png"
+    imagen: "/proyectos/fiore.jpg.png",
   },
   {
     id: "azafran",
     nombre: "Azafrán",
     ubicacion: "Bucaramanga",
-    imagen: "/proyectos/azafran.jpg.jpeg"
+    imagen: "/proyectos/azafran.jpg.jpeg",
   },
   {
     id: "parque-oriente",
     nombre: "Parque Oriente",
     ubicacion: "Floridablanca",
-    imagen: "/proyectos/parque-oriente.jpg.jpeg"
+    imagen: "/proyectos/parque-oriente.jpg.jpeg",
   },
   {
     id: "montebello",
     nombre: "Montebello",
     ubicacion: "Bucaramanga",
-    imagen: "/proyectos/montebello.jpg.jpeg"
+    imagen: "/proyectos/montebello.jpg.jpeg",
   },
   {
     id: "alto-tramonti",
     nombre: "Alto Tramonti",
     ubicacion: "Bucaramanga",
-    imagen: "/proyectos/alto-tramonti.jpg.jpeg"
+    imagen: "/proyectos/alto-tramonti.jpg.jpeg",
   },
   {
     id: "morada-del-viento",
     nombre: "Morada del Viento",
     ubicacion: "Bucaramanga",
-    imagen: "/proyectos/morada-del-viento.jpg.jpeg"
+    imagen: "/proyectos/morada-del-viento.jpg.jpeg",
   },
   {
     id: "fontana-de-la-sierra",
     nombre: "Fontana de la Sierra",
     ubicacion: "Bucaramanga",
-    imagen: "/proyectos/fontana-de-la-sierra.jpg.jpeg"
-  }
+    imagen: "/proyectos/fontana-de-la-sierra.jpg.jpeg",
+  },
 ] as const;
 
-export interface Producto {
-  codigo: number;
-  categoria: string;
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  imagen?: string;
-}
-
+// ═══════════════════════════════════════
+// PLANES BASE
+// ═══════════════════════════════════════
 export const planesBase = {
   basico: {
     id: "basico",
@@ -85,7 +81,7 @@ export const planesBase = {
       "Enchape salpicadero",
       "Enchape zona húmeda",
       "Luminarias LED",
-      "Aseo final"
+      "Aseo final",
     ],
     bonus: [
       "Tendedero abatible",
@@ -93,8 +89,8 @@ export const planesBase = {
       "Asesoría arquitectónica",
       "Recorrido virtual 360°",
       "Supervisión profesional",
-      "Garantía de calidad"
-    ]
+      "Garantía de calidad",
+    ],
   },
   intermedio: {
     id: "intermedio",
@@ -115,7 +111,7 @@ export const planesBase = {
       "3 Puertas RH",
       "Mueble cocina RH",
       "Closet principal RH",
-      "Closet secundario RH"
+      "Closet secundario RH",
     ],
     bonus: [
       "Tendedero abatible",
@@ -123,135 +119,536 @@ export const planesBase = {
       "Asesoría arquitectónica",
       "Recorrido virtual 360°",
       "Supervisión profesional",
-      "Garantía de calidad"
-    ]
-  }
+      "Garantía de calidad",
+    ],
+  },
 } as const;
 
-// Categorías reorganizadas por áreas
-export const categorias = [
-  "General",
-  "Cocina",
-  "Baños",
-  "Carpintería",
-  "Granitos y piedras",
-  "Vidrios y espejos",
-  "Iluminación",
-  "Seguridad",
-  "Otros"
-] as const;
+// ═══════════════════════════════════════
+// PRODUCTO Y ADICIONALES (54 ítems)
+// ═══════════════════════════════════════
+export interface Producto {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  categoria: string;
+  imagen: string;
+  codigo?: string;
+}
 
-// Productos reorganizados por áreas (usando rutas reales de public/productos/)
-export const productos: Producto[] = [
-  // GENERAL
+export const adicionales: Producto[] = [
+  // PRELIMINARES
   {
-    codigo: 7,
-    categoria: "General",
+    id: "estuco",
+    codigo: "3",
+    nombre: "Estuco muros y techo",
+    descripcion: "Superficies lisas y perfectas en todo el apartamento",
+    precio: 1_624_800,
+    categoria: "Preliminares",
+    imagen: "/productos/3.Estuco.jpg",
+  },
+  {
+    id: "pintura",
+    codigo: "4",
+    nombre: "Pintura 3 manos",
+    descripcion: "Pintura blanca profesional tipo 1 y 2",
+    precio: 1_660_800,
+    categoria: "Preliminares",
+    imagen: "/productos/4. Pintura.jpg",
+  },
+  {
+    id: "mortero",
+    codigo: "5",
+    nombre: "Mortero nivelación",
+    descripcion: "Nivelación de piso impermeabilizado",
+    precio: 1_766_400,
+    categoria: "Preliminares",
+    imagen: "/productos/5.Mortero.jpg",
+  },
+  {
+    id: "drywall",
+    codigo: "8",
+    nombre: "Drywall baños y cocina",
+    descripcion: "Descolgado para cubrir tubería expuesta",
+    precio: 720_000,
+    categoria: "Preliminares",
+    imagen: "/productos/8.Drywall.jpg",
+  },
+  {
+    id: "tuberia-aire",
+    codigo: "32",
+    nombre: "Tubería aire acondicionado",
+    descripcion: "Instalación certificada habitación principal",
+    precio: 1_920_000,
+    categoria: "Preliminares",
+    imagen: "/productos/placeholder.svg",
+  },
+  // ENCHAPES
+  {
+    id: "ceramica-piso",
+    codigo: "6",
+    nombre: "Enchape cerámica piso",
+    descripcion: "Piso general con guardaescobas + balcón",
+    precio: 4_567_200,
+    categoria: "Enchapes",
+    imagen: "/productos/6. Ceramica.jpg",
+  },
+  {
+    id: "porcelanato",
+    codigo: "7",
     nombre: "Porcelanato piso completo",
-    descripcion: "Enchape porcelanato 60mil/m²",
-    precio: 5_298_800,
-    imagen: "/productos/7. Porcelanato.jpg"
-  },
-
-  // COCINA
-  {
-    codigo: 61,
-    categoria: "Cocina",
-    nombre: "Mueble cocina RH completo",
-    descripcion: "Mueble cocina superior e inferior",
-    precio: 2_750_000,
-    imagen: "/productos/61-mueble-cocina.jpg.JPG"
+    descripcion: "Upgrade a porcelanato 60x60 con guardaescobas",
+    precio: 1_428_000,
+    categoria: "Enchapes",
+    imagen: "/productos/7. Porcelanato.jpg",
   },
   {
-    codigo: 24,
-    categoria: "Cocina",
-    nombre: "Estufa instalada",
-    descripcion: "Estufa con instalación",
-    precio: 520_000,
-    imagen: "/productos/24. Estufa.jpg"
+    id: "enchape-bano-principal",
+    codigo: "9",
+    nombre: "Enchape baño principal",
+    descripcion: "Pisos y muros completos con cerámica",
+    precio: 2_140_800,
+    categoria: "Enchapes",
+    imagen: "/productos/13.Baño-basico.jpg",
   },
-
-  // BAÑOS
   {
-    codigo: 12,
-    categoria: "Baños",
+    id: "enchape-bano-aux",
+    codigo: "10",
+    nombre: "Demolición + Enchape baño aux",
+    descripcion: "Demoler y enchapar pisos y muros",
+    precio: 2_380_800,
+    categoria: "Enchapes",
+    imagen: "/productos/9. Demolicion-baño.jpg",
+  },
+  {
+    id: "complementar-enchape",
+    codigo: "11",
+    nombre: "Complementar enchape baño",
+    descripcion: "Sin demoler el existente",
+    precio: 860_400,
+    categoria: "Enchapes",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "salpicadero",
+    codigo: "15",
+    nombre: "Enchape salpicadero",
+    descripcion: "60 cm por encima del mesón de cocina",
+    precio: 522_000,
+    categoria: "Enchapes",
+    imagen: "/productos/15.Salpicadero.jpg",
+  },
+  {
+    id: "zona-humeda",
+    codigo: "16",
+    nombre: "Enchapar zona húmeda",
+    descripcion: "Zona húmeda con cerámica",
+    precio: 1_371_600,
+    categoria: "Enchapes",
+    imagen: "/productos/placeholder.svg",
+  },
+  // BAÑOS Y ACCESORIOS
+  {
+    id: "nicho",
+    codigo: "12",
     nombre: "Nicho iluminado",
     descripcion: "Nicho LED en ducha",
-    precio: 228_800,
-    imagen: "/productos/12.nicho.JPG"
-  },
-  {
-    codigo: 13,
+    precio: 273_600,
     categoria: "Baños",
+    imagen: "/productos/12.nicho.JPG",
+  },
+  {
+    id: "combo-basico",
+    codigo: "13",
     nombre: "Combo básico baño",
-    descripcion: "Sanitario, lavamanos, grifería",
-    precio: 730_400,
-    imagen: "/productos/13.Baño-basico.jpg"
-  },
-
-  // CARPINTERÍA
-  {
-    codigo: 64,
-    categoria: "Carpintería",
-    nombre: "Closet habitación principal melamina RH",
-    descripcion: "Closet principal",
-    precio: 3_190_000,
-    imagen: "/productos/64-closet-principal.jpg.JPG"
+    descripcion: "Sanitario, lavamanos, grifería completa",
+    precio: 1_036_800,
+    categoria: "Baños",
+    imagen: "/productos/13.Baño-basico.jpg",
   },
   {
-    codigo: 66,
-    categoria: "Carpintería",
-    nombre: "Closet secundario RH",
-    descripcion: "Closet habitación secundaria",
-    precio: 2_090_000,
-    imagen: "/productos/66-closet-secundario.jpg.JPG"
+    id: "combo-premium",
+    codigo: "14",
+    nombre: "Combo Premium baño",
+    descripcion: "Sanitario premium, lavamanos, accesorios lujo",
+    precio: 1_696_800,
+    categoria: "Baños",
+    imagen: "/productos/14.Baño-premium.jpg",
   },
-
+  {
+    id: "tuberia-agua-caliente",
+    codigo: "19",
+    nombre: "Tubería agua caliente",
+    descripcion: "Acometida a 2 duchas + punto calentador",
+    precio: 1_800_000,
+    categoria: "Baños",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "calentador",
+    codigo: "20",
+    nombre: "Calentador Bosch",
+    descripcion: "Calentador a batería instalado",
+    precio: 1_080_000,
+    categoria: "Baños",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "lavadero-enchapado",
+    codigo: "34",
+    nombre: "Lavadero enchapado",
+    descripcion: "Lavadero completo enchapado",
+    precio: 480_000,
+    categoria: "Baños",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "torre-ducha",
+    codigo: "36",
+    nombre: "Torre ducha negra",
+    descripcion: "Torre ducha moderna instalada",
+    precio: 720_000,
+    categoria: "Baños",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "ducha-cuadrada",
+    codigo: "37",
+    nombre: "Ducha cuadrada metálica",
+    descripcion: "Ducha monocontrol cuadrada",
+    precio: 360_000,
+    categoria: "Baños",
+    imagen: "/productos/placeholder.svg",
+  },
   // GRANITOS Y PIEDRAS
   {
-    codigo: 40,
-    categoria: "Granitos y piedras",
-    nombre: "Mesón Granito/Quartzone blanco",
-    descripcion: "Mesón cocina",
-    precio: 950_400,
-    imagen: "/productos/40. mesón.JPG"
+    id: "meson-granito",
+    codigo: "40",
+    nombre: "Mesón granito cocina",
+    descripcion: "San Gabriel/Quarztone blanco",
+    precio: 1_080_000,
+    categoria: "Granitos",
+    imagen: "/productos/40.Mesón.JPG",
   },
   {
-    codigo: 41,
-    categoria: "Granitos y piedras",
-    nombre: "Barra Granito con soporte",
-    descripcion: "Barra desayunador",
-    precio: 844_800,
-    imagen: "/productos/41. Barra-soporte.JPG"
+    id: "barra-soporte",
+    codigo: "41",
+    nombre: "Barra granito con soporte",
+    descripcion: "San Gabriel con soporte",
+    precio: 960_000,
+    categoria: "Granitos",
+    imagen: "/productos/41.Barra-soporte.JPG",
   },
-
+  {
+    id: "barra-mueble",
+    codigo: "42",
+    nombre: "Barra sobre mueble",
+    descripcion: "Granito sobre mueble alistonado",
+    precio: 2_484_000,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "barra-patera",
+    codigo: "43",
+    nombre: "Barra con patera doble",
+    descripcion: "Patera 1m alto sin mueble",
+    precio: 2_205_600,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "barra-patera-mueble",
+    codigo: "44",
+    nombre: "Barra patera + mueble",
+    descripcion: "Patera 1m sobre mueble alistonado",
+    precio: 3_168_000,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "meson-lavamanos-cuadrado",
+    codigo: "45",
+    nombre: "Mesón bajo lavamanos",
+    descripcion: "Mesón cuadrado granito",
+    precio: 420_000,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "meson-guitarra",
+    codigo: "46",
+    nombre: "Mesón tipo guitarra",
+    descripcion: "Bajo lavamanos tipo guitarra",
+    precio: 780_000,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "meson-sinterizado",
+    codigo: "51",
+    nombre: "Mesón sinterizado cocina",
+    descripcion: "Mesón sinterizado premium",
+    precio: 1_680_000,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "barra-sinterizado",
+    codigo: "53",
+    nombre: "Barra sinterizado",
+    descripcion: "Con patera y mueble",
+    precio: 3_588_000,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "salpicadero-sinterizado",
+    codigo: "55",
+    nombre: "Salpicadero sinterizado",
+    descripcion: "Salpicadero premium",
+    precio: 1_920_000,
+    categoria: "Granitos",
+    imagen: "/productos/placeholder.svg",
+  },
+  // COCINA
+  {
+    id: "estufa",
+    codigo: "24",
+    nombre: "Estufa instalada",
+    descripcion: "Challenger/Haceb/Mabe instalada",
+    precio: 600_000,
+    categoria: "Cocina",
+    imagen: "/productos/24.Estufa.jpg",
+  },
+  {
+    id: "estufa-vidrio",
+    codigo: "25",
+    nombre: "Estufa de vidrio",
+    descripcion: "Vidrio templado 4 puestos",
+    precio: 1_200_000,
+    categoria: "Cocina",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "horno",
+    codigo: "26",
+    nombre: "Horno instalado",
+    descripcion: "Con punto de gas incluido",
+    precio: 1_800_000,
+    categoria: "Cocina",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "lavaplatos",
+    codigo: "27",
+    nombre: "Lavaplatos acero inoxidable",
+    descripcion: "Con desagüe instalado",
+    precio: 360_000,
+    categoria: "Cocina",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "griferia-cocina",
+    codigo: "28",
+    nombre: "Grifería cocina",
+    descripcion: "Grifería tradicional instalada",
+    precio: 240_000,
+    categoria: "Cocina",
+    imagen: "/productos/placeholder.svg",
+  },
+  // CARPINTERÍA
+  {
+    id: "puerta-melamina",
+    codigo: "61",
+    nombre: "Puerta melamina RH",
+    descripcion: "Puerta con marco melamina mate",
+    precio: 960_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "puerta-corredera",
+    codigo: "62",
+    nombre: "Puerta corredera",
+    descripcion: "Melamina RH corredera",
+    precio: 1_320_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "mueble-cocina",
+    codigo: "63",
+    nombre: "Mueble cocina RH completo",
+    descripcion: "Arriba y abajo una tonalidad",
+    precio: 3_000_000,
+    categoria: "Carpintería",
+    imagen: "/productos/63-mueble-cocina.jpg.JPG",
+  },
+  {
+    id: "closet-principal",
+    codigo: "66",
+    nombre: "Closet habitación principal",
+    descripcion: "Melamina RH completo",
+    precio: 3_480_000,
+    categoria: "Carpintería",
+    imagen: "/productos/64-closet-principal.jpg.JPG",
+  },
+  {
+    id: "closet-espaldar",
+    codigo: "67",
+    nombre: "Closet espaldar cama",
+    descripcion: "Habitación principal espaldar",
+    precio: 3_600_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "closet-secundario",
+    codigo: "68",
+    nombre: "Closet habitación secundaria",
+    descripcion: "Melamina RH",
+    precio: 2_280_000,
+    categoria: "Carpintería",
+    imagen: "/productos/66-closet-secundario.jpg.JPG",
+  },
+  {
+    id: "mueble-barra-lamparas",
+    codigo: "69",
+    nombre: "Mueble sobre barra",
+    descripcion: "Pared-techo con lámparas LED",
+    precio: 1_800_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "mueble-barra-vinera",
+    codigo: "76",
+    nombre: "Mueble barra con vinera",
+    descripcion: "Superior con vinera incluida",
+    precio: 2_160_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "mueble-alacena",
+    codigo: "70",
+    nombre: "Mueble alacena vertical",
+    descripcion: "Alacena cocina vertical",
+    precio: 1_320_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "mueble-lavamanos",
+    codigo: "73",
+    nombre: "Mueble bajo lavamanos",
+    descripcion: "Mueble completo bajo lavamanos",
+    precio: 480_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "mueble-lavadero",
+    codigo: "74",
+    nombre: "Mueble bajo lavadero",
+    descripcion: "Mueble para lavadero",
+    precio: 540_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "mueble-nevera",
+    codigo: "75",
+    nombre: "Mueble sobre nevera",
+    descripcion: "Aprovecha espacio superior",
+    precio: 600_000,
+    categoria: "Carpintería",
+    imagen: "/productos/placeholder.svg",
+  },
   // VIDRIOS Y ESPEJOS
   {
-    codigo: 57,
-    categoria: "Vidrios y espejos",
-    nombre: "División de vidrio",
-    descripcion: "División vidrio 8mm",
-    precio: 715_000,
-    imagen: "/productos/57.division-vidrio.JPG"
+    id: "espejo-iluminado",
+    codigo: "56",
+    nombre: "Espejo cuadrado LED",
+    descripcion: "Espejo iluminado moderno",
+    precio: 420_000,
+    categoria: "Vidrios",
+    imagen: "/productos/placeholder.svg",
   },
-
-  // ILUMINACIÓN
   {
-    codigo: 18,
-    categoria: "Iluminación",
+    id: "division-vidrio",
+    codigo: "59",
+    nombre: "División vidrio baño",
+    descripcion: "División vidrio templado 8mm",
+    precio: 840_000,
+    categoria: "Vidrios",
+    imagen: "/productos/59. Division-vidrio-baño.jpg",
+  },
+  // OTROS
+  {
+    id: "luminarias",
+    codigo: "17",
     nombre: "Luminarias LED",
-    descripcion: "Cambio plafones LED",
-    precio: 128_700,
-    imagen: "/productos/18. Luminarias.jpg"
+    descripcion: "Cambio de 10 plafones por LED",
+    precio: 144_000,
+    categoria: "Otros",
+    imagen: "/productos/18. Luminarias.jpg",
   },
-
-  // SEGURIDAD
   {
-    codigo: 21,
-    categoria: "Seguridad",
+    id: "cerradura-inteligente",
+    codigo: "21",
     nombre: "Cerradura inteligente",
-    descripcion: "Cerradura + forrado madera",
-    precio: 1_755_000,
-    imagen: "/productos/21. Cerradura-inteligente.jpg"
-  }
+    descripcion: "Con enchape madera interno",
+    precio: 1_020_000,
+    categoria: "Otros",
+    imagen: "/productos/21. Cerradura-inteligente.jpg",
+  },
+  {
+    id: "malla-seguridad",
+    codigo: "29",
+    nombre: "Malla seguridad",
+    descripcion: "Balcón y habitaciones",
+    precio: 540_000,
+    categoria: "Otros",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "ampliacion-balcon",
+    codigo: "30",
+    nombre: "Ampliación balcón",
+    descripcion: "Ampliar espacio balcón",
+    precio: 1_560_000,
+    categoria: "Otros",
+    imagen: "/productos/placeholder.svg",
+  },
+  {
+    id: "tendedero",
+    codigo: "31",
+    nombre: "Tendedero abatible",
+    descripcion: "Zona húmeda abatible",
+    precio: 240_000,
+    categoria: "Otros",
+    imagen: "/productos/placeholder.svg",
+  },
 ];
+
+// Alias para compatibilidad: productos = adicionales
+export const productos = adicionales;
+
+// Categorías
+export const categorias = [
+  "Preliminares",
+  "Enchapes",
+  "Baños",
+  "Granitos",
+  "Cocina",
+  "Carpintería",
+  "Vidrios",
+  "Otros",
+] as const;
+
+export const adicionalesPorCategoria = (categoria: string) => {
+  return adicionales.filter((p) => p.categoria === categoria);
+};
