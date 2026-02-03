@@ -186,7 +186,7 @@ export const adicionales: Producto[] = [
     descripcion: "Instalación certificada habitación principal",
     precio: 1_920_000,
     categoria: "Preliminares",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/32.Tubería-aire.jpg",
   },
   // ENCHAPES
   {
@@ -223,7 +223,7 @@ export const adicionales: Producto[] = [
     descripcion: "Demoler y enchapar pisos y muros",
     precio: 2_380_800,
     categoria: "Enchapes",
-    imagen: "/productos/9. Demolicion-baño.jpg",
+    imagen: "/productos/10.Enchape-baño-aux-con-demolición.jpg",
   },
   {
     id: "complementar-enchape",
@@ -232,7 +232,7 @@ export const adicionales: Producto[] = [
     descripcion: "Sin demoler el existente",
     precio: 860_400,
     categoria: "Enchapes",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/11.Completar-enchape-baño.jpg",
   },
   {
     id: "salpicadero",
@@ -250,7 +250,7 @@ export const adicionales: Producto[] = [
     descripcion: "Zona húmeda con cerámica",
     precio: 1_371_600,
     categoria: "Enchapes",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/16.Enchape zona húmeda.jpg",
   },
   // BAÑOS Y ACCESORIOS
   {
@@ -307,7 +307,7 @@ export const adicionales: Producto[] = [
     descripcion: "Lavadero completo enchapado",
     precio: 480_000,
     categoria: "Baños",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/34.Lavadero-enchapado.jpg",
   },
   {
     id: "torre-ducha",
@@ -316,7 +316,7 @@ export const adicionales: Producto[] = [
     descripcion: "Torre ducha moderna instalada",
     precio: 720_000,
     categoria: "Baños",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/36.Torre-ducha.jpg",
   },
   {
     id: "ducha-cuadrada",
@@ -325,7 +325,7 @@ export const adicionales: Producto[] = [
     descripcion: "Ducha monocontrol cuadrada",
     precio: 360_000,
     categoria: "Baños",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/37.Ducha-cuadrada.jpg",
   },
   // GRANITOS Y PIEDRAS
   {
@@ -353,7 +353,7 @@ export const adicionales: Producto[] = [
     descripcion: "Granito sobre mueble alistonado",
     precio: 2_484_000,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/42.Barra-con-mueble.jpg",
   },
   {
     id: "barra-patera",
@@ -362,7 +362,7 @@ export const adicionales: Producto[] = [
     descripcion: "Patera 1m alto sin mueble",
     precio: 2_205_600,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/43.Barra-patera-sinmueble.jpg",
   },
   {
     id: "barra-patera-mueble",
@@ -371,7 +371,7 @@ export const adicionales: Producto[] = [
     descripcion: "Patera 1m sobre mueble alistonado",
     precio: 3_168_000,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/44.Barra-patera-mueble-alistonado.jpg",
   },
   {
     id: "meson-lavamanos-cuadrado",
@@ -380,7 +380,7 @@ export const adicionales: Producto[] = [
     descripcion: "Mesón cuadrado granito",
     precio: 420_000,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/45.Meson-cuadrado-lavamanos.jpg",
   },
   {
     id: "meson-guitarra",
@@ -389,7 +389,7 @@ export const adicionales: Producto[] = [
     descripcion: "Bajo lavamanos tipo guitarra",
     precio: 780_000,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/46.Meson-guitarra-bajolavamanos.jpg",
   },
   {
     id: "meson-sinterizado",
@@ -398,7 +398,7 @@ export const adicionales: Producto[] = [
     descripcion: "Mesón sinterizado premium",
     precio: 1_680_000,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/51.Meson-sinterizado.jpg",
   },
   {
     id: "barra-sinterizado",
@@ -407,7 +407,7 @@ export const adicionales: Producto[] = [
     descripcion: "Con patera y mueble",
     precio: 3_588_000,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/53.Barra-sinterizado-conmueble.jpg",
   },
   {
     id: "salpicadero-sinterizado",
@@ -416,7 +416,7 @@ export const adicionales: Producto[] = [
     descripcion: "Salpicadero premium",
     precio: 1_920_000,
     categoria: "Granitos",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/55.Salpicadero-sinterizado.jpg",
   },
   // COCINA
   {
@@ -435,7 +435,7 @@ export const adicionales: Producto[] = [
     descripcion: "Vidrio templado 4 puestos",
     precio: 1_200_000,
     categoria: "Cocina",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/25.Estufa-vidrio.jpg",
   },
   {
     id: "horno",
@@ -444,7 +444,7 @@ export const adicionales: Producto[] = [
     descripcion: "Con punto de gas incluido",
     precio: 1_800_000,
     categoria: "Cocina",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/26.Horno.jpg",
   },
   {
     id: "lavaplatos",
@@ -453,7 +453,7 @@ export const adicionales: Producto[] = [
     descripcion: "Con desagüe instalado",
     precio: 360_000,
     categoria: "Cocina",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/27.Lavaplatos acero inoxidable.jpg",
   },
   {
     id: "griferia-cocina",
@@ -462,7 +462,7 @@ export const adicionales: Producto[] = [
     descripcion: "Grifería tradicional instalada",
     precio: 240_000,
     categoria: "Cocina",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/28.Griferia-cocina.jpg",
   },
   // CARPINTERÍA
   {
@@ -483,7 +483,7 @@ export const adicionales: Producto[] = [
     descripcion: "Melamina RH corredera",
     precio: 1_320_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/62.puerta-corredera.jpg",
   },
   {
     id: "mueble-cocina",
@@ -510,7 +510,7 @@ export const adicionales: Producto[] = [
     descripcion: "Habitación principal espaldar",
     precio: 3_600_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/67.Closet-espaldar-cama.jpg",
   },
   {
     id: "closet-secundario",
@@ -519,7 +519,7 @@ export const adicionales: Producto[] = [
     descripcion: "Melamina RH",
     precio: 2_280_000,
     categoria: "Carpintería",
-    imagen: "/productos/66-closet-secundario.jpg.JPG",
+    imagen: "/productos/68-closet-secundario.jpg.JPG",
   },
   {
     id: "mueble-barra-lamparas",
@@ -528,7 +528,7 @@ export const adicionales: Producto[] = [
     descripcion: "Pared-techo con lámparas LED",
     precio: 1_800_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/69. Mueble-sobre-barra.jpg",
   },
   {
     id: "mueble-barra-vinera",
@@ -537,7 +537,7 @@ export const adicionales: Producto[] = [
     descripcion: "Superior con vinera incluida",
     precio: 2_160_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/76.Mueble-barra-vinera.jpg",
   },
   {
     id: "mueble-alacena",
@@ -546,7 +546,7 @@ export const adicionales: Producto[] = [
     descripcion: "Alacena cocina vertical",
     precio: 1_320_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/70.Mueble-alacena-barra.jpg",
   },
   {
     id: "mueble-lavamanos",
@@ -555,7 +555,7 @@ export const adicionales: Producto[] = [
     descripcion: "Mueble completo bajo lavamanos",
     precio: 480_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/73. Mueble bajo lavamanos.jpg",
   },
   {
     id: "mueble-lavadero",
@@ -564,7 +564,7 @@ export const adicionales: Producto[] = [
     descripcion: "Mueble para lavadero",
     precio: 540_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/74.Mueble-lavadero.jpg",
   },
   {
     id: "mueble-nevera",
@@ -573,7 +573,7 @@ export const adicionales: Producto[] = [
     descripcion: "Aprovecha espacio superior",
     precio: 600_000,
     categoria: "Carpintería",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/75.Mueble-nevera.jpg",
   },
   // VIDRIOS Y ESPEJOS
   {
@@ -622,7 +622,7 @@ export const adicionales: Producto[] = [
     descripcion: "Balcón y habitaciones",
     precio: 540_000,
     categoria: "Otros",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/29.Malla-seguridad-ventanasybalcon.jpg",
   },
   {
     id: "ampliacion-balcon",
@@ -631,7 +631,7 @@ export const adicionales: Producto[] = [
     descripcion: "Ampliar espacio balcón",
     precio: 1_560_000,
     categoria: "Otros",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/30.Ampliacion-balcon.jpg",
   },
   {
     id: "tendedero",
@@ -640,7 +640,7 @@ export const adicionales: Producto[] = [
     descripcion: "Zona húmeda abatible",
     precio: 240_000,
     categoria: "Otros",
-    imagen: "/productos/placeholder.svg",
+    imagen: "/productos/31.Tendedero.jpg",
   },
 ];
 
