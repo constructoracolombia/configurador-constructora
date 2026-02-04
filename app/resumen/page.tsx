@@ -97,6 +97,15 @@ export default function ResumenPage() {
 
     try {
       console.log("💾 Guardando cotización en base de datos...");
+      console.log("📝 Intentando insertar:", {
+        cliente_nombre: clienteNombre,
+        cliente_email: clienteEmail,
+        proyecto_id: proyecto,
+        proyecto_nombre: proyectoData?.nombre,
+        plan_tipo: planBase,
+        estado_crm: "NUEVO",
+        numero_cotizacion: numeroCotizacion,
+      });
 
       const { data, error } = await supabase.from("cotizaciones").insert({
         cliente_nombre: clienteNombre,
@@ -120,7 +129,10 @@ export default function ResumenPage() {
           };
         }),
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      });
+      }).select();
+
+      console.log("✅ Respuesta de Supabase - Data:", data);
+      console.log("❌ Respuesta de Supabase - Error:", error);
 
       if (error) {
         console.error("❌ Error guardando en DB:", error);
