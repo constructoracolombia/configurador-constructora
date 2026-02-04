@@ -120,7 +120,7 @@ export default function CRMPage() {
     setCargando(true);
     try {
       const { data, error } = await supabase
-        .from("comercial.cotizaciones_crm")
+        .from("cotizaciones_crm")
         .select("*")
         .order("posicion_kanban", { ascending: true });
 
@@ -192,7 +192,7 @@ export default function CRMPage() {
 
     try {
       const { error } = await supabase
-        .from("comercial.cotizaciones")
+        .from("cotizaciones")
         .update({
           estado_crm: nuevoEstado,
           ultima_interaccion: new Date().toISOString(),
@@ -212,7 +212,7 @@ export default function CRMPage() {
   const cargarNotas = async (leadId: string) => {
     try {
       const { data, error } = await supabase
-        .from("comercial.notas_seguimiento")
+        .from("notas_seguimiento")
         .select("*")
         .eq("cotizacion_id", leadId)
         .order("created_at", { ascending: false });
@@ -229,7 +229,7 @@ export default function CRMPage() {
 
     setGuardandoNota(true);
     try {
-      const { error } = await supabase.from("comercial.notas_seguimiento").insert({
+      const { error } = await supabase.from("notas_seguimiento").insert({
         cotizacion_id: leadSeleccionado.id,
         nota: nuevaNota,
         tipo: "nota",
