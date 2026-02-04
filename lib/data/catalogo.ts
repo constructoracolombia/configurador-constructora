@@ -703,6 +703,7 @@ export const adicionalesOcultosPorPlan = {
     // + Adicionales incluidos en el plan intermedio
     "enchape-bano-aux",    // Demolición + Enchape baño aux
     "complementar-enchape", // Complementar enchape baño
+    "meson-granito",       // Mesón granito cocina (ya incluido)
     "barra-soporte",       // Barra granito con soporte
     "mueble-cocina",       // Mueble cocina RH completo
     "closet-principal",    // Closet habitación principal
