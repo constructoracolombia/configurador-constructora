@@ -79,7 +79,7 @@ export default function AdminDashboard() {
     setCargando(true);
     try {
       const { data: cotizacionesData, error } = await supabase
-        .from("comercial.cotizaciones")
+        .from("comercial.cotizaciones_crm")
         .select("*")
         .order("created_at", { ascending: false });
 

@@ -120,7 +120,7 @@ export default function CRMPage() {
     setCargando(true);
     try {
       const { data, error } = await supabase
-        .from("comercial.cotizaciones")
+        .from("comercial.cotizaciones_crm")
         .select("*")
         .order("posicion_kanban", { ascending: true });
 
