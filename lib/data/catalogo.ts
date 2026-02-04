@@ -139,6 +139,15 @@ export interface Producto {
   codigo?: string;
   permiteMultiples?: boolean;
   maxCantidad?: number;
+  // Precios y nombres dinámicos por plan
+  nombrePorPlan?: {
+    basico?: string;
+    intermedio?: string;
+  };
+  precioPorPlan?: {
+    basico?: number;
+    intermedio?: number;
+  };
 }
 
 export const adicionales: Producto[] = [
@@ -228,11 +237,15 @@ export const adicionales: Producto[] = [
   {
     id: "complementar-enchape",
     codigo: "11",
-    nombre: "Complementar enchape baño",
+    nombre: "Complementar enchape baño Aux",
     descripcion: "Sin demoler el existente",
     precio: 860_400,
     categoria: "Enchapes",
     imagen: "/productos/11.Completar-enchape-baño.jpg",
+    precioPorPlan: {
+      basico: 1_100_000,
+      intermedio: 860_400,
+    },
   },
   {
     id: "salpicadero",
@@ -281,6 +294,14 @@ export const adicionales: Producto[] = [
     imagen: "/productos/14.Baño-premium.jpg",
     permiteMultiples: true,
     maxCantidad: 2,
+    nombrePorPlan: {
+      basico: "Combo Premium baño",
+      intermedio: "Mejorar a Combo Premium baño",
+    },
+    precioPorPlan: {
+      basico: 1_696_800,
+      intermedio: 1_500_000,
+    },
   },
   {
     id: "tuberia-agua-caliente",
@@ -354,6 +375,14 @@ export const adicionales: Producto[] = [
     precio: 2_484_000,
     categoria: "Granitos",
     imagen: "/productos/42.Barra-con-mueble.jpg",
+    nombrePorPlan: {
+      basico: "Mueble bajo barra",
+      intermedio: "Mueble bajo barra",
+    },
+    precioPorPlan: {
+      basico: 1_300_000,
+      intermedio: 1_300_000,
+    },
   },
   {
     id: "barra-patera",
@@ -363,6 +392,14 @@ export const adicionales: Producto[] = [
     precio: 2_205_600,
     categoria: "Granitos",
     imagen: "/productos/43.Barra-patera-sinmueble.jpg",
+    nombrePorPlan: {
+      basico: "Mejorar a Barra con patera doble",
+      intermedio: "Mejorar a Barra con patera doble",
+    },
+    precioPorPlan: {
+      basico: 2_200_000,
+      intermedio: 1_300_000,
+    },
   },
   {
     id: "barra-patera-mueble",
@@ -372,6 +409,14 @@ export const adicionales: Producto[] = [
     precio: 3_168_000,
     categoria: "Granitos",
     imagen: "/productos/44.Barra-patera-mueble-alistonado.jpg",
+    nombrePorPlan: {
+      basico: "Mejorar a Barra con patera + mueble",
+      intermedio: "Mejorar a Barra con patera + mueble",
+    },
+    precioPorPlan: {
+      basico: 3_200_000,
+      intermedio: 2_250_000,
+    },
   },
   {
     id: "meson-lavamanos-cuadrado",
@@ -399,6 +444,14 @@ export const adicionales: Producto[] = [
     precio: 1_680_000,
     categoria: "Granitos",
     imagen: "/productos/51.Meson-sinterizado.jpg",
+    nombrePorPlan: {
+      basico: "Mejorar a mesón sinterizado cocina",
+      intermedio: "Mejorar a mesón sinterizado cocina",
+    },
+    precioPorPlan: {
+      basico: 1_700_000,
+      intermedio: 700_000,
+    },
   },
   {
     id: "barra-sinterizado",
@@ -408,6 +461,14 @@ export const adicionales: Producto[] = [
     precio: 3_588_000,
     categoria: "Granitos",
     imagen: "/productos/53.Barra-sinterizado-conmueble.jpg",
+    nombrePorPlan: {
+      basico: "Mejorar a Barra sinterizado con mueble",
+      intermedio: "Mejorar a Barra sinterizado con mueble",
+    },
+    precioPorPlan: {
+      basico: 3_600_000,
+      intermedio: 500_000,
+    },
   },
   {
     id: "salpicadero-sinterizado",
@@ -538,6 +599,10 @@ export const adicionales: Producto[] = [
     precio: 2_160_000,
     categoria: "Carpintería",
     imagen: "/productos/76.Mueble-barra-vinera.jpg",
+    nombrePorPlan: {
+      basico: "Mueble sobre barra con vinera",
+      intermedio: "Mueble sobre barra con vinera",
+    },
   },
   {
     id: "mueble-alacena",
@@ -733,4 +798,32 @@ export const debeOcultarseAdicional = (
 ): boolean => {
   const ocultos = adicionalesOcultosPorPlan[planTipo] || [];
   return ocultos.includes(idAdicional);
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS: Obtener nombre y precio según plan seleccionado
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Obtiene el nombre del adicional según el plan seleccionado.
+ * Si tiene nombrePorPlan definido, usa ese; sino usa el nombre base.
+ */
+export const getNombreAdicional = (
+  adicional: Producto,
+  planTipo: "basico" | "intermedio" | null
+): string => {
+  if (!planTipo) return adicional.nombre;
+  return adicional.nombrePorPlan?.[planTipo] || adicional.nombre;
+};
+
+/**
+ * Obtiene el precio del adicional según el plan seleccionado.
+ * Si tiene precioPorPlan definido, usa ese; sino usa el precio base.
+ */
+export const getPrecioAdicional = (
+  adicional: Producto,
+  planTipo: "basico" | "intermedio" | null
+): number => {
+  if (!planTipo) return adicional.precio;
+  return adicional.precioPorPlan?.[planTipo] ?? adicional.precio;
 };

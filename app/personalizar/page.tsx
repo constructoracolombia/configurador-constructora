@@ -7,7 +7,9 @@ import {
   categorias, 
   proyectos, 
   adicionalesFiltrados,
-  adicionalesOcultosPorPlan 
+  adicionalesOcultosPorPlan,
+  getNombreAdicional,
+  getPrecioAdicional,
 } from "@/lib/data/catalogo";
 import type { Producto } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
@@ -149,6 +151,10 @@ export default function PersonalizarPage() {
                 const cantidad = store.getCantidad(producto.id);
                 const tieneMultiples = producto.permiteMultiples;
                 const maxCantidad = producto.maxCantidad || 2;
+                
+                // Obtener nombre y precio según el plan seleccionado
+                const nombreMostrar = getNombreAdicional(producto, store.planBase);
+                const precioMostrar = getPrecioAdicional(producto, store.planBase);
 
                 return (
                   <Card
@@ -159,7 +165,7 @@ export default function PersonalizarPage() {
                       <div className="relative h-40 overflow-hidden">
                         <ImagenOptimizada
                           src={producto.imagen}
-                          alt={producto.nombre}
+                          alt={nombreMostrar}
                           width={300}
                           height={200}
                           className="h-full w-full object-cover"
@@ -177,16 +183,16 @@ export default function PersonalizarPage() {
 
                     <CardContent className="p-4">
                       <h3 className="mb-1 line-clamp-2 font-semibold text-brand-text">
-                        {producto.nombre}
+                        {nombreMostrar}
                       </h3>
                       <p className="mb-3 line-clamp-2 text-sm text-brand-textSecondary">
                         {producto.descripcion}
                       </p>
                       <p className="text-2xl font-bold text-brand-primary">
-                        {formatoPrecio(producto.precio)}
+                        {formatoPrecio(precioMostrar)}
                         {tieneMultiples && cantidad > 1 && (
                           <span className="ml-2 text-base text-brand-textSecondary">
-                            × {cantidad} = {formatoPrecio(producto.precio * cantidad)}
+                            × {cantidad} = {formatoPrecio(precioMostrar * cantidad)}
                           </span>
                         )}
                       </p>

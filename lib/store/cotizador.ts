@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Producto } from "@/lib/data/catalogo";
-import { planesBase } from "@/lib/data/catalogo";
+import { planesBase, getPrecioAdicional } from "@/lib/data/catalogo";
 
 export interface ProductoConCantidad extends Producto {
   cantidad?: number;
@@ -188,10 +188,11 @@ export const useCotizador = create<CotizadorStore>()(
 
       getPrecioAdicionales: () => {
         const state = get();
-        return state.adicionales.reduce(
-          (sum, item) => sum + item.precio * (item.cantidad ?? 1),
-          0
-        );
+        return state.adicionales.reduce((sum, item) => {
+          // Usar precio dinámico según el plan seleccionado
+          const precioItem = getPrecioAdicional(item, state.planBase);
+          return sum + precioItem * (item.cantidad ?? 1);
+        }, 0);
       },
 
       getTotal: () => {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCotizador } from "@/lib/store/cotizador";
-import { planesBase, proyectos } from "@/lib/data/catalogo";
+import { planesBase, proyectos, getNombreAdicional, getPrecioAdicional } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
 import { subirPresupuesto } from "@/lib/utils/storage-service";
@@ -123,9 +123,11 @@ export default function ResumenPage() {
         posicion_kanban: 0,
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
+          const nombre = getNombreAdicional(a, planBase);
+          const precio = getPrecioAdicional(a, planBase);
           return {
-            nombre: qty > 1 ? `${a.nombre} (×${qty})` : a.nombre,
-            precio: a.precio * qty,
+            nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
+            precio: precio * qty,
           };
         }),
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
@@ -220,9 +222,11 @@ export default function ResumenPage() {
         },
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
+          const nombre = getNombreAdicional(a, planBase);
+          const precio = getPrecioAdicional(a, planBase);
           return {
-            nombre: qty > 1 ? `${a.nombre} (×${qty})` : a.nombre,
-            precio: a.precio * qty,
+            nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
+            precio: precio * qty,
           };
         }),
         total: getTotal(),
@@ -295,9 +299,11 @@ export default function ResumenPage() {
         },
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
+          const nombre = getNombreAdicional(a, planBase);
+          const precio = getPrecioAdicional(a, planBase);
           return {
-            nombre: qty > 1 ? `${a.nombre} (×${qty})` : a.nombre,
-            precio: a.precio * qty,
+            nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
+            precio: precio * qty,
           };
         }),
         total: getTotal(),
@@ -577,14 +583,16 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                   <div className="space-y-3">
                     {adicionales.map((adicional, index) => {
                       const qty = adicional.cantidad ?? 1;
-                      const lineTotal = adicional.precio * qty;
+                      const nombreMostrar = getNombreAdicional(adicional, planBase);
+                      const precioMostrar = getPrecioAdicional(adicional, planBase);
+                      const lineTotal = precioMostrar * qty;
                       return (
                         <div
                           key={index}
                           className="flex items-center justify-between border-b border-brand-border py-2 last:border-0"
                         >
                           <span className="text-brand-textSecondary">
-                            {adicional.nombre}
+                            {nombreMostrar}
                             {qty > 1 && (
                               <span className="ml-1 text-brand-primary">
                                 ×{qty}
