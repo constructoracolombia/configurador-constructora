@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const cargarStats = async () => {
     try {
       const { data, error } = await supabase
-        .from("cotizaciones")
+        .from("comercial.cotizaciones")
         .select("id", { count: "exact" });
 
       if (!error && data) {

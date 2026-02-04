@@ -98,7 +98,7 @@ export default function ResumenPage() {
     try {
       console.log("💾 Guardando cotización en base de datos...");
 
-      const { data, error } = await supabase.from("cotizaciones").insert({
+      const { data, error } = await supabase.from("comercial.cotizaciones").insert({
         cliente_nombre: clienteNombre,
         cliente_email: clienteEmail,
         cliente_telefono: clienteTelefono || null,
@@ -228,7 +228,7 @@ export default function ResumenPage() {
         );
         if (emailOk) {
           await supabase
-            .from("cotizaciones")
+            .from("comercial.cotizaciones")
             .update({ estado_crm: "CORREO_ENVIADO" })
             .eq("numero_cotizacion", numeroCotizacion);
         }
@@ -314,7 +314,7 @@ export default function ResumenPage() {
         );
         if (emailOk) {
           await supabase
-            .from("cotizaciones")
+            .from("comercial.cotizaciones")
             .update({ estado_crm: "CORREO_ENVIADO" })
             .eq("numero_cotizacion", numeroCotizacion);
         }
