@@ -668,47 +668,68 @@ export const adicionalesPorCategoria = (categoria: string) => {
 // Lo que ya "viene incluido" en un plan NO debe aparecer como opción de compra.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** 1. Limpieza inicial – base estructural mínima. Eliminación permanente en /personalizar.
- *   Códigos de referencia: 3.Estuco, 4.Pintura, 5.Mortero, 15.Salpicadero, 8.Drywall, 6.Ceramica, 16.Zona húmeda. */
-const itemsExcluidosSiempre = [
-  "estuco",
-  "pintura",
-  "mortero",
-  "drywall",
-  "ceramica-piso",
-  "salpicadero",
-  "zona-humeda",
-];
-
-/** 2. Solo cuando plan === 'intermedio': ocultar (ya incluidos en el precio, no pagar doble).
- *   Códigos: 10, 11, 12, 13, 40, 41, 63, 66, 68, 59. */
-const itemsIncluidosIntermedio = [
-  "enchape-bano-aux",
-  "complementar-enchape",
-  "nicho",
-  "combo-basico",
-  "meson-granito",
-  "barra-soporte",
-  "mueble-cocina",
-  "closet-principal",
-  "closet-secundario",
-  "division-vidrio",
-];
+/**
+ * Adicionales a OCULTAR según el plan seleccionado.
+ * - BÁSICO: Oculta 11 items que ya vienen incluidos en el plan básico.
+ * - INTERMEDIO: Oculta 18 items (los 11 del básico + 7 adicionales del intermedio).
+ */
+export const adicionalesOcultosPorPlan = {
+  basico: [
+    "estuco",              // Estuco muros y techo
+    "pintura",             // Pintura 3 manos
+    "mortero",             // Mortero nivelación
+    "drywall",             // Drywall baños y cocina
+    "ceramica-piso",       // Enchape cerámica piso
+    "enchape-bano-principal", // Enchape baño principal
+    "salpicadero",         // Enchape salpicadero
+    "zona-humeda",         // Enchapar zona húmeda
+    "nicho",               // Nicho iluminado
+    "combo-basico",        // Combo básico baño
+    "luminarias",          // Luminarias LED
+  ],
+  intermedio: [
+    // Todo lo del plan básico
+    "estuco",
+    "pintura",
+    "mortero",
+    "drywall",
+    "ceramica-piso",
+    "enchape-bano-principal",
+    "salpicadero",
+    "zona-humeda",
+    "nicho",
+    "combo-basico",
+    "luminarias",
+    // + Adicionales incluidos en el plan intermedio
+    "enchape-bano-aux",    // Demolición + Enchape baño aux
+    "complementar-enchape", // Complementar enchape baño
+    "barra-soporte",       // Barra granito con soporte
+    "mueble-cocina",       // Mueble cocina RH completo
+    "closet-principal",    // Closet habitación principal
+    "closet-secundario",   // Closet habitación secundaria
+    "division-vidrio",     // División vidrio baño
+  ],
+};
 
 /**
  * Lista de adicionales visibles en /personalizar según el plan elegido.
- * - BÁSICO: todos los ítems del catálogo excepto los 7 de itemsExcluidosSiempre.
- * - INTERMEDIO: además se ocultan los 10 de itemsIncluidosIntermedio (ya vienen en el plan).
- * @param planTipo Debe venir del estado global (selectedPlan / planBase) persistido entre /plan y /personalizar.
+ * Filtra los items que ya vienen incluidos en cada plan.
+ * @param planTipo "basico" o "intermedio"
  */
 export const adicionalesFiltrados = (planTipo: "basico" | "intermedio") => {
-  const sinBase = adicionales.filter(
-    (item) => !itemsExcluidosSiempre.includes(item.id)
-  );
-  if (planTipo === "intermedio") {
-    return sinBase.filter(
-      (item) => !itemsIncluidosIntermedio.includes(item.id)
-    );
-  }
-  return sinBase;
+  const ocultos = adicionalesOcultosPorPlan[planTipo] || [];
+  return adicionales.filter((item) => !ocultos.includes(item.id));
+};
+
+/**
+ * Verifica si un adicional debe ocultarse para un plan específico.
+ * @param idAdicional ID del adicional
+ * @param planTipo "basico" o "intermedio"
+ */
+export const debeOcultarseAdicional = (
+  idAdicional: string,
+  planTipo: "basico" | "intermedio"
+): boolean => {
+  const ocultos = adicionalesOcultosPorPlan[planTipo] || [];
+  return ocultos.includes(idAdicional);
 };

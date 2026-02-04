@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check } from "lucide-react";
-import { productos, categorias, proyectos } from "@/lib/data/catalogo";
+import { 
+  categorias, 
+  proyectos, 
+  adicionalesFiltrados,
+  adicionalesOcultosPorPlan 
+} from "@/lib/data/catalogo";
 import type { Producto } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
@@ -21,9 +26,32 @@ export default function PersonalizarPage() {
   // CRÍTICO: Usar el store directamente - NO destructurar para máxima reactividad
   const store = useCotizador();
 
+  // Obtener productos filtrados según el plan seleccionado
+  const productosDisponibles = useMemo(() => {
+    if (!store.planBase) return [];
+    return adicionalesFiltrados(store.planBase);
+  }, [store.planBase]);
+
+  // Filtrar por categoría si está seleccionada
   const productosFiltrados = categoriaSeleccionada
-    ? productos.filter((p) => p.categoria === categoriaSeleccionada)
-    : productos;
+    ? productosDisponibles.filter((p) => p.categoria === categoriaSeleccionada)
+    : productosDisponibles;
+
+  // Limpiar adicionales que ya no están disponibles cuando cambia el plan
+  useEffect(() => {
+    if (!store.planBase) return;
+    
+    const ocultos = adicionalesOcultosPorPlan[store.planBase] || [];
+    const adicionalesInvalidos = store.adicionales.filter((a) =>
+      ocultos.includes(a.id)
+    );
+
+    // Remover cada adicional que ya no debería estar disponible
+    adicionalesInvalidos.forEach((adicional) => {
+      console.log(`🧹 Removiendo adicional no disponible para plan ${store.planBase}:`, adicional.nombre);
+      store.removeAdicional(adicional.id);
+    });
+  }, [store.planBase]);
 
   const isProductoAgregado = (id: string): boolean =>
     store.adicionales.some((a) => a.id === id);
