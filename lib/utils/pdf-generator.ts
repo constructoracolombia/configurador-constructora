@@ -23,6 +23,7 @@ interface CotizacionData {
   adicionales: Array<{
     nombre: string;
     precio: number;
+    cantidad?: number;
   }>;
   total: number;
 }
@@ -100,8 +101,160 @@ const getActividadesPorPlan = (planNombre: string): string[] => {
 // Bonos gratis
 const BONOS_GRATIS = ["nicho iluminado", "tendedero", "ducha elegante"];
 const esBonoGratis = (nombre: string): boolean => BONOS_GRATIS.some((b) => nombre.toLowerCase().includes(b));
-const filtrarAdicionales = (adicionales: Array<{ nombre: string; precio: number }>) => adicionales.filter((a) => !esBonoGratis(a.nombre));
-const calcularTotal = (precioPlan: number, adicionales: Array<{ nombre: string; precio: number }>) => precioPlan + filtrarAdicionales(adicionales).reduce((sum, a) => sum + a.precio, 0);
+const filtrarAdicionales = (adicionales: Array<{ nombre: string; precio: number; cantidad?: number }>) => adicionales.filter((a) => !esBonoGratis(a.nombre));
+const calcularTotal = (precioPlan: number, adicionales: Array<{ nombre: string; precio: number; cantidad?: number }>) =>
+  precioPlan + filtrarAdicionales(adicionales).reduce((sum, a) => sum + a.precio * (a.cantidad || 1), 0);
+
+// ═══════════════════════════════════════════════════════════════
+// MINI HEADER PARA PÁGINAS DE CONTINUACIÓN
+// ═══════════════════════════════════════════════════════════════
+
+function renderMiniHeader(doc: jsPDF, margin: number, pageWidth: number): number {
+  let y = margin;
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...COLORS.gold);
+  doc.text("CONSTRUCTORA COLOMBIA", pageWidth / 2, y, { align: "center" });
+
+  y += 5;
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...COLORS.textTertiary);
+  doc.text("Más que una constructora, un aliado para tu hogar", pageWidth / 2, y, { align: "center" });
+
+  y += 4;
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, pageWidth - margin, y);
+
+  return y + 6;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABLA ADICIONALES CON AUTO-AJUSTE
+// ═══════════════════════════════════════════════════════════════
+
+function renderTablaAdicionalesConAutoAjuste(
+  doc: DocWithAutoTable,
+  adicionales: Array<{ nombre: string; precio: number; cantidad?: number }>,
+  margin: number,
+  contentWidth: number,
+  startY: number
+): number {
+  // Detectar si hay muchos adicionales
+  const tieneMuchosAdicionales = adicionales.length > 8;
+
+  // Ajustar tamaños según cantidad
+  const fontSize = tieneMuchosAdicionales ? 7.5 : 8;
+  const cellPadding = tieneMuchosAdicionales ? 1.2 : 1.5;
+  const headFontSize = tieneMuchosAdicionales ? 8.5 : 9;
+
+  autoTable(doc, {
+    startY: startY,
+    head: [["#", "Descripción", "Precio"]],
+    body: adicionales.map((item, idx) => [
+      (idx + 1).toString(),
+      item.nombre + (item.cantidad && item.cantidad > 1 ? ` (×${item.cantidad})` : ""),
+      formatPrice(item.precio * (item.cantidad || 1)),
+    ]),
+    theme: "grid",
+    styles: {
+      fontSize: fontSize,
+      cellPadding: cellPadding,
+      lineColor: [220, 220, 220],
+      lineWidth: 0.1,
+    },
+    headStyles: {
+      fillColor: COLORS.darkNavy,
+      textColor: COLORS.white,
+      fontSize: headFontSize,
+      fontStyle: "bold",
+      cellPadding: cellPadding + 0.3,
+    },
+    bodyStyles: {
+      fontSize: fontSize,
+      cellPadding: cellPadding,
+      minCellHeight: tieneMuchosAdicionales ? 5 : 6,
+    },
+    columnStyles: {
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: contentWidth - 40 },
+      2: { cellWidth: 30, halign: "right", fontStyle: "bold" },
+    },
+    margin: { left: margin, right: margin },
+    rowPageBreak: "avoid",
+  });
+
+  return doc.lastAutoTable?.finalY ?? startY;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVERSIÓN TOTAL COMPACTO Y PREMIUM
+// ═══════════════════════════════════════════════════════════════
+
+function renderInversionTotalCompacto(
+  doc: jsPDF,
+  total: number,
+  tiempoEntrega: number,
+  margin: number,
+  contentWidth: number,
+  startY: number,
+  pageWidth: number
+): number {
+  const boxHeight = 38; // Compacto
+
+  // Fondo gris casi imperceptible
+  doc.setFillColor(...COLORS.backgroundLight);
+  doc.rect(margin, startY, contentWidth, boxHeight, "F");
+
+  // Borde dorado premium 1.5px
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.55); // ~1.5px
+  doc.rect(margin, startY, contentWidth, boxHeight);
+
+  // Título "INVERSIÓN TOTAL" (14pt)
+  doc.setTextColor(...COLORS.gold);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("INVERSIÓN TOTAL", pageWidth / 2, startY + 11, { align: "center" });
+
+  // Precio (22pt - elegante)
+  doc.setTextColor(...COLORS.darkNavy);
+  doc.setFontSize(22);
+  doc.text(formatPrice(total), pageWidth / 2, startY + 24, { align: "center" });
+
+  // Tiempo de entrega (8pt)
+  doc.setFontSize(8);
+  doc.setTextColor(...COLORS.textTertiary);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Entrega en ${tiempoEntrega} días hábiles`, pageWidth / 2, startY + 32, { align: "center" });
+
+  return startY + boxHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FOOTER
+// ═══════════════════════════════════════════════════════════════
+
+function renderFooter(doc: jsPDF, margin: number, pageWidth: number, pageHeight: number): void {
+  const footerY = pageHeight - 10;
+
+  doc.setFillColor(...COLORS.darkNavy);
+  doc.rect(0, footerY - 2, pageWidth, 12, "F");
+
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.2);
+  doc.line(margin, footerY - 2, pageWidth - margin, footerY - 2);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...COLORS.gold);
+
+  doc.text("Constructora Colombia", margin, footerY + 3);
+  doc.text("Bucaramanga, Colombia", pageWidth / 2, footerY + 3, { align: "center" });
+  doc.text("contacto@constructoracolombia.com", pageWidth - margin, footerY + 3, { align: "right" });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // GENERADOR PRINCIPAL
@@ -114,9 +267,11 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   const pageHeight = 279.4;
   const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
+  const maxY = pageHeight - margin - 12; // Espacio para footer
 
   const totalReal = calcularTotal(data.plan.precio, data.adicionales);
   let currentY = 0;
+  let pageNumber = 1;
 
   // ═══════════════════════════════════════════════════════════════
   // PÁGINA 1: HEADER + ACTIVIDADES GRID + ADICIONALES + INVERSIÓN
@@ -230,7 +385,6 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
     // Texto
     doc.setTextColor(...COLORS.textSecondary);
     doc.setFont("helvetica", "normal");
-    const maxTextWidth = columnWidth - 7;
     const texto = actividad.length > 22 ? actividad.substring(0, 20) + "..." : actividad;
     doc.text(texto, colX + 4, itemY);
 
@@ -247,7 +401,7 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
 
   currentY += maxItemsPorColumna * itemHeight + 8;
 
-  // ADICIONALES
+  // ADICIONALES CON AUTO-AJUSTE
   const adicionalesParaMostrar = filtrarAdicionales(data.adicionales);
 
   if (adicionalesParaMostrar.length > 0) {
@@ -257,53 +411,43 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
     doc.text("ADICIONALES SELECCIONADOS", margin, currentY);
     currentY += 5;
 
-    autoTable(doc, {
-      startY: currentY,
-      head: [["#", "Descripción", "Precio"]],
-      body: adicionalesParaMostrar.map((add, idx) => [(idx + 1).toString(), add.nombre, formatPrice(add.precio)]),
-      styles: { fontSize: 8, cellPadding: 1.5, lineColor: [220, 220, 220], lineWidth: 0.1 },
-      headStyles: { fillColor: COLORS.darkNavy, textColor: COLORS.white, fontStyle: "bold", fontSize: 8, cellPadding: 2 },
-      columnStyles: { 0: { cellWidth: 8, halign: "center" }, 1: { cellWidth: contentWidth - 38 }, 2: { cellWidth: 30, halign: "right", fontStyle: "bold" } },
-      margin: { left: margin, right: margin },
-    });
-
-    currentY = (doc.lastAutoTable?.finalY ?? currentY) + 6;
+    currentY = renderTablaAdicionalesConAutoAjuste(doc, adicionalesParaMostrar, margin, contentWidth, currentY);
+    currentY += adicionalesParaMostrar.length > 8 ? 4 : 6; // Espaciado reducido si hay muchos
   }
 
-  // INVERSIÓN TOTAL (borde dorado, fondo gris)
-  currentY += 4;
-  const totalHeight = 38;
+  // ═══════════════════════════════════════════════════════════════
+  // PROTECCIÓN CRÍTICA: Verificar espacio para Inversión Total
+  // ═══════════════════════════════════════════════════════════════
+  const alturaInversionTotal = 42; // 38mm + márgenes de seguridad
 
-  doc.setFillColor(...COLORS.backgroundLight);
-  doc.rect(margin, currentY, contentWidth, totalHeight, "F");
+  if (currentY + alturaInversionTotal > maxY) {
+    // No cabe completo, mover a página siguiente
+    renderFooter(doc, margin, pageWidth, pageHeight);
 
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(0.4);
-  doc.rect(margin, currentY, contentWidth, totalHeight);
+    doc.addPage();
+    pageNumber++;
+    currentY = renderMiniHeader(doc, margin, pageWidth);
+    currentY += 8;
+  }
 
-  doc.setTextColor(...COLORS.gold);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("INVERSIÓN TOTAL", pageWidth / 2, currentY + 11, { align: "center" });
+  // INVERSIÓN TOTAL (siempre completo, nunca cortado)
+  currentY = renderInversionTotalCompacto(doc, totalReal, data.plan.tiempoEntrega, margin, contentWidth, currentY, pageWidth);
 
-  doc.setTextColor(...COLORS.darkNavy);
-  doc.setFontSize(22);
-  doc.text(formatPrice(totalReal), pageWidth / 2, currentY + 25, { align: "center" });
-
-  doc.setTextColor(...COLORS.textTertiary);
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Entrega en ${data.plan.tiempoEntrega} días hábiles`, pageWidth / 2, currentY + 33, { align: "center" });
-
-  // FOOTER P1
-  renderFooter(doc, margin, pageWidth, pageHeight);
+  // Footer página 1 (si aún estamos en página 1)
+  if (pageNumber === 1) {
+    renderFooter(doc, margin, pageWidth, pageHeight);
+  }
 
   // ═══════════════════════════════════════════════════════════════
-  // PÁGINA 2: BONOS + FORMA DE PAGO
+  // PÁGINA 2: BONOS + FORMA DE PAGO + GARANTÍAS + WHATSAPP
   // ═══════════════════════════════════════════════════════════════
 
-  doc.addPage();
-  currentY = 0;
+  // Si ya estamos en página 2 por overflow de Inversión, continuar
+  // Si no, crear nueva página
+  if (pageNumber === 1) {
+    doc.addPage();
+    pageNumber++;
+  }
 
   // Header P2
   doc.setFillColor(...COLORS.darkNavy);
@@ -432,6 +576,23 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
 
   currentY += 56;
 
+  // ═══════════════════════════════════════════════════════════════
+  // PROTECCIÓN: Verificar si caben Garantías + WhatsApp
+  // ═══════════════════════════════════════════════════════════════
+  const alturaGarantias = 42;
+  const alturaWhatsApp = 30;
+  const espacioNecesario = alturaGarantias + alturaWhatsApp + 15;
+
+  if (currentY + espacioNecesario > maxY) {
+    // No caben, footer aquí y nueva página
+    renderFooter(doc, margin, pageWidth, pageHeight);
+
+    doc.addPage();
+    pageNumber++;
+    currentY = renderMiniHeader(doc, margin, pageWidth);
+    currentY += 8;
+  }
+
   // GARANTÍAS
   doc.setTextColor(...COLORS.textPrimary);
   doc.setFontSize(12);
@@ -491,31 +652,8 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   doc.setFontSize(6.5);
   doc.text("Horario: Lun-Vie 8am-6pm | Sáb 9am-1pm  •  Respuesta: <5 min", pageWidth / 2, currentY + buttonHeight + 4, { align: "center" });
 
-  // FOOTER P2
+  // FOOTER FINAL
   renderFooter(doc, margin, pageWidth, pageHeight);
 
   return doc.output("blob");
-}
-
-// ═══════════════════════════════════════════════════════════════
-// FOOTER
-// ═══════════════════════════════════════════════════════════════
-
-function renderFooter(doc: jsPDF, margin: number, pageWidth: number, pageHeight: number): void {
-  const footerY = pageHeight - 10;
-
-  doc.setFillColor(...COLORS.darkNavy);
-  doc.rect(0, footerY - 2, pageWidth, 12, "F");
-
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(0.2);
-  doc.line(margin, footerY - 2, pageWidth - margin, footerY - 2);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(...COLORS.gold);
-
-  doc.text("Constructora Colombia", margin, footerY + 3);
-  doc.text("Bucaramanga, Colombia", pageWidth / 2, footerY + 3, { align: "center" });
-  doc.text("contacto@constructoracolombia.com", pageWidth - margin, footerY + 3, { align: "right" });
 }
