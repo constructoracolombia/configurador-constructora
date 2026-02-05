@@ -14,6 +14,7 @@ interface KanbanColumnProps {
   onLeadClick: (lead: Lead) => void | Promise<void>;
   onWhatsApp: (lead: Lead) => void;
   onReenviarEmail: (lead: Lead) => void;
+  onEliminar?: (lead: Lead) => void;
 }
 
 export function KanbanColumn({
@@ -22,6 +23,7 @@ export function KanbanColumn({
   onLeadClick,
   onWhatsApp,
   onReenviarEmail,
+  onEliminar,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: estado.id,
@@ -59,6 +61,7 @@ export function KanbanColumn({
               onClick={() => onLeadClick(lead)}
               onWhatsApp={() => onWhatsApp(lead)}
               onReenviarEmail={() => onReenviarEmail(lead)}
+              onEliminar={onEliminar ? () => onEliminar(lead) : undefined}
             />
           ))}
         </SortableContext>

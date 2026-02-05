@@ -25,6 +25,7 @@ import {
   Search,
   Lock,
   LayoutDashboard,
+  Trash2,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import { motion } from "framer-motion";
@@ -152,6 +153,53 @@ export default function AdminDashboard() {
       void cargarDatos();
     }
   }, []);
+
+  const eliminarCotizacion = async (
+    cotizacionId: string,
+    numeroCotizacion: string
+  ) => {
+    if (
+      !confirm(
+        `¿Eliminar cotización ${numeroCotizacion}?\n\nEsta acción no se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setCargando(true);
+
+      // Eliminar notas relacionadas
+      await supabase
+        .from("notas_seguimiento")
+        .delete()
+        .eq("cotizacion_id", cotizacionId);
+
+      // Eliminar historial de estados
+      await supabase
+        .from("historial_estados")
+        .delete()
+        .eq("cotizacion_id", cotizacionId);
+
+      // Eliminar cotización
+      const { error } = await supabase
+        .from("cotizaciones")
+        .delete()
+        .eq("id", cotizacionId);
+
+      if (error) throw error;
+
+      // Recargar datos
+      await cargarDatos();
+
+      alert("✅ Cotización eliminada exitosamente");
+    } catch (error) {
+      console.error("Error eliminando cotización:", error);
+      alert("❌ Error al eliminar la cotización");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   const cotizacionesFiltradas = cotizaciones.filter((c) => {
     const matchBusqueda =
@@ -451,13 +499,16 @@ export default function AdminDashboard() {
                     <TableHead className="text-brand-textSecondary">
                       PDF
                     </TableHead>
+                    <TableHead className="text-brand-textSecondary">
+                      Acciones
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {cotizacionesFiltradas.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={9}
                         className="py-8 text-center text-brand-textSecondary"
                       >
                         No hay cotizaciones registradas
@@ -512,6 +563,17 @@ export default function AdminDashboard() {
                           ) : (
                             <span className="text-brand-textSecondary">-</span>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() =>
+                              eliminarCotizacion(cot.id, cot.numero_cotizacion)
+                            }
+                            className="rounded-lg p-2 text-red-400 transition-colors hover:bg-red-900/30 hover:text-red-300"
+                            title="Eliminar cotización"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </TableCell>
                       </TableRow>
                     ))

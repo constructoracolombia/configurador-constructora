@@ -237,16 +237,50 @@ export default function ResumenPage() {
       const { success, publicUrl } = await subirPresupuesto(pdfBlob, fileName);
 
       if (success && publicUrl) {
-        await guardarCotizacionEnDB(numeroCotizacion, publicUrl);
-        const emailOk = await enviarPresupuestoPorEmail(
-          publicUrl,
-          numeroCotizacion
-        );
-        if (emailOk) {
-          await supabase
-            .from("cotizaciones")
-            .update({ estado_crm: "CORREO_ENVIADO" })
-            .eq("numero_cotizacion", numeroCotizacion);
+        const dbResult = await guardarCotizacionEnDB(numeroCotizacion, publicUrl);
+
+        if (dbResult?.success) {
+          // 1. Enviar email
+          const emailOk = await enviarPresupuestoPorEmail(
+            publicUrl,
+            numeroCotizacion
+          );
+
+          if (emailOk) {
+            await supabase
+              .from("cotizaciones")
+              .update({ estado_crm: "CORREO_ENVIADO" })
+              .eq("numero_cotizacion", numeroCotizacion);
+          }
+
+          // 2. Preparar WhatsApp automático (si hay teléfono)
+          if (clienteTelefono) {
+            try {
+              const whatsappResponse = await fetch("/api/enviar-whatsapp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  clienteNombre,
+                  clienteTelefono,
+                  proyecto: proyectoData.nombre,
+                  numeroCotizacion,
+                  pdfUrl: publicUrl,
+                }),
+              });
+
+              const whatsappData = await whatsappResponse.json();
+
+              if (whatsappData.success && whatsappData.whatsappUrl) {
+                // Abrir WhatsApp automáticamente en nueva pestaña
+                // El usuario verá el mensaje pre-escrito y solo debe dar clic en enviar
+                window.open(whatsappData.whatsappUrl, "_blank");
+                console.log("✅ WhatsApp preparado automáticamente");
+              }
+            } catch (whatsappError) {
+              console.error("Error preparando WhatsApp:", whatsappError);
+              // No bloquear el flujo si WhatsApp falla
+            }
+          }
         }
       }
     } catch (error) {

@@ -298,6 +298,54 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
     );
   };
 
+  const eliminarLead = async (lead: Lead) => {
+    if (
+      !confirm(
+        `¿Estás seguro de eliminar el lead de ${lead.cliente_nombre}?\n\nEsta acción no se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      // Eliminar notas relacionadas primero
+      const { error: notasError } = await supabase
+        .from("notas_seguimiento")
+        .delete()
+        .eq("cotizacion_id", lead.id);
+
+      if (notasError) {
+        console.error("Error eliminando notas:", notasError);
+      }
+
+      // Eliminar historial de estados
+      const { error: historialError } = await supabase
+        .from("historial_estados")
+        .delete()
+        .eq("cotizacion_id", lead.id);
+
+      if (historialError) {
+        console.error("Error eliminando historial:", historialError);
+      }
+
+      // Eliminar cotización
+      const { error } = await supabase
+        .from("cotizaciones")
+        .delete()
+        .eq("id", lead.id);
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      setLeads(leads.filter((l) => l.id !== lead.id));
+
+      alert("✅ Lead eliminado exitosamente");
+    } catch (error) {
+      console.error("Error eliminando lead:", error);
+      alert("❌ Error al eliminar el lead");
+    }
+  };
+
   const totalPipeline = leads.reduce(
     (sum, l) => sum + Number(l.total || 0),
     0
@@ -490,6 +538,7 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
                 onLeadClick={abrirDetalles}
                 onWhatsApp={abrirWhatsApp}
                 onReenviarEmail={reenviarEmail}
+                onEliminar={eliminarLead}
               />
             ))}
           </div>

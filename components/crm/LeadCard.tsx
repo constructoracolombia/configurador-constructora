@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Trash2,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import type { Lead } from "@/lib/types/crm";
@@ -27,6 +28,7 @@ interface LeadCardProps {
   onClick: () => void;
   onWhatsApp: () => void;
   onReenviarEmail: () => void;
+  onEliminar?: () => void;
 }
 
 export function LeadCard({
@@ -34,6 +36,7 @@ export function LeadCard({
   onClick,
   onWhatsApp,
   onReenviarEmail,
+  onEliminar,
 }: LeadCardProps) {
   const {
     attributes,
@@ -124,6 +127,18 @@ export function LeadCard({
                 >
                   <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
                   Ver PDF
+                </DropdownMenuItem>
+              )}
+              {onEliminar && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEliminar();
+                  }}
+                  className="cursor-pointer text-red-400 hover:text-red-300"
+                >
+                  <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                  Eliminar
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
