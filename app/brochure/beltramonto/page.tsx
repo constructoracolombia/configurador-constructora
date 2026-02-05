@@ -5,14 +5,31 @@ export const metadata = {
   description: 'Transforma tu apartamento VIS en Beltramonto. Planes desde $14.900.000',
 };
 
+const TESTIMONIOS = [
+  {
+    texto: 'La cocina quedó increíble, mejor de lo que imaginamos. El equipo fue muy profesional y cumplieron cada detalle.',
+    autor: 'Alejandro Díaz',
+    imagen: '/brochure/3. Testimonio-Alejo.jpeg'
+  },
+  {
+    texto: 'Transformaron nuestro apartamento VIS en el hogar de nuestros sueños. La asesoría arquitectónica fue clave para elegir los acabados perfectos.',
+    autor: 'Liliana Sánchez',
+    imagen: '/brochure/4. Testimonio-Liliana.jpeg'
+  },
+  {
+    texto: 'El día de la entrega fue emocionante. Todo quedó impecable y respetaron el presupuesto acordado. ¡Muy recomendados!',
+    autor: 'Sra. Dioselina',
+    imagen: '/brochure/5. Testimonio-Dioselina.jpeg'
+  }
+];
+
 export default function BeltramontoBrochurePage() {
   const proyecto = {
     slug: 'beltramonto',
     nombre: 'Beltramonto',
+    imagenPrincipal: '/brochure/1. Beltramonto.jpeg',
     ubicacion: 'Bucaramanga',
     descripcion: 'Tu apartamento VIS transformado con los mejores acabados. Cotiza en minutos, sin compromiso.',
-    imagenPrincipal: '/proyectos/beltramonto.jpg.jpeg',
-    imagenAntesDepues: 'https://i.imgur.com/h9oMXjD.png',
     precio: {
       basico: '$14.900.000',
       intermedio: '$30.900.000'
@@ -21,19 +38,7 @@ export default function BeltramontoBrochurePage() {
       basico: '35-39 días hábiles',
       intermedio: '59-69 días hábiles'
     },
-    testimonios: [
-      {
-        texto: 'El proceso fue muy sencillo y transparente. Desde la cotización hasta la entrega, todo fue profesional.',
-        autor: 'Carlos Mendoza',
-        imagen: undefined
-      },
-      {
-        texto: 'Quedamos encantados con los acabados. La calidad es impresionante para el precio.',
-        autor: 'María Fernanda Ruiz',
-        imagen: undefined
-      }
-    ],
-    caracteristicas: []
+    testimonios: TESTIMONIOS
   };
 
   return <BrochureLayout proyecto={proyecto} />;

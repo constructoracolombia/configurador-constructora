@@ -5,14 +5,31 @@ export const metadata = {
   description: 'Transforma tu apartamento VIS en Fiore. Planes desde $14.900.000',
 };
 
+const TESTIMONIOS = [
+  {
+    texto: 'La cocina quedó increíble, mejor de lo que imaginamos. El equipo fue muy profesional y cumplieron cada detalle.',
+    autor: 'Alejandro Díaz',
+    imagen: '/brochure/3. Testimonio-Alejo.jpeg'
+  },
+  {
+    texto: 'Transformaron nuestro apartamento VIS en el hogar de nuestros sueños. La asesoría arquitectónica fue clave para elegir los acabados perfectos.',
+    autor: 'Liliana Sánchez',
+    imagen: '/brochure/4. Testimonio-Liliana.jpeg'
+  },
+  {
+    texto: 'El día de la entrega fue emocionante. Todo quedó impecable y respetaron el presupuesto acordado. ¡Muy recomendados!',
+    autor: 'Sra. Dioselina',
+    imagen: '/brochure/5. Testimonio-Dioselina.jpeg'
+  }
+];
+
 export default function FioreBrochurePage() {
   const proyecto = {
     slug: 'fiore',
     nombre: 'Fiore',
+    imagenPrincipal: '/brochure/1. Fiore.png',
     ubicacion: 'Bucaramanga',
     descripcion: 'Remodelamos tu apartamento VIS con acabados de alta calidad. Presupuesto claro, sin sorpresas.',
-    imagenPrincipal: '/proyectos/fiore.jpg.png',
-    imagenAntesDepues: 'https://i.imgur.com/h9oMXjD.png',
     precio: {
       basico: '$14.900.000',
       intermedio: '$30.900.000'
@@ -21,14 +38,7 @@ export default function FioreBrochurePage() {
       basico: '35-39 días hábiles',
       intermedio: '59-69 días hábiles'
     },
-    testimonios: [
-      {
-        texto: 'Excelente servicio y acabados de primera. Muy contentos con el resultado final.',
-        autor: 'Andrea Gómez',
-        imagen: undefined
-      }
-    ],
-    caracteristicas: []
+    testimonios: TESTIMONIOS
   };
 
   return <BrochureLayout proyecto={proyecto} />;
