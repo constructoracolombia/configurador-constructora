@@ -87,6 +87,7 @@ export default function CRMPage() {
   const [notas, setNotas] = useState<Nota[]>([]);
   const [nuevaNota, setNuevaNota] = useState("");
   const [guardandoNota, setGuardandoNota] = useState(false);
+  const [eliminando, setEliminando] = useState<string | null>(null);
 
   const PASSWORD_ADMIN = "admin2026";
 
@@ -299,50 +300,91 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
   };
 
   const eliminarLead = async (lead: Lead) => {
-    if (
-      !confirm(
-        `¿Estás seguro de eliminar el lead de ${lead.cliente_nombre}?\n\nEsta acción no se puede deshacer.`
-      )
-    ) {
-      return;
-    }
+    const confirmacion = window.confirm(
+      `⚠️ ¿ELIMINAR DEFINITIVAMENTE?\n\n` +
+        `Lead: ${lead.cliente_nombre}\n` +
+        `Cotización: ${lead.numero_cotizacion}\n\n` +
+        `Se eliminará:\n` +
+        `• La cotización\n` +
+        `• Todas las notas\n` +
+        `• Todo el historial\n\n` +
+        `Esta acción NO se puede deshacer.`
+    );
+
+    if (!confirmacion) return;
 
     try {
-      // Eliminar notas relacionadas primero
+      setEliminando(lead.id);
+      console.log("🗑️ INICIANDO ELIMINACIÓN:", lead.id, lead.numero_cotizacion);
+
+      // PASO 1: Eliminar notas de seguimiento
+      console.log("📝 Eliminando notas...");
       const { error: notasError } = await supabase
         .from("notas_seguimiento")
         .delete()
         .eq("cotizacion_id", lead.id);
 
       if (notasError) {
-        console.error("Error eliminando notas:", notasError);
+        console.error("❌ Error eliminando notas:", notasError);
+      } else {
+        console.log("✅ Notas eliminadas");
       }
 
-      // Eliminar historial de estados
+      // PASO 2: Eliminar historial de estados
+      console.log("📜 Eliminando historial...");
       const { error: historialError } = await supabase
         .from("historial_estados")
         .delete()
         .eq("cotizacion_id", lead.id);
 
       if (historialError) {
-        console.error("Error eliminando historial:", historialError);
+        console.error("❌ Error eliminando historial:", historialError);
+      } else {
+        console.log("✅ Historial eliminado");
       }
 
-      // Eliminar cotización
-      const { error } = await supabase
+      // PASO 3: Eliminar cotización
+      console.log("💰 Eliminando cotización...");
+      const { error: cotizacionError } = await supabase
         .from("cotizaciones")
         .delete()
         .eq("id", lead.id);
 
-      if (error) throw error;
+      if (cotizacionError) {
+        console.error("❌ Error eliminando cotización:", cotizacionError);
+        throw new Error("Error eliminando cotización: " + cotizacionError.message);
+      }
+      console.log("✅ Cotización eliminada de BD");
 
-      // Actualizar estado local
-      setLeads(leads.filter((l) => l.id !== lead.id));
+      // PASO 4: Actualizar estado local INMEDIATAMENTE
+      setLeads((prevLeads) => {
+        const nuevaLista = prevLeads.filter((l) => l.id !== lead.id);
+        console.log(
+          "🔄 Estado actualizado. Antes:",
+          prevLeads.length,
+          "Después:",
+          nuevaLista.length
+        );
+        return nuevaLista;
+      });
 
+      // PASO 5: Recargar desde BD para confirmar sincronización
+      console.log("🔄 Recargando desde BD...");
+      await cargarLeads();
+
+      console.log("✅ ELIMINACIÓN COMPLETA");
       alert("✅ Lead eliminado exitosamente");
-    } catch (error) {
-      console.error("Error eliminando lead:", error);
-      alert("❌ Error al eliminar el lead");
+    } catch (error: unknown) {
+      console.error("❌ ERROR CRÍTICO:", error);
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
+      alert(
+        `❌ Error al eliminar:\n\n${errorMessage}\n\nRevisa la consola para más detalles.`
+      );
+
+      // Recargar en caso de error para mostrar estado real
+      await cargarLeads();
+    } finally {
+      setEliminando(null);
     }
   };
 
@@ -539,6 +581,7 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
                 onWhatsApp={abrirWhatsApp}
                 onReenviarEmail={reenviarEmail}
                 onEliminar={eliminarLead}
+                eliminandoId={eliminando}
               />
             ))}
           </div>

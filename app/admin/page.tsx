@@ -25,6 +25,8 @@ import {
   Search,
   Lock,
   LayoutDashboard,
+  RefreshCw,
+  Radio,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import { motion } from "framer-motion";
@@ -62,6 +64,7 @@ export default function AdminDashboard() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroProyecto, setFiltroProyecto] = useState("todos");
   const [cargando, setCargando] = useState(false);
+  const [realtimeConectado, setRealtimeConectado] = useState(false);
 
   const PASSWORD_ADMIN = "admin2026"; // Cambiar en producción
 
@@ -153,6 +156,38 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  // SUSCRIPCIÓN EN TIEMPO REAL - Se actualiza automáticamente cuando hay cambios en BD
+  useEffect(() => {
+    if (!autenticado) return;
+
+    console.log("👂 Admin: Suscribiéndose a cambios en tiempo real...");
+
+    const subscription = supabase
+      .channel("admin-cotizaciones-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "cotizaciones",
+        },
+        (payload) => {
+          console.log("⚡ Admin: Cambio detectado en cotizaciones:", payload.eventType);
+          // Recargar datos cuando hay cualquier cambio
+          void cargarDatos();
+        }
+      )
+      .subscribe((status) => {
+        console.log("📡 Admin: Estado de suscripción:", status);
+        setRealtimeConectado(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      console.log("👋 Admin: Desuscribiendo de cambios...");
+      void subscription.unsubscribe();
+    };
+  }, [autenticado]);
+
   const cotizacionesFiltradas = cotizaciones.filter((c) => {
     const matchBusqueda =
       c.cliente_nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -213,7 +248,26 @@ export default function AdminDashboard() {
               Panel de control de cotizaciones
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Indicador de conexión en tiempo real */}
+            <div
+              className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${
+                realtimeConectado
+                  ? "bg-green-900/50 text-green-400"
+                  : "bg-gray-700 text-gray-400"
+              }`}
+              title={
+                realtimeConectado
+                  ? "Conectado - Los cambios se sincronizan automáticamente"
+                  : "Desconectado - Los cambios no se sincronizan"
+              }
+            >
+              <Radio
+                className={`h-3 w-3 ${realtimeConectado ? "animate-pulse" : ""}`}
+              />
+              {realtimeConectado ? "Tiempo Real" : "Sin conexión"}
+            </div>
+
             <Button
               onClick={() => router.push("/dashboard")}
               className="bg-white font-semibold text-black hover:bg-gray-200"
@@ -240,6 +294,7 @@ export default function AdminDashboard() {
               disabled={cargando}
               className="bg-brand-primary font-semibold text-black hover:bg-brand-secondary"
             >
+              <RefreshCw className={`mr-2 h-4 w-4 ${cargando ? "animate-spin" : ""}`} />
               {cargando ? "Cargando..." : "Actualizar"}
             </Button>
             <Button
