@@ -61,7 +61,7 @@ const ESTADOS: Estado[] = [
     color: "bg-yellow-500",
     icon: "📅",
   },
-  { id: "RESERVADO", nombre: "Reservado", color: "bg-orange-500", icon: "💰" },
+  { id: "EN_SEGUIMIENTO", nombre: "En Seguimiento", color: "bg-orange-500", icon: "🔥" },
   {
     id: "CONTRATO_FIRMADO",
     nombre: "Ganado",
@@ -152,7 +152,14 @@ export default function CRMPage() {
     const agrupados: Record<string, Lead[]> = {};
     ESTADOS.forEach((estado) => {
       agrupados[estado.id] = filtrados
-        .filter((lead) => (lead.estado_crm || "NUEVO") === estado.id)
+        .filter((lead) => {
+          const estadoLead = lead.estado_crm || "NUEVO";
+          // Compatibilidad: leads con "RESERVADO" antiguo van a "EN_SEGUIMIENTO"
+          if (estado.id === "EN_SEGUIMIENTO") {
+            return estadoLead === "EN_SEGUIMIENTO" || estadoLead === "RESERVADO";
+          }
+          return estadoLead === estado.id;
+        })
         .sort((a, b) => (a.posicion_kanban || 0) - (b.posicion_kanban || 0));
     });
     setLeadsAgrupados(agrupados);
@@ -394,7 +401,7 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
   );
   const enNegociacion = leads
     .filter((l) =>
-      ["CITA_AGENDADA", "RESERVADO"].includes(l.estado_crm || "NUEVO")
+      ["CITA_AGENDADA", "EN_SEGUIMIENTO", "RESERVADO"].includes(l.estado_crm || "NUEVO")
     )
     .reduce((sum, l) => sum + Number(l.total || 0), 0);
   const ganados = leads.filter(
