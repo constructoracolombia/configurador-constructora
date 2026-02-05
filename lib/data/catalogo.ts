@@ -462,12 +462,12 @@ export const adicionales: Producto[] = [
     categoria: "Granitos",
     imagen: "/productos/53.Barra-sinterizado-conmueble.jpg",
     nombrePorPlan: {
-      basico: "Mejorar a Barra sinterizado con mueble",
-      intermedio: "Mejorar a Barra sinterizado con mueble",
+      basico: "Mejorar a Barra sinterizado con patera y con mueble",
+      intermedio: "Mejorar a Barra sinterizado con patera y con mueble",
     },
     precioPorPlan: {
-      basico: 3_600_000,
-      intermedio: 500_000,
+      basico: 3_840_000,
+      intermedio: 2_900_000,
     },
   },
   {
