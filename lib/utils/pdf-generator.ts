@@ -153,39 +153,33 @@ const getActividadesPorPlan = (planNombre: string): ActividadCategoria[] => {
   }
 };
 
-// Bonos gratis que NO suman al total
+// Bonos gratis
 const BONOS_GRATIS = ["nicho iluminado", "tendedero", "ducha elegante"];
 
-// Filtrar adicionales para mostrar (excluye bonos)
-const filtrarAdicionalesParaMostrar = (
-  adicionales: Array<{ nombre: string; precio: number }>
-) => {
-  return adicionales.filter((a) => {
-    const nombreLower = a.nombre.toLowerCase();
-    return !BONOS_GRATIS.some((b) => nombreLower.includes(b));
-  });
+const esBonoGratis = (nombre: string): boolean => {
+  const nombreLower = nombre.toLowerCase();
+  return BONOS_GRATIS.some((b) => nombreLower.includes(b));
 };
 
-// Calcular total real (sin bonos gratis)
-const calcularTotalReal = (
-  precioPlan: number,
-  adicionales: Array<{ nombre: string; precio: number }>
-) => {
-  const adicionalesQueSeCobran = filtrarAdicionalesParaMostrar(adicionales);
-  const totalAdicionales = adicionalesQueSeCobran.reduce(
-    (sum, a) => sum + a.precio,
-    0
-  );
-  return precioPlan + totalAdicionales;
+const filtrarAdicionales = (adicionales: Array<{ nombre: string; precio: number }>) => {
+  return adicionales.filter((a) => !esBonoGratis(a.nombre));
+};
+
+const calcularTotal = (precioPlan: number, adicionales: Array<{ nombre: string; precio: number }>) => {
+  const adicionalesQueSeCobran = filtrarAdicionales(adicionales);
+  return precioPlan + adicionalesQueSeCobran.reduce((sum, a) => sum + a.precio, 0);
+};
+
+// Calcular altura de una categoría
+const calcularAlturaCategoria = (categoria: ActividadCategoria): number => {
+  return 8 + 4 + categoria.items.length * 5 + 3;
 };
 
 // ═══════════════════════════════════════════════════════════════
-// GENERADOR PRINCIPAL
+// GENERADOR PRINCIPAL CON PAGINACIÓN INTELIGENTE
 // ═══════════════════════════════════════════════════════════════
 
-export async function generarCotizacionPDF(
-  data: CotizacionData
-): Promise<Blob> {
+export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -196,252 +190,233 @@ export async function generarCotizacionPDF(
   const pageHeight = 279.4;
   const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
+  const maxY = pageHeight - margin - 12; // Límite inferior (espacio para footer)
 
-  // Calcular total real (sin bonos gratis)
-  const totalReal = calcularTotalReal(data.plan.precio, data.adicionales);
+  const totalReal = calcularTotal(data.plan.precio, data.adicionales);
+
+  let currentY = 0;
 
   // ═══════════════════════════════════════════════════════════════
-  // PÁGINA 1
+  // PÁGINA 1: COTIZACIÓN
   // ═══════════════════════════════════════════════════════════════
-
-  let yPos = 0;
 
   // HEADER
   doc.setFillColor(...colors.dark);
-  doc.rect(0, 0, pageWidth, 34, "F");
+  doc.rect(0, 0, pageWidth, 32, "F");
 
   doc.setTextColor(...colors.primary);
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.text("CONSTRUCTORA COLOMBIA", pageWidth / 2, 12, { align: "center" });
 
   doc.setTextColor(...colors.white);
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "italic");
-  doc.text(
-    "Más que una constructora, un aliado para tu hogar",
-    pageWidth / 2,
-    19,
-    { align: "center" }
-  );
+  doc.text("Más que una constructora, un aliado para tu hogar", pageWidth / 2, 19, { align: "center" });
 
   doc.setTextColor(...colors.primary);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("COTIZACIÓN KIT ACABADOS", margin + 5, 28);
+  doc.text("COTIZACIÓN KIT ACABADOS", margin + 4, 27);
 
   doc.setTextColor(...colors.white);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(data.numeroConsecutivo, pageWidth - margin - 5, 28, {
-    align: "right",
-  });
+  doc.text(data.numeroConsecutivo, pageWidth - margin - 4, 27, { align: "right" });
 
-  yPos = 42;
+  currentY = 40;
 
   // CLIENTE Y PROYECTO
   const boxWidth = (contentWidth - 8) / 2;
 
   doc.setFillColor(...colors.background);
-  doc.roundedRect(margin, yPos, boxWidth, 24, 2, 2, "F");
+  doc.roundedRect(margin, currentY, boxWidth, 22, 2, 2, "F");
 
   doc.setTextColor(...colors.dark);
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("CLIENTE", margin + 4, yPos + 6);
+  doc.text("CLIENTE", margin + 4, currentY + 6);
 
   doc.setTextColor(...colors.text);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(data.cliente.nombre, margin + 4, yPos + 12);
+  doc.text(data.cliente.nombre, margin + 4, currentY + 11);
 
   doc.setFontSize(7);
   doc.setTextColor(...colors.textLight);
-  if (data.cliente.email) doc.text(data.cliente.email, margin + 4, yPos + 17);
-  if (data.cliente.telefono) doc.text(data.cliente.telefono, margin + 4, yPos + 21);
+  if (data.cliente.email) doc.text(data.cliente.email, margin + 4, currentY + 16);
+  if (data.cliente.telefono) doc.text(data.cliente.telefono, margin + 4, currentY + 20);
 
   const rightX = margin + boxWidth + 8;
   doc.setFillColor(...colors.background);
-  doc.roundedRect(rightX, yPos, boxWidth, 24, 2, 2, "F");
+  doc.roundedRect(rightX, currentY, boxWidth, 22, 2, 2, "F");
 
   doc.setTextColor(...colors.dark);
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("PROYECTO", rightX + 4, yPos + 6);
+  doc.text("PROYECTO", rightX + 4, currentY + 6);
 
   doc.setTextColor(...colors.text);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(data.proyecto.nombre, rightX + 4, yPos + 12);
+  doc.text(data.proyecto.nombre, rightX + 4, currentY + 11);
 
   doc.setFontSize(7);
   doc.setTextColor(...colors.textLight);
-  doc.text(data.proyecto.ubicacion, rightX + 4, yPos + 17);
-  doc.text(data.fecha, rightX + 4, yPos + 21);
+  doc.text(data.proyecto.ubicacion, rightX + 4, currentY + 16);
+  doc.text(data.fecha, rightX + 4, currentY + 20);
 
-  yPos += 30;
+  currentY += 28;
 
   // BANNER PLAN
   doc.setFillColor(...colors.secondary);
-  doc.roundedRect(margin, yPos, contentWidth, 12, 2, 2, "F");
+  doc.roundedRect(margin, currentY, contentWidth, 12, 2, 2, "F");
 
   doc.setTextColor(...colors.dark);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`PLAN: ${data.plan.nombre.toUpperCase()}`, margin + 6, yPos + 8);
+  doc.text(`PLAN: ${data.plan.nombre.toUpperCase()}`, margin + 6, currentY + 8);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(
-    `Entrega: ${data.plan.tiempoEntrega} días hábiles`,
-    pageWidth - margin - 6,
-    yPos + 8,
-    { align: "right" }
-  );
+  doc.text(`Entrega: ${data.plan.tiempoEntrega} días hábiles`, pageWidth - margin - 6, currentY + 8, { align: "right" });
 
-  yPos += 20;
+  currentY += 18;
 
-  // ACTIVIDADES INCLUIDAS
+  // TÍTULO ACTIVIDADES
   doc.setTextColor(...colors.dark);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("ACTIVIDADES INCLUIDAS EN TU PLAN", margin, yPos);
+  doc.text("ACTIVIDADES INCLUIDAS EN TU PLAN", margin, currentY);
+  currentY += 6;
 
-  yPos += 6;
-
+  // ACTIVIDADES POR CATEGORÍA - CON CONTROL DE PAGINACIÓN
   const actividades = getActividadesPorPlan(data.plan.nombre);
 
-  actividades.forEach((categoria) => {
+  for (const categoria of actividades) {
+    const alturaCategoria = calcularAlturaCategoria(categoria);
+
+    // Si no cabe la categoría completa, saltar a nueva página
+    if (currentY + alturaCategoria > maxY) {
+      // Footer antes de saltar
+      renderFooterSimple(doc, margin, pageWidth, pageHeight);
+      
+      doc.addPage();
+      currentY = margin;
+      renderMiniHeader(doc, margin, pageWidth);
+      currentY = margin + 20;
+    }
+
     // Título categoría
     doc.setFillColor(243, 244, 246);
-    doc.rect(margin, yPos, contentWidth, 6, "F");
+    doc.rect(margin, currentY, contentWidth, 6, "F");
     doc.setTextColor(...colors.dark);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text(categoria.categoria, margin + 4, yPos + 4);
+    doc.text(categoria.categoria, margin + 4, currentY + 4);
 
-    yPos += 6 + 3; // +3mm separación crítica
+    currentY += 6 + 3; // +3mm separación
 
     // Items
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
 
-    categoria.items.forEach((item) => {
+    for (const item of categoria.items) {
       doc.setTextColor(...colors.success);
-      doc.text("✓", margin + 4, yPos);
+      doc.text("✓", margin + 4, currentY);
       doc.setTextColor(75, 85, 99);
-      doc.text(item, margin + 10, yPos);
-      yPos += 4.5;
-    });
+      doc.text(item, margin + 10, currentY);
+      currentY += 5;
+    }
 
-    yPos += 2;
-  });
-
-  yPos += 3;
+    currentY += 3;
+  }
 
   // ADICIONALES
-  const adicionalesParaMostrar = filtrarAdicionalesParaMostrar(data.adicionales);
+  const adicionalesParaMostrar = filtrarAdicionales(data.adicionales);
 
   if (adicionalesParaMostrar.length > 0) {
+    const alturaTabla = 18 + adicionalesParaMostrar.length * 7;
+
+    if (currentY + alturaTabla > maxY) {
+      renderFooterSimple(doc, margin, pageWidth, pageHeight);
+      doc.addPage();
+      currentY = margin;
+      renderMiniHeader(doc, margin, pageWidth);
+      currentY = margin + 20;
+    }
+
+    currentY += 4;
     doc.setTextColor(...colors.dark);
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("ADICIONALES SELECCIONADOS", margin, yPos);
-
-    yPos += 4;
+    doc.text("ADICIONALES SELECCIONADOS", margin, currentY);
+    currentY += 4;
 
     autoTable(doc, {
-      startY: yPos,
+      startY: currentY,
       head: [["#", "Descripción", "Precio"]],
       body: adicionalesParaMostrar.map((add, idx) => [
         (idx + 1).toString(),
         add.nombre,
         formatPrice(add.precio),
       ]),
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-        lineColor: [230, 230, 230],
-        lineWidth: 0.1,
-      },
-      headStyles: {
-        fillColor: colors.dark,
-        textColor: colors.white,
-        fontStyle: "bold",
-        fontSize: 8,
-      },
-      alternateRowStyles: {
-        fillColor: [250, 250, 250],
-      },
+      styles: { fontSize: 8, cellPadding: 2, lineColor: [230, 230, 230], lineWidth: 0.1 },
+      headStyles: { fillColor: colors.dark, textColor: colors.white, fontStyle: "bold", fontSize: 8 },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
       columnStyles: {
         0: { cellWidth: 8, halign: "center" },
-        1: { cellWidth: contentWidth - 40 },
-        2: { cellWidth: 32, halign: "right", fontStyle: "bold" },
+        1: { cellWidth: contentWidth - 38 },
+        2: { cellWidth: 30, halign: "right", fontStyle: "bold" },
       },
       margin: { left: margin, right: margin },
     });
 
-    yPos = (doc.lastAutoTable?.finalY ?? yPos) + 6;
+    currentY = (doc.lastAutoTable?.finalY ?? currentY) + 6;
   }
 
-  // TOTAL - Siempre en Página 1
-  const totalHeight = 45;
+  // TOTAL
+  const totalHeight = 42;
 
-  if (yPos + totalHeight + 12 > pageHeight - margin) {
+  if (currentY + totalHeight > maxY) {
+    renderFooterSimple(doc, margin, pageWidth, pageHeight);
     doc.addPage();
-    yPos = margin;
+    currentY = margin;
+    renderMiniHeader(doc, margin, pageWidth);
+    currentY = margin + 20;
   }
+
+  currentY += 6;
 
   doc.setFillColor(...colors.dark);
-  doc.roundedRect(margin + 10, yPos, contentWidth - 20, totalHeight, 5, 5, "F");
+  doc.roundedRect(margin + 12, currentY, contentWidth - 24, totalHeight, 5, 5, "F");
 
   doc.setTextColor(...colors.primary);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("INVERSIÓN TOTAL", pageWidth / 2, yPos + 11, { align: "center" });
+  doc.text("INVERSIÓN TOTAL", pageWidth / 2, currentY + 10, { align: "center" });
 
-  doc.setFontSize(28);
-  doc.text(formatPrice(totalReal), pageWidth / 2, yPos + 28, {
-    align: "center",
-  });
+  doc.setFontSize(26);
+  doc.text(formatPrice(totalReal), pageWidth / 2, currentY + 25, { align: "center" });
 
   doc.setTextColor(148, 163, 184);
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text(
-    `Entrega en ${data.plan.tiempoEntrega} días hábiles`,
-    pageWidth / 2,
-    yPos + 38,
-    { align: "center" }
-  );
+  doc.text(`Entrega en ${data.plan.tiempoEntrega} días hábiles`, pageWidth / 2, currentY + 35, { align: "center" });
 
-  // FOOTER P1
-  doc.setFillColor(...colors.dark);
-  doc.rect(0, pageHeight - 8, pageWidth, 8, "F");
+  currentY += totalHeight + 8;
 
-  doc.setTextColor(...colors.primary);
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.text("Constructora Colombia", margin, pageHeight - 3);
-
-  doc.setTextColor(...colors.white);
-  doc.setFontSize(6);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    "+57 317 563 9674 | www.constructoracolombia.com",
-    pageWidth - margin,
-    pageHeight - 3,
-    { align: "right" }
-  );
+  // Footer página cotización
+  renderFooterSimple(doc, margin, pageWidth, pageHeight);
 
   // ═══════════════════════════════════════════════════════════════
-  // PÁGINA 2
+  // PÁGINA 2: DETALLES DEL CONTRATO
   // ═══════════════════════════════════════════════════════════════
 
   doc.addPage();
-  yPos = 0;
+  currentY = 0;
 
-  // HEADER P2
+  // Header P2
   doc.setFillColor(...colors.dark);
   doc.rect(0, 0, pageWidth, 28, "F");
 
@@ -453,28 +428,23 @@ export async function generarCotizacionPDF(
   doc.setTextColor(...colors.white);
   doc.setFontSize(8);
   doc.setFont("helvetica", "italic");
-  doc.text(
-    "Más que una constructora, un aliado para tu hogar",
-    pageWidth / 2,
-    17,
-    { align: "center" }
-  );
+  doc.text("Más que una constructora, un aliado para tu hogar", pageWidth / 2, 17, { align: "center" });
 
   doc.setTextColor(...colors.primary);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("DETALLES DEL CONTRATO", pageWidth / 2, 24, { align: "center" });
 
-  yPos = 36;
+  currentY = 36;
 
   // FORMA DE PAGO
   doc.setFillColor(...colors.dark);
-  doc.roundedRect(margin, yPos, contentWidth, 52, 4, 4, "F");
+  doc.roundedRect(margin, currentY, contentWidth, 50, 4, 4, "F");
 
   doc.setTextColor(...colors.primary);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("FORMA DE PAGO FLEXIBLE", margin + 8, yPos + 9);
+  doc.text("FORMA DE PAGO FLEXIBLE", margin + 8, currentY + 9);
 
   const cuotas = [
     { porcentaje: 45, descripcion: "Anticipo para iniciar obra" },
@@ -484,7 +454,7 @@ export async function generarCotizacionPDF(
     { porcentaje: 5, descripcion: "Con entrega a satisfacción" },
   ];
 
-  let cuotaY = yPos + 17;
+  let cuotaY = currentY + 16;
   cuotas.forEach((cuota) => {
     const monto = Math.round((totalReal * cuota.porcentaje) / 100);
 
@@ -500,9 +470,7 @@ export async function generarCotizacionPDF(
 
     doc.setTextColor(...colors.success);
     doc.setFont("helvetica", "bold");
-    doc.text(formatPrice(monto), pageWidth - margin - 10, cuotaY, {
-      align: "right",
-    });
+    doc.text(formatPrice(monto), pageWidth - margin - 10, cuotaY, { align: "right" });
 
     cuotaY += 6.5;
   });
@@ -510,31 +478,28 @@ export async function generarCotizacionPDF(
   doc.setTextColor(148, 163, 184);
   doc.setFontSize(7);
   doc.setFont("helvetica", "italic");
-  doc.text("Sin letras pequeñas, sin sorpresas", pageWidth / 2, yPos + 49, {
-    align: "center",
-  });
+  doc.text("Sin letras pequeñas, sin sorpresas", pageWidth / 2, currentY + 47, { align: "center" });
 
-  yPos += 60;
+  currentY += 58;
 
-  // BONOS REGALO
-  const bonosHeight = 68;
+  // BONOS (reducidos 15%)
+  const bonosHeight = 60;
 
   doc.setFillColor(254, 252, 232);
-  doc.roundedRect(margin, yPos, contentWidth, bonosHeight, 4, 4, "F");
-
+  doc.roundedRect(margin, currentY, contentWidth, bonosHeight, 4, 4, "F");
   doc.setDrawColor(...colors.secondary);
   doc.setLineWidth(1);
-  doc.roundedRect(margin, yPos, contentWidth, bonosHeight, 4, 4, "S");
+  doc.roundedRect(margin, currentY, contentWidth, bonosHeight, 4, 4, "S");
 
   doc.setTextColor(...colors.dark);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("BONOS REGALO INCLUIDOS", margin + 8, yPos + 9);
+  doc.text("BONOS REGALO INCLUIDOS", margin + 8, currentY + 8);
 
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(...colors.textLight);
-  doc.text("(Sin costo adicional)", margin + 75, yPos + 9);
+  doc.text("(Sin costo adicional)", margin + 72, currentY + 8);
 
   const bonos = [
     "Bono #1 - Nicho iluminado",
@@ -546,8 +511,8 @@ export async function generarCotizacionPDF(
     "Bono #7 - Garantía de calidad",
   ];
 
-  let bonoY = yPos + 18;
-  doc.setFontSize(9);
+  let bonoY = currentY + 15;
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
 
   bonos.forEach((bono) => {
@@ -555,34 +520,29 @@ export async function generarCotizacionPDF(
     doc.text("✓", margin + 8, bonoY);
     doc.setTextColor(...colors.text);
     doc.text(bono, margin + 14, bonoY);
-    bonoY += 6;
+    bonoY += 5.5;
   });
 
   // Valor estimado
   doc.setFillColor(209, 250, 229);
-  doc.roundedRect(margin + 20, yPos + bonosHeight - 11, contentWidth - 40, 8, 3, 3, "F");
+  doc.roundedRect(margin + 18, currentY + bonosHeight - 10, contentWidth - 36, 7, 3, 3, "F");
   doc.setTextColor(5, 150, 105);
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text(
-    "Valor estimado de bonos: $2.500.000",
-    pageWidth / 2,
-    yPos + bonosHeight - 5,
-    { align: "center" }
-  );
+  doc.text("Valor estimado de bonos: $2.500.000", pageWidth / 2, currentY + bonosHeight - 5, { align: "center" });
 
-  yPos += bonosHeight + 8;
+  currentY += bonosHeight + 8;
 
   // GARANTÍAS
-  const garantiasHeight = 40;
+  const garantiasHeight = 38;
 
   doc.setFillColor(...colors.dark);
-  doc.roundedRect(margin, yPos, contentWidth, garantiasHeight, 4, 4, "F");
+  doc.roundedRect(margin, currentY, contentWidth, garantiasHeight, 4, 4, "F");
 
   doc.setTextColor(...colors.primary);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("GARANTÍAS Y CONDICIONES", margin + 8, yPos + 9);
+  doc.text("GARANTÍAS Y CONDICIONES", margin + 8, currentY + 8);
 
   const garantias = [
     `Tiempo de entrega: ${data.plan.tiempoEntrega} días hábiles`,
@@ -592,7 +552,7 @@ export async function generarCotizacionPDF(
     "Seguro de responsabilidad civil",
   ];
 
-  let garantiaY = yPos + 16;
+  let garantiaY = currentY + 14;
   doc.setFontSize(8);
 
   garantias.forEach((garantia) => {
@@ -604,58 +564,43 @@ export async function generarCotizacionPDF(
     garantiaY += 5;
   });
 
-  yPos += garantiasHeight + 10;
+  currentY += garantiasHeight + 12;
 
-  // BOTÓN WHATSAPP (160x38mm)
-  const buttonWidth = 160;
-  const buttonHeight = 38;
+  // BOTÓN WHATSAPP
+  const buttonWidth = 150;
+  const buttonHeight = 36;
   const buttonX = (pageWidth - buttonWidth) / 2;
-  const buttonY = yPos;
 
   // Sombra
   doc.setFillColor(30, 30, 30);
-  doc.roundedRect(buttonX + 1, buttonY + 1, buttonWidth, buttonHeight, 6, 6, "F");
+  doc.roundedRect(buttonX + 1, currentY + 1, buttonWidth, buttonHeight, 5, 5, "F");
 
   // Botón
   doc.setFillColor(...colors.whatsapp);
-  doc.roundedRect(buttonX, buttonY, buttonWidth, buttonHeight, 6, 6, "F");
+  doc.roundedRect(buttonX, currentY, buttonWidth, buttonHeight, 5, 5, "F");
 
   // Texto
   doc.setTextColor(...colors.white);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text("Continuar conversación", pageWidth / 2, buttonY + 12, {
-    align: "center",
-  });
-  doc.text("en WhatsApp", pageWidth / 2, buttonY + 20, { align: "center" });
+  doc.text("Continuar conversación", pageWidth / 2, currentY + 12, { align: "center" });
+  doc.text("en WhatsApp", pageWidth / 2, currentY + 20, { align: "center" });
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text("+57 317 563 9674", pageWidth / 2, buttonY + 30, { align: "center" });
+  doc.text("+57 317 563 9674", pageWidth / 2, currentY + 29, { align: "center" });
 
   // Link
-  const whatsappUrl = `https://wa.me/573175639674?text=${encodeURIComponent(
-    `Hola, quiero continuar con mi cotización ${data.numeroConsecutivo}`
-  )}`;
-  doc.link(buttonX, buttonY, buttonWidth, buttonHeight, { url: whatsappUrl });
+  const whatsappUrl = `https://wa.me/573175639674?text=${encodeURIComponent(`Hola, quiero continuar con mi cotización ${data.numeroConsecutivo}`)}`;
+  doc.link(buttonX, currentY, buttonWidth, buttonHeight, { url: whatsappUrl });
 
   // Subtexto
   doc.setTextColor(...colors.textLight);
   doc.setFontSize(7);
-  doc.text(
-    "Horario: Lun-Vie 8am-6pm | Sáb 9am-1pm",
-    pageWidth / 2,
-    buttonY + buttonHeight + 5,
-    { align: "center" }
-  );
-  doc.text(
-    "Respuesta promedio: Menos de 5 minutos",
-    pageWidth / 2,
-    buttonY + buttonHeight + 9,
-    { align: "center" }
-  );
+  doc.text("Horario: Lun-Vie 8am-6pm | Sáb 9am-1pm", pageWidth / 2, currentY + buttonHeight + 5, { align: "center" });
+  doc.text("Respuesta promedio: Menos de 5 minutos", pageWidth / 2, currentY + buttonHeight + 9, { align: "center" });
 
-  // FOOTER P2
+  // FOOTER FINAL
   doc.setFillColor(...colors.dark);
   doc.rect(0, pageHeight - 8, pageWidth, 8, "F");
 
@@ -667,12 +612,43 @@ export async function generarCotizacionPDF(
   doc.setTextColor(...colors.white);
   doc.setFontSize(6);
   doc.setFont("helvetica", "normal");
-  doc.text("Bucaramanga, Colombia", pageWidth / 2, pageHeight - 3, {
-    align: "center",
-  });
-  doc.text("hola@constructoracolombia.com", pageWidth - margin, pageHeight - 3, {
-    align: "right",
-  });
+  doc.text("Bucaramanga, Colombia", pageWidth / 2, pageHeight - 3, { align: "center" });
+  doc.text("hola@constructoracolombia.com", pageWidth - margin, pageHeight - 3, { align: "right" });
 
   return doc.output("blob");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FUNCIONES AUXILIARES
+// ═══════════════════════════════════════════════════════════════
+
+function renderMiniHeader(doc: jsPDF, margin: number, pageWidth: number): void {
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...colors.primary);
+  doc.text("CONSTRUCTORA COLOMBIA", pageWidth / 2, margin + 5, { align: "center" });
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...colors.textLight);
+  doc.text("Más que una constructora, un aliado para tu hogar", pageWidth / 2, margin + 10, { align: "center" });
+
+  doc.setDrawColor(...colors.primary);
+  doc.setLineWidth(0.3);
+  doc.line(margin, margin + 14, pageWidth - margin, margin + 14);
+}
+
+function renderFooterSimple(doc: jsPDF, margin: number, pageWidth: number, pageHeight: number): void {
+  doc.setFillColor(...colors.dark);
+  doc.rect(0, pageHeight - 8, pageWidth, 8, "F");
+
+  doc.setTextColor(...colors.primary);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.text("Constructora Colombia", margin, pageHeight - 3);
+
+  doc.setTextColor(...colors.white);
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "normal");
+  doc.text("+57 317 563 9674 | www.constructoracolombia.com", pageWidth - margin, pageHeight - 3, { align: "right" });
 }
