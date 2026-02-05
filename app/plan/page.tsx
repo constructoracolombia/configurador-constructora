@@ -38,6 +38,21 @@ function PlanPageContent() {
   const setProyecto = useCotizador((s) => s.setProyecto);
   const setPlanBase = useCotizador((s) => s.setPlanBase);
 
+  // Leer proyecto pre-seleccionado desde localStorage (desde brochure)
+  useEffect(() => {
+    const proyectoGuardado = localStorage.getItem('proyecto-seleccionado');
+    
+    if (proyectoGuardado) {
+      // Verificar que el proyecto existe en el catálogo
+      const proyectoExiste = proyectos.find(p => p.id === proyectoGuardado);
+      if (proyectoExiste) {
+        setProyecto(proyectoGuardado);
+      }
+      // Limpiar localStorage después de usar
+      localStorage.removeItem('proyecto-seleccionado');
+    }
+  }, [setProyecto]);
+
   useEffect(() => {
     if (proyectoFromUrl && !proyectoFromStore) {
       setProyecto(proyectoFromUrl);
