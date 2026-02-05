@@ -188,7 +188,17 @@ export const useCotizador = create<CotizadorStore>()(
 
       getPrecioAdicionales: () => {
         const state = get();
-        return state.adicionales.reduce((sum, item) => {
+        
+        // Bonos gratis que NO suman al total
+        const bonusGratis = ["nicho iluminado", "tendedero", "ducha elegante"];
+        
+        // Filtrar adicionales que NO son bonos gratis
+        const adicionalesQueSeCobran = state.adicionales.filter((item) => {
+          const nombreLower = item.nombre.toLowerCase();
+          return !bonusGratis.some((b) => nombreLower.includes(b));
+        });
+        
+        return adicionalesQueSeCobran.reduce((sum, item) => {
           // Usar precio dinámico según el plan seleccionado
           const precioItem = getPrecioAdicional(item, state.planBase);
           return sum + precioItem * (item.cantidad ?? 1);
