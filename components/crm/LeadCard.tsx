@@ -19,6 +19,7 @@ import {
   Eye,
   EyeOff,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import type { Lead } from "@/lib/types/crm";
@@ -29,6 +30,7 @@ interface LeadCardProps {
   onWhatsApp: () => void;
   onReenviarEmail: () => void;
   onEliminar?: () => void;
+  isDeleting?: boolean;
 }
 
 export function LeadCard({
@@ -37,6 +39,7 @@ export function LeadCard({
   onWhatsApp,
   onReenviarEmail,
   onEliminar,
+  isDeleting = false,
 }: LeadCardProps) {
   const {
     attributes,
@@ -61,10 +64,19 @@ export function LeadCard({
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-move border-brand-border bg-brand-dark transition-all hover:border-brand-primary ${
+      className={`relative cursor-move border-brand-border bg-brand-dark transition-all hover:border-brand-primary ${
         esGanado ? "animate-pulse border-2 border-brand-primary" : ""
-      }`}
+      } ${isDeleting ? "pointer-events-none opacity-50" : ""}`}
     >
+      {/* Overlay de eliminación */}
+      {isDeleting && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-brand-dark/80">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-red-500" />
+            <span className="text-xs font-medium text-red-400">Eliminando...</span>
+          </div>
+        </div>
+      )}
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between">
           <div

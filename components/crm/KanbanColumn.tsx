@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   onWhatsApp: (lead: Lead) => void;
   onReenviarEmail: (lead: Lead) => void;
   onEliminar?: (lead: Lead) => void;
+  eliminandoId?: string | null;
 }
 
 export function KanbanColumn({
@@ -24,6 +25,7 @@ export function KanbanColumn({
   onWhatsApp,
   onReenviarEmail,
   onEliminar,
+  eliminandoId,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: estado.id,
@@ -62,6 +64,7 @@ export function KanbanColumn({
               onWhatsApp={() => onWhatsApp(lead)}
               onReenviarEmail={() => onReenviarEmail(lead)}
               onEliminar={onEliminar ? () => onEliminar(lead) : undefined}
+              isDeleting={eliminandoId === lead.id}
             />
           ))}
         </SortableContext>
