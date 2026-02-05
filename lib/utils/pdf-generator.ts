@@ -1,5 +1,4 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 interface CotizacionData {
   numeroConsecutivo: string;
@@ -27,8 +26,6 @@ interface CotizacionData {
   }>;
   total: number;
 }
-
-type DocWithAutoTable = jsPDF & { lastAutoTable?: { finalY: number } };
 
 // ═══════════════════════════════════════════════════════════════
 // COLORES
@@ -132,61 +129,111 @@ function renderMiniHeader(doc: jsPDF, margin: number, pageWidth: number): number
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TABLA ADICIONALES CON AUTO-AJUSTE
+// ACTIVIDADES EN GRID 3 COLUMNAS (REUTILIZABLE)
 // ═══════════════════════════════════════════════════════════════
 
-function renderTablaAdicionalesConAutoAjuste(
-  doc: DocWithAutoTable,
+function renderActividadesEnGrid(doc: jsPDF, actividades: string[], margin: number, contentWidth: number, startY: number): number {
+  const columnas = 3;
+  const columnWidth = contentWidth / columnas;
+  const itemHeight = 6;
+  const fontSize = 9;
+
+  let x = margin;
+  let y = startY;
+  let itemsEnColumna = 0;
+  const maxItemsPorColumna = Math.ceil(actividades.length / columnas);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(fontSize);
+
+  actividades.forEach((actividad, index) => {
+    // Check dorado
+    doc.setTextColor(...COLORS.gold);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("✓", x, y);
+
+    // Texto actividad
+    doc.setTextColor(...COLORS.textSecondary);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+
+    const maxTextWidth = columnWidth - 8;
+    const texto = doc.splitTextToSize(actividad, maxTextWidth)[0];
+    doc.text(texto, x + 5, y);
+
+    itemsEnColumna++;
+
+    if (itemsEnColumna >= maxItemsPorColumna && index < actividades.length - 1) {
+      x += columnWidth;
+      y = startY;
+      itemsEnColumna = 0;
+    } else {
+      y += itemHeight;
+    }
+  });
+
+  return startY + maxItemsPorColumna * itemHeight + 5;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADICIONALES EN GRID 3 COLUMNAS (SIN PRECIOS - REVOLUCIONARIO)
+// ═══════════════════════════════════════════════════════════════
+
+function renderAdicionalesEnGrid(
+  doc: jsPDF,
   adicionales: Array<{ nombre: string; precio: number; cantidad?: number }>,
   margin: number,
   contentWidth: number,
   startY: number
 ): number {
-  // Detectar si hay muchos adicionales
-  const tieneMuchosAdicionales = adicionales.length > 8;
+  const columnas = 3;
+  const columnWidth = contentWidth / columnas;
+  const itemHeight = 6;
+  const fontSize = 9;
 
-  // Ajustar tamaños según cantidad
-  const fontSize = tieneMuchosAdicionales ? 7.5 : 8;
-  const cellPadding = tieneMuchosAdicionales ? 1.2 : 1.5;
-  const headFontSize = tieneMuchosAdicionales ? 8.5 : 9;
+  let x = margin;
+  let y = startY;
+  let itemsEnColumna = 0;
+  const maxItemsPorColumna = Math.ceil(adicionales.length / columnas);
 
-  autoTable(doc, {
-    startY: startY,
-    head: [["#", "Descripción", "Precio"]],
-    body: adicionales.map((item, idx) => [
-      (idx + 1).toString(),
-      item.nombre + (item.cantidad && item.cantidad > 1 ? ` (×${item.cantidad})` : ""),
-      formatPrice(item.precio * (item.cantidad || 1)),
-    ]),
-    theme: "grid",
-    styles: {
-      fontSize: fontSize,
-      cellPadding: cellPadding,
-      lineColor: [220, 220, 220],
-      lineWidth: 0.1,
-    },
-    headStyles: {
-      fillColor: COLORS.darkNavy,
-      textColor: COLORS.white,
-      fontSize: headFontSize,
-      fontStyle: "bold",
-      cellPadding: cellPadding + 0.3,
-    },
-    bodyStyles: {
-      fontSize: fontSize,
-      cellPadding: cellPadding,
-      minCellHeight: tieneMuchosAdicionales ? 5 : 6,
-    },
-    columnStyles: {
-      0: { cellWidth: 8, halign: "center" },
-      1: { cellWidth: contentWidth - 40 },
-      2: { cellWidth: 30, halign: "right", fontStyle: "bold" },
-    },
-    margin: { left: margin, right: margin },
-    rowPageBreak: "avoid",
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(fontSize);
+
+  adicionales.forEach((adicional, index) => {
+    // Check dorado
+    doc.setTextColor(...COLORS.gold);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("✓", x, y);
+
+    // Nombre adicional (SIN PRECIO)
+    doc.setTextColor(...COLORS.textSecondary);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fontSize);
+
+    const nombreCompleto = adicional.nombre + (adicional.cantidad && adicional.cantidad > 1 ? ` (×${adicional.cantidad})` : "");
+
+    const maxTextWidth = columnWidth - 8;
+    const textoTruncado = doc.splitTextToSize(nombreCompleto, maxTextWidth)[0];
+    doc.text(textoTruncado, x + 5, y);
+
+    itemsEnColumna++;
+
+    // Mover a siguiente posición
+    if (itemsEnColumna >= maxItemsPorColumna && index < adicionales.length - 1) {
+      // Nueva columna
+      x += columnWidth;
+      y = startY;
+      itemsEnColumna = 0;
+    } else {
+      // Siguiente fila
+      y += itemHeight;
+    }
   });
 
-  return doc.lastAutoTable?.finalY ?? startY;
+  // Retornar Y máximo
+  return startY + maxItemsPorColumna * itemHeight + 5;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -202,29 +249,29 @@ function renderInversionTotalCompacto(
   startY: number,
   pageWidth: number
 ): number {
-  const boxHeight = 38; // Compacto
+  const boxHeight = 38;
 
-  // Fondo gris casi imperceptible
+  // Fondo gris sutil
   doc.setFillColor(...COLORS.backgroundLight);
   doc.rect(margin, startY, contentWidth, boxHeight, "F");
 
   // Borde dorado premium 1.5px
   doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(0.55); // ~1.5px
+  doc.setLineWidth(0.55);
   doc.rect(margin, startY, contentWidth, boxHeight);
 
-  // Título "INVERSIÓN TOTAL" (14pt)
+  // Título
   doc.setTextColor(...COLORS.gold);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text("INVERSIÓN TOTAL", pageWidth / 2, startY + 11, { align: "center" });
 
-  // Precio (22pt - elegante)
+  // Precio
   doc.setTextColor(...COLORS.darkNavy);
   doc.setFontSize(22);
   doc.text(formatPrice(total), pageWidth / 2, startY + 24, { align: "center" });
 
-  // Tiempo de entrega (8pt)
+  // Tiempo entrega
   doc.setFontSize(8);
   doc.setTextColor(...COLORS.textTertiary);
   doc.setFont("helvetica", "normal");
@@ -261,7 +308,7 @@ function renderFooter(doc: jsPDF, margin: number, pageWidth: number, pageHeight:
 // ═══════════════════════════════════════════════════════════════
 
 export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" }) as DocWithAutoTable;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
 
   const pageWidth = 215.9;
   const pageHeight = 279.4;
@@ -274,7 +321,7 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   let pageNumber = 1;
 
   // ═══════════════════════════════════════════════════════════════
-  // PÁGINA 1: HEADER + ACTIVIDADES GRID + ADICIONALES + INVERSIÓN
+  // PÁGINA 1: PROPUESTA DE VALOR COMPLETA
   // ═══════════════════════════════════════════════════════════════
 
   // HEADER
@@ -356,94 +403,71 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
 
   currentY += 17;
 
-  // TÍTULO ACTIVIDADES
+  // ════════════════════════════════════════════════════════════
+  // SECCIÓN 1: ACTIVIDADES DEL PLAN (Grid 3 columnas)
+  // ════════════════════════════════════════════════════════════
+
   doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(12);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.text("ACTIVIDADES INCLUIDAS EN TU PLAN", margin, currentY);
   currentY += 8;
 
-  // ACTIVIDADES EN GRID 3 COLUMNAS
   const actividades = getActividadesPorPlan(data.plan.nombre);
-  const columnas = 3;
-  const columnWidth = contentWidth / columnas;
-  const itemHeight = 5.5;
-  const maxItemsPorColumna = Math.ceil(actividades.length / columnas);
+  currentY = renderActividadesEnGrid(doc, actividades, margin, contentWidth, currentY);
 
-  let colX = margin;
-  let itemY = currentY;
-  let itemsEnColumna = 0;
+  // ════════════════════════════════════════════════════════════
+  // SECCIÓN 2: UPGRADES Y ADICIONALES (Grid 3 columnas SIN precios)
+  // ════════════════════════════════════════════════════════════
 
-  doc.setFontSize(8);
-
-  actividades.forEach((actividad, index) => {
-    // Check dorado
-    doc.setTextColor(...COLORS.gold);
-    doc.setFont("helvetica", "bold");
-    doc.text("✓", colX, itemY);
-
-    // Texto
-    doc.setTextColor(...COLORS.textSecondary);
-    doc.setFont("helvetica", "normal");
-    const texto = actividad.length > 22 ? actividad.substring(0, 20) + "..." : actividad;
-    doc.text(texto, colX + 4, itemY);
-
-    itemsEnColumna++;
-
-    if (itemsEnColumna >= maxItemsPorColumna && index < actividades.length - 1) {
-      colX += columnWidth;
-      itemY = currentY;
-      itemsEnColumna = 0;
-    } else {
-      itemY += itemHeight;
-    }
-  });
-
-  currentY += maxItemsPorColumna * itemHeight + 8;
-
-  // ADICIONALES CON AUTO-AJUSTE
   const adicionalesParaMostrar = filtrarAdicionales(data.adicionales);
 
   if (adicionalesParaMostrar.length > 0) {
-    doc.setTextColor(...COLORS.textPrimary);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("ADICIONALES SELECCIONADOS", margin, currentY);
-    currentY += 5;
+    currentY += 8;
 
-    currentY = renderTablaAdicionalesConAutoAjuste(doc, adicionalesParaMostrar, margin, contentWidth, currentY);
-    currentY += adicionalesParaMostrar.length > 8 ? 4 : 6; // Espaciado reducido si hay muchos
+    // Título elegante
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("UPGRADES Y ADICIONALES SELECCIONADOS", margin, currentY);
+    currentY += 8;
+
+    // Renderizar adicionales en grid (SIN PRECIOS - ahorra 60% espacio)
+    currentY = renderAdicionalesEnGrid(doc, adicionalesParaMostrar, margin, contentWidth, currentY);
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // PROTECCIÓN CRÍTICA: Verificar espacio para Inversión Total
-  // ═══════════════════════════════════════════════════════════════
-  const alturaInversionTotal = 42; // 38mm + márgenes de seguridad
+  // ════════════════════════════════════════════════════════════
+  // SECCIÓN 3: INVERSIÓN TOTAL (Ancla visual con borde dorado)
+  // ════════════════════════════════════════════════════════════
 
+  currentY += 8;
+
+  const alturaInversionTotal = 42; // 38mm + márgenes
+
+  // PROTECCIÓN: Verificar si cabe completo
   if (currentY + alturaInversionTotal > maxY) {
-    // No cabe completo, mover a página siguiente
+    // No cabe, mover a página 2
     renderFooter(doc, margin, pageWidth, pageHeight);
 
     doc.addPage();
     pageNumber++;
     currentY = renderMiniHeader(doc, margin, pageWidth);
-    currentY += 8;
+    currentY += 10;
   }
 
   // INVERSIÓN TOTAL (siempre completo, nunca cortado)
   currentY = renderInversionTotalCompacto(doc, totalReal, data.plan.tiempoEntrega, margin, contentWidth, currentY, pageWidth);
 
-  // Footer página 1 (si aún estamos en página 1)
+  // Footer Página 1 (si aún estamos en página 1)
   if (pageNumber === 1) {
     renderFooter(doc, margin, pageWidth, pageHeight);
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // PÁGINA 2: BONOS + FORMA DE PAGO + GARANTÍAS + WHATSAPP
+  // PÁGINA 2: DETALLES CONTRACTUALES
   // ═══════════════════════════════════════════════════════════════
 
-  // Si ya estamos en página 2 por overflow de Inversión, continuar
-  // Si no, crear nueva página
+  // Si ya estamos en página 2 por overflow, continuar; si no, crear nueva
   if (pageNumber === 1) {
     doc.addPage();
     pageNumber++;
