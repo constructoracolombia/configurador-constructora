@@ -11,15 +11,36 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { ImagenOptimizada } from "@/components/ImagenOptimizada";
-import { MapPin, Sparkles } from "lucide-react";
+import { ExternalLink, MapPin, Sparkles } from "lucide-react";
+
+const BROCHURE_URLS: Record<string, string> = {
+  'Ciudadela Verde': 'https://constructoracolombia.com/brochure_cv',
+  'Beltramonto': 'https://constructoracolombia.com/brochure_beltramonto',
+  'Fiore': 'https://constructoracolombia.com/brochure_fiore',
+  'Azafrán': 'https://constructoracolombia.com/brochure_azafran',
+  'Parque Oriente': 'https://constructoracolombia.com/brochure_parqueoriente',
+  'Aurora': 'https://constructoracolombia.com/brochure_parqueoriente',
+  'Montevista': 'https://constructoracolombia.com/brochure_parqueoriente',
+  'Montebello': 'https://constructoracolombia.com/brochure_montebello',
+  'Alto Tramonti': 'https://constructoracolombia.com/brochure_altotramonti',
+  'Morada del Viento': 'https://constructoracolombia.com/brochure_moradaviento',
+  'Fontana de la Sierra': 'https://constructoracolombia.com/brochure_fontanasierra',
+};
 
 export default function Home() {
   const router = useRouter();
   const setProyecto = useCotizador((state) => state.setProyecto);
 
   const handleProyectoClick = (proyecto: (typeof proyectos)[number]) => {
-    setProyecto(proyecto.id);
-    router.push("/plan");
+    const brochureUrl = BROCHURE_URLS[proyecto.nombre];
+
+    if (brochureUrl) {
+      window.open(brochureUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      // Fallback: si no hay brochure, ir al configurador
+      setProyecto(proyecto.id);
+      router.push("/plan");
+    }
   };
 
   return (
@@ -129,9 +150,12 @@ export default function Home() {
               <CardFooter className="bg-brand-card p-6">
                 <Button
                   onClick={() => handleProyectoClick(proyecto)}
-                  className="w-full rounded-xl bg-brand-primary py-6 font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all duration-300 hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
+                  className="w-full rounded-xl bg-brand-primary py-6 font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all duration-300 hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] flex items-center justify-center gap-2"
                 >
                   Cotizar mi apartamento
+                  {BROCHURE_URLS[proyecto.nombre] && (
+                    <ExternalLink className="h-4 w-4" />
+                  )}
                 </Button>
               </CardFooter>
             </Card>
