@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Plus, Check } from "lucide-react";
 import { 
   categorias, 
-  proyectos, 
+  proyectos,
+  findProyecto,
   adicionalesFiltrados,
   adicionalesOcultosPorPlan,
   getNombreAdicional,
@@ -72,7 +73,7 @@ export default function PersonalizarPage() {
   };
 
   const proyectoNombre = store.proyecto
-    ? (proyectos.find((p) => p.id === store.proyecto)?.nombre ?? "tu proyecto")
+    ? (findProyecto(store.proyecto)?.nombre ?? "tu proyecto")
     : "tu proyecto";
 
   // Precios dinámicos por proyecto (cálculo directo, no depende del store getter)

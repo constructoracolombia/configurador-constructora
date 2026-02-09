@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check } from "lucide-react";
-import { proyectos, planesBase, getPreciosPlanPorProyecto } from "@/lib/data/catalogo";
+import { proyectos, findProyecto, planesBase, getPreciosPlanPorProyecto } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 
 function getProyectoNombre(proyectoId: string | null): string {
   if (!proyectoId) return "";
-  const proyecto = proyectos.find((p) => p.id === proyectoId);
+  const proyecto = findProyecto(proyectoId);
   return proyecto?.nombre ?? proyectoId;
 }
 
@@ -40,7 +40,7 @@ function PlanPageContent() {
     
     if (proyectoGuardado) {
       // Verificar que el proyecto existe en el catálogo
-      const proyectoExiste = proyectos.find(p => p.id === proyectoGuardado);
+      const proyectoExiste = findProyecto(proyectoGuardado);
       if (proyectoExiste) {
         setProyecto(proyectoGuardado);
       }

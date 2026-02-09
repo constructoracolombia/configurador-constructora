@@ -59,6 +59,23 @@ export const proyectos = [
   },
 ] as const;
 
+// Helper: buscar proyecto de forma robusta (por ID exacto, slug normalizado, o nombre)
+export function findProyecto(proyectoId: string | null) {
+  if (!proyectoId) return undefined;
+  // 1. Match exacto por ID
+  const exacto = proyectos.find((p) => p.id === proyectoId);
+  if (exacto) return exacto;
+  // 2. Normalizar a slug y buscar
+  const normalizado = proyectoId.toLowerCase().trim()
+    .replace(/\s+/g, '-')
+    .replace(/[áà]/g, 'a').replace(/[éè]/g, 'e')
+    .replace(/[íì]/g, 'i').replace(/[óò]/g, 'o').replace(/[úù]/g, 'u');
+  const porSlug = proyectos.find((p) => p.id === normalizado);
+  if (porSlug) return porSlug;
+  // 3. Match por nombre (case insensitive)
+  return proyectos.find((p) => p.nombre.toLowerCase() === proyectoId.toLowerCase().trim());
+}
+
 // ═══════════════════════════════════════
 // PLANES BASE
 // ═══════════════════════════════════════

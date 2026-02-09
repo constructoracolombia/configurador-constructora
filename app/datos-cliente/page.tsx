@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCotizador } from "@/lib/store/cotizador";
-import { proyectos } from "@/lib/data/catalogo";
+import { proyectos, findProyecto } from "@/lib/data/catalogo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,15 @@ import { motion } from "framer-motion";
 export default function DatosClientePage() {
   const router = useRouter();
   const { proyecto, setClienteInfo, clienteNombre, clienteTelefono, clienteEmail } = useCotizador();
-  const proyectoData = proyectos.find((p) => p.id === proyecto);
+  
+  const proyectoData = findProyecto(proyecto);
+
+  // DEBUG - Diagnóstico de pantalla negra
+  console.log('🎯 DATOS-CLIENTE - Estado:', {
+    proyecto,
+    proyectoData: proyectoData ? proyectoData.nombre : 'NO ENCONTRADO',
+    todosLosIds: proyectos.map(p => p.id),
+  });
 
   const [nombre, setNombre] = useState(clienteNombre || "");
   const [telefono, setTelefono] = useState(clienteTelefono || "");
@@ -166,7 +174,20 @@ export default function DatosClientePage() {
   const IconComponent = currentStepData.icon;
   const progress = ((currentStep + 1) / steps.length) * 100;
 
-  if (!proyectoData) return null;
+  if (!proyectoData) {
+    console.error('❌ DATOS-CLIENTE: proyectoData es null. proyecto en store:', JSON.stringify(proyecto));
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-brand-dark p-4 text-center">
+        <p className="mb-4 text-xl text-brand-text">No se encontró el proyecto</p>
+        <p className="mb-6 text-sm text-brand-textSecondary">
+          Valor en store: &quot;{proyecto || 'null'}&quot;
+        </p>
+        <Button onClick={() => router.push("/")} className="bg-brand-primary text-black hover:bg-brand-secondary">
+          Volver al inicio
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-dark via-black to-brand-dark p-4">

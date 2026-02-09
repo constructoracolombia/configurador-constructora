@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCotizador } from "@/lib/store/cotizador";
-import { planesBase, proyectos, getNombreAdicional, getPrecioAdicional } from "@/lib/data/catalogo";
+import { planesBase, proyectos, findProyecto, getNombreAdicional, getPrecioAdicional } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
 import { subirPresupuesto } from "@/lib/utils/storage-service";
@@ -71,7 +71,7 @@ export default function ResumenPage() {
   const [emailEnviado, setEmailEnviado] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
 
-  const proyectoData = proyectos.find((p) => p.id === proyecto);
+  const proyectoData = findProyecto(proyecto);
   const planData =
     planBase === "basico"
       ? planesBase.basico
