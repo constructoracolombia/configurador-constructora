@@ -135,6 +135,33 @@ export const planesBase = {
 } as const;
 
 // ═══════════════════════════════════════
+// PRECIOS POR PROYECTO
+// ═══════════════════════════════════════
+// Proyectos con precios diferentes al estándar.
+// Si un proyecto no está aquí, usa los precios por defecto de planesBase.
+export const preciosPorProyecto: Record<string, { basico: number; intermedio: number }> = {
+  "ciudadela-verde":      { basico: 14_900_000, intermedio: 29_900_000 },
+  "parque-oriente":       { basico: 15_900_000, intermedio: 31_900_000 },
+};
+
+/**
+ * Obtiene los precios de los planes para un proyecto específico.
+ * Si el proyecto tiene precios especiales, los usa; sino, usa los estándar.
+ */
+export function getPreciosPlanPorProyecto(proyectoId: string | null): {
+  basico: number;
+  intermedio: number;
+} {
+  if (proyectoId && preciosPorProyecto[proyectoId]) {
+    return preciosPorProyecto[proyectoId];
+  }
+  return {
+    basico: planesBase.basico.precio,
+    intermedio: planesBase.intermedio.precio,
+  };
+}
+
+// ═══════════════════════════════════════
 // PRODUCTO Y ADICIONALES (54 ítems)
 // ═══════════════════════════════════════
 export interface Producto {

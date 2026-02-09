@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Producto } from "@/lib/data/catalogo";
-import { planesBase, getPrecioAdicional } from "@/lib/data/catalogo";
+import { planesBase, getPrecioAdicional, getPreciosPlanPorProyecto } from "@/lib/data/catalogo";
 
 export interface ProductoConCantidad extends Producto {
   cantidad?: number;
@@ -179,11 +179,8 @@ export const useCotizador = create<CotizadorStore>()(
       getPrecioPlanBase: () => {
         const state = get();
         if (!state.planBase) return 0;
-        if (state.planBase === "basico") return planesBase.basico.precio;
-        if (state.proyecto === "ciudadela-verde") {
-          return planesBase.intermedio.precioCiudadelaVerde;
-        }
-        return planesBase.intermedio.precio;
+        const precios = getPreciosPlanPorProyecto(state.proyecto);
+        return precios[state.planBase];
       },
 
       getPrecioAdicionales: () => {
