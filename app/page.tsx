@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { proyectos } from "@/lib/data/catalogo";
 import { useCotizador } from "@/lib/store/cotizador";
@@ -11,7 +12,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { ImagenOptimizada } from "@/components/ImagenOptimizada";
-import { ExternalLink, MapPin, Sparkles } from "lucide-react";
+import { ExternalLink, Loader2, MapPin, Sparkles } from "lucide-react";
 
 const BROCHURE_URLS: Record<string, string> = {
   'Ciudadela Verde': 'https://constructoracolombia.com/brochure_cv',
@@ -30,12 +31,22 @@ const BROCHURE_URLS: Record<string, string> = {
 export default function Home() {
   const router = useRouter();
   const setProyecto = useCotizador((state) => state.setProyecto);
+  const [loading, setLoading] = useState(false);
+  const [proyectoCargando, setProyectoCargando] = useState("");
 
   const handleProyectoClick = (proyecto: (typeof proyectos)[number]) => {
     const brochureUrl = BROCHURE_URLS[proyecto.nombre];
 
+    setLoading(true);
+    setProyectoCargando(proyecto.nombre);
+
     if (brochureUrl) {
       window.open(brochureUrl, '_blank', 'noopener,noreferrer');
+      // Ocultar loader después de 1.5s (la pestaña ya abrió)
+      setTimeout(() => {
+        setLoading(false);
+        setProyectoCargando("");
+      }, 1500);
     } else {
       // Fallback: si no hay brochure, ir al configurador
       setProyecto(proyecto.id);
@@ -45,6 +56,21 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-brand-dark">
+      {/* LOADER OVERLAY */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="text-center animate-[fadeIn_0.2s_ease-in]">
+            <Loader2 className="mx-auto mb-4 h-16 w-16 animate-spin text-brand-primary" />
+            <p className="text-xl font-semibold text-brand-text">
+              Cargando {proyectoCargando}...
+            </p>
+            <p className="mt-2 text-brand-textSecondary">
+              Preparando tu experiencia personalizada
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section - Gradiente oscuro elegante */}
       <section className="relative overflow-hidden bg-gradient-to-br from-black via-brand-dark to-brand-card px-4 py-20 text-brand-text">
         {/* Patrón de fondo sutil */}
@@ -150,11 +176,21 @@ export default function Home() {
               <CardFooter className="bg-brand-card p-6">
                 <Button
                   onClick={() => handleProyectoClick(proyecto)}
-                  className="w-full rounded-xl bg-brand-primary py-6 font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all duration-300 hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] flex items-center justify-center gap-2"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-brand-primary py-6 font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all duration-300 hover:scale-105 hover:bg-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none"
                 >
-                  Cotizar mi apartamento
-                  {BROCHURE_URLS[proyecto.nombre] && (
-                    <ExternalLink className="h-4 w-4" />
+                  {loading && proyectoCargando === proyecto.nombre ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    <>
+                      Cotizar mi apartamento
+                      {BROCHURE_URLS[proyecto.nombre] && (
+                        <ExternalLink className="h-4 w-4" />
+                      )}
+                    </>
                   )}
                 </Button>
               </CardFooter>
