@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Shield, Calendar, CheckCircle, Clock, Video, Zap } from "lucide-react";
+import { MessageSquare, Shield, Calendar, CheckCircle, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface CierreVentaExpressProps {
@@ -14,13 +14,6 @@ export function CierreVentaExpress({
   onReservar,
   generandoPDF = false,
 }: CierreVentaExpressProps) {
-  const abrirCalendly = () => {
-    window.open(
-      "https://calendly.com/contacto-constructoracolombia/30min",
-      "_blank"
-    );
-  };
-
   return (
     <Card className="mt-8 overflow-hidden border-brand-border bg-brand-card">
       <CardContent className="p-6 md:p-8">
@@ -124,17 +117,6 @@ export function CierreVentaExpress({
             </Button>
           </motion.div>
 
-          {/* Botón secundario: Agendar (Azul outline) */}
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button
-              onClick={abrirCalendly}
-              variant="outline"
-              className="flex h-auto w-full items-center justify-center gap-3 rounded-xl border-2 border-blue-500 bg-transparent px-6 py-5 text-lg font-bold text-blue-400 transition-all hover:bg-blue-500/10 hover:text-blue-300"
-            >
-              <Calendar className="h-6 w-6" />
-              <span>Agendar Reunión Virtual GRATIS</span>
-            </Button>
-          </motion.div>
         </div>
 
         {/* Info adicional */}
