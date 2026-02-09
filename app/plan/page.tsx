@@ -49,9 +49,11 @@ function PlanPageContent() {
     }
   }, [setProyecto]);
 
+  // Si la URL tiene proyecto, SIEMPRE actualizar el store (tiene prioridad)
   useEffect(() => {
-    if (proyectoFromUrl && !proyectoFromStore) {
+    if (proyectoFromUrl && proyectoFromUrl !== proyectoFromStore) {
       setProyecto(proyectoFromUrl);
+      console.log('📍 Proyecto actualizado desde URL:', proyectoFromUrl);
     }
   }, [proyectoFromUrl, proyectoFromStore, setProyecto]);
 
@@ -66,7 +68,13 @@ function PlanPageContent() {
   const ahorro = planesBase.intermedio.precio - precios.intermedio;
 
   const handleElegirPlan = (plan: "basico" | "intermedio") => {
+    // CRÍTICO: Siempre guardar el proyecto actual en el store antes de navegar
+    if (proyectoId) {
+      setProyecto(proyectoId);
+      console.log('✅ Proyecto guardado en store:', proyectoId);
+    }
     setPlanBase(plan);
+    console.log('✅ Plan guardado:', plan);
     router.push("/personalizar");
   };
 
