@@ -179,8 +179,13 @@ export const useCotizador = create<CotizadorStore>()(
       getPrecioPlanBase: () => {
         const state = get();
         if (!state.planBase) return 0;
+        // Llamada directa a la función del catálogo con el proyecto actual
         const precios = getPreciosPlanPorProyecto(state.proyecto);
-        return precios[state.planBase];
+        const precio = state.planBase === "basico" ? precios.basico : precios.intermedio;
+        if (process.env.NODE_ENV === "development") {
+          console.log("💰 getPrecioPlanBase:", { proyecto: state.proyecto, plan: state.planBase, precio });
+        }
+        return precio;
       },
 
       getPrecioAdicionales: () => {
@@ -204,7 +209,11 @@ export const useCotizador = create<CotizadorStore>()(
 
       getTotal: () => {
         const state = get();
-        return state.getPrecioPlanBase() + state.getPrecioAdicionales();
+        // Calcular directamente sin depender de métodos encadenados
+        if (!state.planBase) return 0;
+        const precios = getPreciosPlanPorProyecto(state.proyecto);
+        const precioBase = state.planBase === "basico" ? precios.basico : precios.intermedio;
+        return precioBase + state.getPrecioAdicionales();
       },
 
       getCantidadAdicionales: () => {

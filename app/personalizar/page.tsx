@@ -10,6 +10,7 @@ import {
   adicionalesOcultosPorPlan,
   getNombreAdicional,
   getPrecioAdicional,
+  getPreciosPlanPorProyecto,
 } from "@/lib/data/catalogo";
 import type { Producto } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
@@ -73,6 +74,14 @@ export default function PersonalizarPage() {
   const proyectoNombre = store.proyecto
     ? (proyectos.find((p) => p.id === store.proyecto)?.nombre ?? "tu proyecto")
     : "tu proyecto";
+
+  // Precios dinámicos por proyecto (cálculo directo, no depende del store getter)
+  const preciosDinamicos = getPreciosPlanPorProyecto(store.proyecto);
+  const precioBase = store.planBase ? preciosDinamicos[store.planBase] : 0;
+
+  // Total = precio base del plan + adicionales
+  const totalAdicionales = store.getPrecioAdicionales();
+  const totalFinal = precioBase + totalAdicionales;
 
   return (
     <main className="min-h-screen bg-brand-dark pb-32">
@@ -269,7 +278,7 @@ export default function PersonalizarPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex-1">
             <p className="text-sm text-brand-textSecondary">
-              Plan: {formatoPrecio(store.getPrecioPlanBase())}
+              Plan: {formatoPrecio(precioBase)}
               {store.getCantidadAdicionales() > 0 && (
                 <> + {store.getCantidadAdicionales()}{" "}
                 {store.getCantidadAdicionales() === 1
@@ -278,7 +287,7 @@ export default function PersonalizarPage() {
               )}
             </p>
             <p className="text-3xl font-bold text-brand-primary">
-              Total: {formatoPrecio(store.getTotal())}
+              Total: {formatoPrecio(totalFinal)}
             </p>
           </div>
           <Button
