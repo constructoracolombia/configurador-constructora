@@ -140,8 +140,12 @@ export const planesBase = {
 // Proyectos con precios diferentes al estándar.
 // Si un proyecto no está aquí, usa los precios por defecto de planesBase.
 export const preciosPorProyecto: Record<string, { basico: number; intermedio: number }> = {
+  // Ciudadela Verde: único con Plus en $29.9M
   "ciudadela-verde":      { basico: 14_900_000, intermedio: 29_900_000 },
+  // Parque Oriente: básico $15.9M, plus $31.9M
   "parque-oriente":       { basico: 15_900_000, intermedio: 31_900_000 },
+  // Azafrán: básico $15.9M, plus $31.9M
+  "azafran":              { basico: 15_900_000, intermedio: 31_900_000 },
 };
 
 /**

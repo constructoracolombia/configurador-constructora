@@ -31,8 +31,8 @@ export default function AzafranBrochurePage() {
     ubicacion: 'Bucaramanga',
     descripcion: 'Tu nuevo hogar comienza aquí. Acabados premium para tu apartamento VIS en Azafrán.',
     precio: {
-      basico: '$14.900.000',
-      intermedio: '$30.900.000'
+      basico: '$15.900.000',
+      intermedio: '$31.900.000'
     },
     diasEntrega: {
       basico: '35-39 días hábiles',
