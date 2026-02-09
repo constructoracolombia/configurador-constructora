@@ -137,32 +137,38 @@ export const planesBase = {
 // ═══════════════════════════════════════
 // PRECIOS POR PROYECTO
 // ═══════════════════════════════════════
-// Proyectos con precios diferentes al estándar.
-// Si un proyecto no está aquí, usa los precios por defecto de planesBase.
-export const preciosPorProyecto: Record<string, { basico: number; intermedio: number }> = {
-  // Ciudadela Verde: único con Plus en $29.9M
-  "ciudadela-verde":      { basico: 14_900_000, intermedio: 29_900_000 },
-  // Parque Oriente: básico $15.9M, plus $31.9M
-  "parque-oriente":       { basico: 15_900_000, intermedio: 31_900_000 },
-  // Azafrán: básico $15.9M, plus $31.9M
-  "azafran":              { basico: 15_900_000, intermedio: 31_900_000 },
-};
 
 /**
  * Obtiene los precios de los planes para un proyecto específico.
- * Si el proyecto tiene precios especiales, los usa; sino, usa los estándar.
+ * Maneja variaciones de nombre (tildes, guiones, espacios).
  */
 export function getPreciosPlanPorProyecto(proyectoId: string | null): {
   basico: number;
   intermedio: number;
 } {
-  if (proyectoId && preciosPorProyecto[proyectoId]) {
-    return preciosPorProyecto[proyectoId];
+  const id = proyectoId?.toLowerCase().trim() || "";
+
+  // PRECIOS PREMIUM - Parque Oriente (y torres) y Azafrán
+  const proyectosPremium = [
+    "parque-oriente",
+    "parque oriente",
+    "aurora",
+    "montevista",
+    "azafran",
+    "azafrán",
+  ];
+
+  if (proyectosPremium.includes(id)) {
+    return { basico: 15_900_000, intermedio: 31_900_000 };
   }
-  return {
-    basico: planesBase.basico.precio,
-    intermedio: planesBase.intermedio.precio,
-  };
+
+  // PRECIO ESPECIAL - Ciudadela Verde (único con Plus en $29.9M)
+  if (id === "ciudadela-verde" || id === "ciudadela verde") {
+    return { basico: 14_900_000, intermedio: 29_900_000 };
+  }
+
+  // PRECIOS ESTÁNDAR - Resto de proyectos
+  return { basico: 14_900_000, intermedio: 30_900_000 };
 }
 
 // ═══════════════════════════════════════
