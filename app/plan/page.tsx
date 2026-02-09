@@ -96,9 +96,12 @@ function PlanPageContent() {
             </nav>
             <h1 className="text-2xl font-bold text-brand-text md:text-3xl">
               Elige tu Plan de Remodelación
+              {proyectoNombre ? (
+                <span className="block text-brand-primary">en {proyectoNombre}</span>
+              ) : null}
             </h1>
             <p className="mt-2 text-brand-textSecondary">
-              Personaliza tu apartamento con el plan que mejor se adapte a ti
+              Personaliza tu apartamento{proyectoNombre ? ` en ${proyectoNombre}` : ""} con el plan que mejor se adapte a ti
             </p>
           </div>
         </div>
