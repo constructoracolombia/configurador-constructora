@@ -269,10 +269,13 @@ export default function PersonalizarPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex-1">
             <p className="text-sm text-brand-textSecondary">
-              {store.getCantidadAdicionales()}{" "}
-              {store.getCantidadAdicionales() === 1
-                ? "producto agregado"
-                : "productos agregados"}
+              Plan: {formatoPrecio(store.getPrecioPlanBase())}
+              {store.getCantidadAdicionales() > 0 && (
+                <> + {store.getCantidadAdicionales()}{" "}
+                {store.getCantidadAdicionales() === 1
+                  ? "adicional"
+                  : "adicionales"}</>
+              )}
             </p>
             <p className="text-3xl font-bold text-brand-primary">
               Total: {formatoPrecio(store.getTotal())}
