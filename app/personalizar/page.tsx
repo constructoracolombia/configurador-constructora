@@ -83,6 +83,15 @@ export default function PersonalizarPage() {
   const totalAdicionales = store.getPrecioAdicionales();
   const totalFinal = precioBase + totalAdicionales;
 
+  // DEBUG - ELIMINAR DESPUÉS
+  console.log('🔍 DEBUG PERSONALIZAR:');
+  console.log('  - store.proyecto:', JSON.stringify(store.proyecto));
+  console.log('  - store.planBase:', JSON.stringify(store.planBase));
+  console.log('  - preciosDinamicos:', JSON.stringify(preciosDinamicos));
+  console.log('  - precioBase:', precioBase);
+  console.log('  - store.getPrecioPlanBase():', store.getPrecioPlanBase());
+  console.log('  - totalFinal:', totalFinal);
+
   return (
     <main className="min-h-screen bg-brand-dark pb-32">
       <div className="mx-auto max-w-7xl px-4 py-8">

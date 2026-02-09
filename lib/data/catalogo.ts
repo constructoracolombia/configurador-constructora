@@ -148,6 +148,8 @@ export function getPreciosPlanPorProyecto(proyectoId: string | null): {
 } {
   const id = proyectoId?.toLowerCase().trim() || "";
 
+  console.log('📊 getPreciosPlanPorProyecto:', { input: proyectoId, normalizado: id });
+
   // PRECIOS PREMIUM - Parque Oriente (y torres) y Azafrán
   const proyectosPremium = [
     "parque-oriente",
@@ -159,6 +161,7 @@ export function getPreciosPlanPorProyecto(proyectoId: string | null): {
   ];
 
   if (proyectosPremium.includes(id)) {
+    console.log('✅ PREMIUM detectado → basico: 15.9M, intermedio: 31.9M');
     return { basico: 15_900_000, intermedio: 31_900_000 };
   }
 
