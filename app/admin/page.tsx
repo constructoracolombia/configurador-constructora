@@ -318,7 +318,7 @@ export default function AdminDashboard() {
               CRM Kanban
             </Button>
             <Button
-              onClick={() => window.open("/", "_blank")}
+              onClick={() => window.open("/presupuestos", "_blank")}
               className="bg-white font-semibold text-black hover:bg-gray-200"
             >
               <ExternalLink className="mr-2 h-4 w-4" />

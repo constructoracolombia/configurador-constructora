@@ -81,7 +81,7 @@ export default function ResumenPage() {
 
   useEffect(() => {
     if (!planBase || !proyecto) {
-      router.push("/");
+      router.push("/presupuestos");
       return;
     }
     if (!clienteNombre?.trim() || !clienteEmail?.trim()) {

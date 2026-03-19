@@ -31,7 +31,7 @@ export default function AdicionalesPage() {
 
   useEffect(() => {
     if (!proyecto || !planBase) {
-      router.push("/");
+      router.push("/presupuestos");
     }
   }, [proyecto, planBase, router]);
 

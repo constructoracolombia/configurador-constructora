@@ -59,7 +59,7 @@ function PlanPageContent() {
 
   useEffect(() => {
     if (!proyectoId) {
-      router.push("/");
+      router.push("/presupuestos");
     }
   }, [proyectoId, router]);
 

@@ -15,6 +15,7 @@ import {
   Users,
   BarChart3,
   Activity,
+  Home,
   ArrowRight,
   Lock,
   Sparkles,
@@ -77,7 +78,7 @@ export default function DashboardPage() {
       descripcion: "Genera cotizaciones personalizadas en minutos",
       icono: Calculator,
       color: "from-blue-600 to-blue-800",
-      ruta: "/",
+      ruta: "/presupuestos",
       destacado: true,
       stats: [
         { label: "Proyectos", valor: String(numProyectos) },
@@ -323,7 +324,7 @@ export default function DashboardPage() {
 
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    onClick={() => router.push("/centro-operaciones")}
+                    onClick={() => router.push("/")}
                     className="bg-white font-semibold text-black hover:bg-gray-200"
                   >
                     <Activity className="mr-2 h-4 w-4" />
@@ -331,6 +332,13 @@ export default function DashboardPage() {
                   </Button>
                   <Button
                     onClick={() => router.push("/")}
+                    className="bg-white font-semibold text-black hover:bg-gray-200"
+                  >
+                    <Home className="mr-2 h-4 w-4" />
+                    Inicio
+                  </Button>
+                  <Button
+                    onClick={() => router.push("/presupuestos")}
                     className="border-brand-border bg-white font-semibold text-black hover:bg-gray-200"
                   >
                     <Calculator className="mr-2 h-4 w-4" />

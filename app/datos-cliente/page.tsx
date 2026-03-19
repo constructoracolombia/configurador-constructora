@@ -69,7 +69,7 @@ export default function DatosClientePage() {
 
   useEffect(() => {
     if (!proyecto) {
-      router.push("/");
+      router.push("/presupuestos");
       return;
     }
     if (!planBase) {
@@ -182,7 +182,7 @@ export default function DatosClientePage() {
         <p className="mb-6 text-sm text-brand-textSecondary">
           Valor en store: &quot;{proyecto || 'null'}&quot;
         </p>
-        <Button onClick={() => router.push("/")} className="bg-brand-primary text-black hover:bg-brand-secondary">
+        <Button onClick={() => router.push("/presupuestos")} className="bg-brand-primary text-black hover:bg-brand-secondary">
           Volver al inicio
         </Button>
       </div>
