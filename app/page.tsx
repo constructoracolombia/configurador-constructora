@@ -15,7 +15,6 @@ import {
   ArrowRight,
   Activity,
   RefreshCw,
-  Plus,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 
@@ -37,6 +36,7 @@ type EtapaVisual = {
   key: string;
   color: string;
   dias: string;
+  permiteCrear: boolean;
 };
 
 type EtapaConDatos = EtapaVisual & {
@@ -58,22 +58,48 @@ type NuevoLeadForm = {
 };
 
 const ETAPAS_VISUALES: EtapaVisual[] = [
-  { nombre: "Prospección", key: "PROSPECCION", color: "blue", dias: "1-3" },
+  {
+    nombre: "Prospección",
+    key: "PROSPECCION",
+    color: "blue",
+    dias: "1-3",
+    permiteCrear: true,
+  },
   {
     nombre: "Primer Contacto",
     key: "PRIMER_CONTACTO",
     color: "purple",
     dias: "3-7",
+    permiteCrear: false,
   },
-  { nombre: "Cotización", key: "COTIZACION", color: "yellow", dias: "7-10" },
   {
-    nombre: "Presentación",
+    nombre: "Reunión Virtual/Presencial",
     key: "PRESENTACION",
     color: "orange",
     dias: "10-14",
+    permiteCrear: false,
   },
-  { nombre: "Negociación", key: "NEGOCIACION", color: "teal", dias: "14-21" },
-  { nombre: "Cierre", key: "CIERRE", color: "green", dias: "21-30" },
+  {
+    nombre: "Cotización Enviada",
+    key: "COTIZACION",
+    color: "yellow",
+    dias: "7-10",
+    permiteCrear: false,
+  },
+  {
+    nombre: "Negociación",
+    key: "NEGOCIACION",
+    color: "teal",
+    dias: "14-21",
+    permiteCrear: false,
+  },
+  {
+    nombre: "Cierre",
+    key: "CIERRE",
+    color: "green",
+    dias: "21-30",
+    permiteCrear: false,
+  },
 ];
 
 const crearFormularioVacio = (): NuevoLeadForm => ({
@@ -194,8 +220,9 @@ export default function CentroOperacionesPage() {
     setNuevoLead(crearFormularioVacio());
   };
 
-  const abrirModalLead = (etapa: string) => {
-    setEtapaSeleccionada(etapa);
+  const abrirModalLead = (_etapa: string) => {
+    // El flujo manual inicia siempre desde Prospección
+    setEtapaSeleccionada("PROSPECCION");
     resetFormulario();
     setMostrarModalLead(true);
   };
@@ -214,9 +241,9 @@ export default function CentroOperacionesPage() {
     try {
       const probabilidades: Record<string, number> = {
         PROSPECCION: 10,
-        PRIMER_CONTACTO: 20,
+        PRIMER_CONTACTO: 25,
+        PRESENTACION: 50,
         COTIZACION: 40,
-        PRESENTACION: 60,
         NEGOCIACION: 75,
         CIERRE: 95,
       };
@@ -235,8 +262,8 @@ export default function CentroOperacionesPage() {
             ? Number.parseFloat(nuevoLead.presupuesto_estimado)
             : null,
           observaciones: nuevoLead.observaciones || null,
-          etapa: etapaSeleccionada,
-          probabilidad: probabilidades[etapaSeleccionada] || 10,
+          etapa: "PROSPECCION",
+          probabilidad: probabilidades["PROSPECCION"] || 10,
           fuente:
             nuevoLead.origen === "WEB"
               ? "WEB"
@@ -253,7 +280,7 @@ export default function CentroOperacionesPage() {
       await supabase.from("lead_actividades").insert({
         lead_id: lead.id,
         tipo: "NOTA",
-        descripcion: `Lead creado manualmente en etapa ${etapaSeleccionada}`,
+        descripcion: "Lead creado manualmente en etapa PROSPECCION",
         usuario: "Admin",
       });
 
@@ -513,12 +540,15 @@ export default function CentroOperacionesPage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => abrirModalLead(etapa.key)}
-                    className="mb-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg border-2 border-dashed border-current bg-white/60 text-xs font-semibold transition-all hover:bg-white/90"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Nuevo Lead
-                  </button>
+                  {/* Botón agregar lead - SOLO en Prospección */}
+                  {etapa.permiteCrear && (
+                    <button
+                      onClick={() => abrirModalLead(etapa.key)}
+                      className="mb-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg border-2 border-dashed border-current bg-white/60 text-xs font-semibold transition-all hover:bg-white/90"
+                    >
+                      <span className="text-lg">+</span> Nuevo Lead
+                    </button>
+                  )}
 
                   {etapa.leads.length > 0 ? (
                     <div className="space-y-2">
@@ -590,23 +620,21 @@ export default function CentroOperacionesPage() {
         </Card>
       </div>
 
+      {/* Modal de Nuevo Lead */}
       {mostrarModalLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white">
-            <div className="sticky top-0 border-b border-gray-200 bg-white p-6">
+            <div className="sticky top-0 z-10 border-b border-gray-200 bg-white p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Nuevo Lead</h2>
                   <p className="mt-1 text-sm text-gray-600">
-                    Etapa:{" "}
-                    <span className="font-semibold">
-                      {etapaSeleccionada.replace(/_/g, " ")}
-                    </span>
+                    Etapa: <span className="font-semibold">Prospección</span>
                   </p>
                 </div>
                 <button
                   onClick={() => setMostrarModalLead(false)}
-                  className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-xl font-bold text-gray-600 transition-colors hover:bg-gray-100"
                 >
                   ✕
                 </button>
@@ -614,6 +642,7 @@ export default function CentroOperacionesPage() {
             </div>
 
             <div className="space-y-4 p-6">
+              {/* Fecha de contacto */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Fecha de Contacto *
@@ -624,10 +653,11 @@ export default function CentroOperacionesPage() {
                   onChange={(e) =>
                     setNuevoLead({ ...nuevoLead, fecha_contacto: e.target.value })
                   }
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
+              {/* Origen */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   ¿De dónde viene? *
@@ -637,7 +667,7 @@ export default function CentroOperacionesPage() {
                   onChange={(e) =>
                     setNuevoLead({ ...nuevoLead, origen: e.target.value })
                   }
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="PAUTA_META">Pauta Meta (Facebook/Instagram)</option>
                   <option value="PAUTA_GOOGLE">Pauta Google Ads</option>
@@ -650,6 +680,7 @@ export default function CentroOperacionesPage() {
                 </select>
               </div>
 
+              {/* Datos del cliente */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -662,7 +693,7 @@ export default function CentroOperacionesPage() {
                       setNuevoLead({ ...nuevoLead, nombre: e.target.value })
                     }
                     placeholder="Juan Pérez"
-                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
@@ -677,7 +708,7 @@ export default function CentroOperacionesPage() {
                       setNuevoLead({ ...nuevoLead, telefono: e.target.value })
                     }
                     placeholder="3001234567"
-                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -693,10 +724,11 @@ export default function CentroOperacionesPage() {
                     setNuevoLead({ ...nuevoLead, email: e.target.value })
                   }
                   placeholder="juan@ejemplo.com"
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
+              {/* Tipo de proyecto */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Tipo de Proyecto *
@@ -706,7 +738,7 @@ export default function CentroOperacionesPage() {
                   onChange={(e) =>
                     setNuevoLead({ ...nuevoLead, tipo_proyecto: e.target.value })
                   }
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="VIS">VIS (Vivienda de Interés Social)</option>
                   <option value="REFORMA">Reforma</option>
@@ -717,6 +749,7 @@ export default function CentroOperacionesPage() {
                 </select>
               </div>
 
+              {/* Nombre del proyecto */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Nombre del Proyecto/Conjunto
@@ -728,10 +761,11 @@ export default function CentroOperacionesPage() {
                     setNuevoLead({ ...nuevoLead, nombre_proyecto: e.target.value })
                   }
                   placeholder="Ej: Ciudadela Verde, Parque Oriente..."
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
+              {/* Presupuesto estimado */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Presupuesto Estimado (opcional)
@@ -746,11 +780,12 @@ export default function CentroOperacionesPage() {
                     })
                   }
                   placeholder="25000000"
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">En pesos colombianos</p>
               </div>
 
+              {/* Responsable */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Responsable
@@ -760,7 +795,7 @@ export default function CentroOperacionesPage() {
                   onChange={(e) =>
                     setNuevoLead({ ...nuevoLead, responsable: e.target.value })
                   }
-                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="Jeisson">Jeisson</option>
                   <option value="Javier">Javier</option>
@@ -768,6 +803,7 @@ export default function CentroOperacionesPage() {
                 </select>
               </div>
 
+              {/* Observaciones */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Observaciones
@@ -779,12 +815,13 @@ export default function CentroOperacionesPage() {
                   }
                   placeholder="Notas adicionales sobre el lead..."
                   rows={3}
-                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex gap-3 border-t border-gray-200 bg-white p-6">
+            {/* Footer con botones */}
+            <div className="sticky bottom-0 z-10 flex gap-3 border-t border-gray-200 bg-white p-6">
               <button
                 onClick={() => setMostrarModalLead(false)}
                 className="h-11 flex-1 rounded-lg border border-gray-300 font-medium text-gray-700 transition-colors hover:bg-gray-50"
