@@ -15,14 +15,21 @@ import {
   ArrowRight,
   Activity,
   RefreshCw,
+  Plus,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 
 type Lead = {
   id: string;
   nombre: string;
+  telefono: string | null;
+  email: string | null;
   etapa: string;
   presupuesto_estimado: number | null;
+  tipo_proyecto: string | null;
+  nombre_proyecto: string | null;
+  origen: string | null;
+  fecha_contacto: string | null;
 };
 
 type EtapaVisual = {
@@ -35,6 +42,19 @@ type EtapaVisual = {
 type EtapaConDatos = EtapaVisual & {
   cantidad: number;
   leads: Lead[];
+};
+
+type NuevoLeadForm = {
+  fecha_contacto: string;
+  origen: string;
+  nombre: string;
+  telefono: string;
+  email: string;
+  tipo_proyecto: string;
+  nombre_proyecto: string;
+  presupuesto_estimado: string;
+  observaciones: string;
+  responsable: string;
 };
 
 const ETAPAS_VISUALES: EtapaVisual[] = [
@@ -56,11 +76,32 @@ const ETAPAS_VISUALES: EtapaVisual[] = [
   { nombre: "Cierre", key: "CIERRE", color: "green", dias: "21-30" },
 ];
 
+const crearFormularioVacio = (): NuevoLeadForm => ({
+  fecha_contacto: new Date().toISOString().split("T")[0],
+  origen: "PAUTA_META",
+  nombre: "",
+  telefono: "",
+  email: "",
+  tipo_proyecto: "VIS",
+  nombre_proyecto: "",
+  presupuesto_estimado: "",
+  observaciones: "",
+  responsable: "Jeisson",
+});
+
 export default function CentroOperacionesPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [mostrarLogin, setMostrarLogin] = useState(true);
   const [cargando, setCargando] = useState(false);
+
+  // Estados para modal de nuevo lead
+  const [mostrarModalLead, setMostrarModalLead] = useState(false);
+  const [etapaSeleccionada, setEtapaSeleccionada] = useState("PROSPECCION");
+  const [guardandoLead, setGuardandoLead] = useState(false);
+  const [nuevoLead, setNuevoLead] = useState<NuevoLeadForm>(
+    crearFormularioVacio()
+  );
 
   const [kpis, setKpis] = useState({
     totalLeads: 0,
@@ -92,10 +133,13 @@ export default function CentroOperacionesPage() {
     try {
       const { data: leadsData, error } = await supabase
         .from("leads")
-        .select("id,nombre,etapa,presupuesto_estimado,updated_at")
+        .select(
+          "id,nombre,telefono,email,etapa,presupuesto_estimado,tipo_proyecto,nombre_proyecto,origen,fecha_contacto,updated_at"
+        )
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
+
       const leads = ((leadsData || []) as Lead[]).map((lead) => ({
         ...lead,
         presupuesto_estimado: lead.presupuesto_estimado ?? 0,
@@ -143,6 +187,85 @@ export default function CentroOperacionesPage() {
       void cargarDatos();
     } else {
       alert("Contraseña incorrecta");
+    }
+  };
+
+  const resetFormulario = () => {
+    setNuevoLead(crearFormularioVacio());
+  };
+
+  const abrirModalLead = (etapa: string) => {
+    setEtapaSeleccionada(etapa);
+    resetFormulario();
+    setMostrarModalLead(true);
+  };
+
+  const guardarNuevoLead = async () => {
+    if (!nuevoLead.nombre.trim()) {
+      alert("El nombre es obligatorio");
+      return;
+    }
+    if (!nuevoLead.telefono.trim()) {
+      alert("El teléfono es obligatorio");
+      return;
+    }
+
+    setGuardandoLead(true);
+    try {
+      const probabilidades: Record<string, number> = {
+        PROSPECCION: 10,
+        PRIMER_CONTACTO: 20,
+        COTIZACION: 40,
+        PRESENTACION: 60,
+        NEGOCIACION: 75,
+        CIERRE: 95,
+      };
+
+      const { data: lead, error: leadError } = await supabase
+        .from("leads")
+        .insert({
+          nombre: nuevoLead.nombre,
+          telefono: nuevoLead.telefono,
+          email: nuevoLead.email || null,
+          fecha_contacto: nuevoLead.fecha_contacto,
+          origen: nuevoLead.origen,
+          tipo_proyecto: nuevoLead.tipo_proyecto,
+          nombre_proyecto: nuevoLead.nombre_proyecto || null,
+          presupuesto_estimado: nuevoLead.presupuesto_estimado
+            ? Number.parseFloat(nuevoLead.presupuesto_estimado)
+            : null,
+          observaciones: nuevoLead.observaciones || null,
+          etapa: etapaSeleccionada,
+          probabilidad: probabilidades[etapaSeleccionada] || 10,
+          fuente:
+            nuevoLead.origen === "WEB"
+              ? "WEB"
+              : nuevoLead.origen === "WHATSAPP"
+                ? "WHATSAPP"
+                : "OTRO",
+          responsable: nuevoLead.responsable,
+        })
+        .select("id")
+        .single();
+
+      if (leadError) throw leadError;
+
+      await supabase.from("lead_actividades").insert({
+        lead_id: lead.id,
+        tipo: "NOTA",
+        descripcion: `Lead creado manualmente en etapa ${etapaSeleccionada}`,
+        usuario: "Admin",
+      });
+
+      alert("✅ Lead creado exitosamente");
+      setMostrarModalLead(false);
+      resetFormulario();
+      await cargarDatos();
+    } catch (error) {
+      console.error("Error guardando lead:", error);
+      alert("❌ Error al crear lead");
+    } finally {
+      setGuardandoLead(false);
     }
   };
 
@@ -372,9 +495,7 @@ export default function CentroOperacionesPage() {
 
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
-            <h2 className="mb-6 text-lg font-bold text-gray-900">
-              Flujo Comercial
-            </h2>
+            <h2 className="mb-6 text-lg font-bold text-gray-900">Flujo Comercial</h2>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {leadsPorEtapa.map((etapa) => (
@@ -392,31 +513,73 @@ export default function CentroOperacionesPage() {
                     </div>
                   </div>
 
+                  <button
+                    onClick={() => abrirModalLead(etapa.key)}
+                    className="mb-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg border-2 border-dashed border-current bg-white/60 text-xs font-semibold transition-all hover:bg-white/90"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Nuevo Lead
+                  </button>
+
                   {etapa.leads.length > 0 ? (
                     <div className="space-y-2">
                       {etapa.leads.map((lead) => (
                         <div
                           key={lead.id}
-                          className="rounded-lg bg-white/60 p-2 text-xs"
+                          className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 text-xs transition-shadow hover:shadow-md"
+                          onClick={() => {
+                            console.log("Ver detalle lead:", lead);
+                          }}
                         >
-                          <div className="truncate font-medium text-gray-900">
+                          <div className="mb-1 truncate font-bold text-gray-900">
                             {lead.nombre}
                           </div>
-                          <div className="text-[10px] text-gray-600">
-                            {lead.presupuesto_estimado
-                              ? formatoPrecio(lead.presupuesto_estimado)
-                              : "Sin presupuesto"}
+
+                          <div className="mb-1 flex items-center gap-1 text-gray-600">
+                            <span className="text-[10px]">📱</span>
+                            {lead.telefono || "Sin teléfono"}
                           </div>
+
+                          {lead.tipo_proyecto && (
+                            <div className="mb-1 text-[10px] text-gray-500">
+                              🏗️ {lead.tipo_proyecto}
+                            </div>
+                          )}
+
+                          {lead.nombre_proyecto && (
+                            <div className="mb-1 truncate text-[10px] text-gray-500">
+                              📍 {lead.nombre_proyecto}
+                            </div>
+                          )}
+
+                          {lead.presupuesto_estimado ? (
+                            <div className="mb-1 text-[11px] font-semibold text-gray-900">
+                              💰 {formatoPrecio(lead.presupuesto_estimado)}
+                            </div>
+                          ) : null}
+
+                          {lead.origen && (
+                            <div className="inline-block rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-600">
+                              {lead.origen.replace(/_/g, " ")}
+                            </div>
+                          )}
+
+                          {lead.fecha_contacto && (
+                            <div className="mt-2 text-[10px] text-gray-400">
+                              {new Date(lead.fecha_contacto).toLocaleDateString(
+                                "es-CO"
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                       {etapa.cantidad > 3 && (
-                        <div className="text-center text-xs text-gray-600">
+                        <div className="py-2 text-center text-xs text-gray-600">
                           +{etapa.cantidad - 3} más
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="py-4 text-center text-xs text-gray-500">
+                    <div className="rounded-lg bg-white/30 py-6 text-center text-xs text-gray-500">
                       Sin leads
                     </div>
                   )}
@@ -426,6 +589,220 @@ export default function CentroOperacionesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {mostrarModalLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white">
+            <div className="sticky top-0 border-b border-gray-200 bg-white p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Nuevo Lead</h2>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Etapa:{" "}
+                    <span className="font-semibold">
+                      {etapaSeleccionada.replace(/_/g, " ")}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setMostrarModalLead(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Fecha de Contacto *
+                </label>
+                <input
+                  type="date"
+                  value={nuevoLead.fecha_contacto}
+                  onChange={(e) =>
+                    setNuevoLead({ ...nuevoLead, fecha_contacto: e.target.value })
+                  }
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  ¿De dónde viene? *
+                </label>
+                <select
+                  value={nuevoLead.origen}
+                  onChange={(e) =>
+                    setNuevoLead({ ...nuevoLead, origen: e.target.value })
+                  }
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="PAUTA_META">Pauta Meta (Facebook/Instagram)</option>
+                  <option value="PAUTA_GOOGLE">Pauta Google Ads</option>
+                  <option value="REFERIDO">Referido</option>
+                  <option value="WHATSAPP">WhatsApp</option>
+                  <option value="LLAMADA_DIRECTA">Llamada Directa</option>
+                  <option value="WEB">Sitio Web</option>
+                  <option value="INSTAGRAM">Instagram Orgánico</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Nombre Completo *
+                  </label>
+                  <input
+                    type="text"
+                    value={nuevoLead.nombre}
+                    onChange={(e) =>
+                      setNuevoLead({ ...nuevoLead, nombre: e.target.value })
+                    }
+                    placeholder="Juan Pérez"
+                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Teléfono *
+                  </label>
+                  <input
+                    type="tel"
+                    value={nuevoLead.telefono}
+                    onChange={(e) =>
+                      setNuevoLead({ ...nuevoLead, telefono: e.target.value })
+                    }
+                    placeholder="3001234567"
+                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Correo Electrónico
+                </label>
+                <input
+                  type="email"
+                  value={nuevoLead.email}
+                  onChange={(e) =>
+                    setNuevoLead({ ...nuevoLead, email: e.target.value })
+                  }
+                  placeholder="juan@ejemplo.com"
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Tipo de Proyecto *
+                </label>
+                <select
+                  value={nuevoLead.tipo_proyecto}
+                  onChange={(e) =>
+                    setNuevoLead({ ...nuevoLead, tipo_proyecto: e.target.value })
+                  }
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="VIS">VIS (Vivienda de Interés Social)</option>
+                  <option value="REFORMA">Reforma</option>
+                  <option value="DISENO">Diseño</option>
+                  <option value="CONSTRUCCION">Construcción</option>
+                  <option value="ACABADOS">Acabados</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Nombre del Proyecto/Conjunto
+                </label>
+                <input
+                  type="text"
+                  value={nuevoLead.nombre_proyecto}
+                  onChange={(e) =>
+                    setNuevoLead({ ...nuevoLead, nombre_proyecto: e.target.value })
+                  }
+                  placeholder="Ej: Ciudadela Verde, Parque Oriente..."
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Presupuesto Estimado (opcional)
+                </label>
+                <input
+                  type="number"
+                  value={nuevoLead.presupuesto_estimado}
+                  onChange={(e) =>
+                    setNuevoLead({
+                      ...nuevoLead,
+                      presupuesto_estimado: e.target.value,
+                    })
+                  }
+                  placeholder="25000000"
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">En pesos colombianos</p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Responsable
+                </label>
+                <select
+                  value={nuevoLead.responsable}
+                  onChange={(e) =>
+                    setNuevoLead({ ...nuevoLead, responsable: e.target.value })
+                  }
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Jeisson">Jeisson</option>
+                  <option value="Javier">Javier</option>
+                  <option value="Equipo">Equipo</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Observaciones
+                </label>
+                <textarea
+                  value={nuevoLead.observaciones}
+                  onChange={(e) =>
+                    setNuevoLead({ ...nuevoLead, observaciones: e.target.value })
+                  }
+                  placeholder="Notas adicionales sobre el lead..."
+                  rows={3}
+                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 flex gap-3 border-t border-gray-200 bg-white p-6">
+              <button
+                onClick={() => setMostrarModalLead(false)}
+                className="h-11 flex-1 rounded-lg border border-gray-300 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                disabled={guardandoLead}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => void guardarNuevoLead()}
+                disabled={guardandoLead}
+                className="h-11 flex-1 rounded-lg bg-blue-600 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {guardandoLead ? "Guardando..." : "Crear Lead"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
