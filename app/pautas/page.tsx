@@ -28,6 +28,18 @@ interface CampanaMetrics {
   contenidos: string[];
 }
 
+interface MetaInsightRow {
+  campaign_name: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  date_start: string;
+  date_stop: string;
+  synced_at?: string;
+}
+
 export default function PautasPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -38,6 +50,11 @@ export default function PautasPage() {
   const [campanas, setCampanas] = useState<CampanaMetrics[]>([]);
   const [filtroOrigen, setFiltroOrigen] = useState("TODOS");
   const [filtroFecha, setFiltroFecha] = useState("30");
+  const [metricasMetaMap, setMetricasMetaMap] = useState<Map<string, MetaInsightRow>>(
+    new Map()
+  );
+  const [sincronizando, setSincronizando] = useState(false);
+  const [ultimaSync, setUltimaSync] = useState<string | null>(null);
 
   const [kpisGenerales, setKpisGenerales] = useState({
     total_leads_pautas: 0,
@@ -62,6 +79,12 @@ export default function PautasPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autenticado, filtroOrigen, filtroFecha]);
+
+  useEffect(() => {
+    if (autenticado) {
+      void cargarMetricasMeta();
+    }
+  }, [autenticado]);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -164,6 +187,52 @@ export default function PautasPage() {
       void cargarDatos();
     } else {
       alert("Contraseña incorrecta");
+    }
+  };
+
+  const sincronizarConMeta = async () => {
+    setSincronizando(true);
+    try {
+      const response = await fetch("/api/meta-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dias: Number.parseInt(filtroFecha, 10) }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ ${result.synced} campañas sincronizadas con Meta`);
+        setUltimaSync(new Date().toLocaleString("es-CO"));
+        await cargarMetricasMeta();
+        await cargarDatos();
+      } else {
+        const error = await response.json();
+        alert(`❌ Error: ${error.error}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("❌ Error de conexión con Meta");
+    } finally {
+      setSincronizando(false);
+    }
+  };
+
+  const cargarMetricasMeta = async () => {
+    try {
+      const { data } = await supabase
+        .from("meta_campaign_insights")
+        .select("*")
+        .order("date_start", { ascending: false });
+
+      if (data) {
+        const map = new Map<string, MetaInsightRow>();
+        (data as MetaInsightRow[]).forEach((insight) => {
+          map.set(insight.campaign_name, insight);
+        });
+        setMetricasMetaMap(map);
+      }
+    } catch (error) {
+      console.error("Error cargando métricas Meta:", error);
     }
   };
 
@@ -353,6 +422,19 @@ export default function PautasPage() {
               >
                 {cargando ? "Cargando..." : "Actualizar"}
               </Button>
+
+              <Button
+                onClick={() => void sincronizarConMeta()}
+                disabled={sincronizando}
+                className="bg-purple-600 text-white hover:bg-purple-700"
+                size="sm"
+              >
+                {sincronizando ? "Sincronizando..." : "🔄 Sincronizar con Meta"}
+              </Button>
+
+              {ultimaSync && (
+                <span className="text-xs text-gray-500">Última sync: {ultimaSync}</span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -386,6 +468,15 @@ export default function PautasPage() {
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">
                       Pipeline
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">
+                      Gasto
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium uppercase text-gray-500">
+                      CPL
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium uppercase text-gray-500">
+                      ROI %
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
                       Origen
@@ -432,6 +523,37 @@ export default function PautasPage() {
                       </td>
                       <td className="px-4 py-4 text-right font-medium text-gray-900">
                         {formatoPrecio(campana.pipeline_total)}
+                      </td>
+                      <td className="px-4 py-4 text-right text-gray-600">
+                        {metricasMetaMap.has(campana.campana)
+                          ? formatoPrecio(metricasMetaMap.get(campana.campana)?.spend || 0)
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-4 text-center font-medium">
+                        {metricasMetaMap.has(campana.campana) && campana.total_leads > 0
+                          ? formatoPrecio(
+                              (metricasMetaMap.get(campana.campana)?.spend || 0) /
+                                campana.total_leads
+                            )
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-4 text-center font-bold">
+                        {(() => {
+                          const metricas = metricasMetaMap.get(campana.campana);
+                          if (!metricas || metricas.spend === 0) return "-";
+
+                          const ingresosCerrados =
+                            campana.cerrados *
+                            (campana.pipeline_total / Math.max(campana.total_leads, 1));
+                          const roi = ((ingresosCerrados - metricas.spend) / metricas.spend) * 100;
+
+                          return (
+                            <span className={roi >= 0 ? "text-green-600" : "text-red-600"}>
+                              {roi >= 0 ? "+" : ""}
+                              {roi.toFixed(0)}%
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-4">
                         <span
