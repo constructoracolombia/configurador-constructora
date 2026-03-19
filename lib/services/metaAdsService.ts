@@ -25,7 +25,10 @@ export class MetaAdsService {
     until: string;
   }): Promise<MetaCampaignInsights[]> {
     try {
-      const url = `${this.baseUrl}/act_${this.adAccountId}/insights`;
+      const adAccountPath = this.adAccountId.startsWith("act_")
+        ? this.adAccountId
+        : `act_${this.adAccountId}`;
+      const url = `${this.baseUrl}/${adAccountPath}/insights`;
 
       const params = new URLSearchParams({
         access_token: this.accessToken,
@@ -34,8 +37,10 @@ export class MetaAdsService {
           since: dateRange.since,
           until: dateRange.until,
         }),
-        fields: "campaign_id,campaign_name,spend,impressions,clicks,ctr,cpc",
+        fields:
+          "campaign_id,campaign_name,spend,impressions,clicks,ctr,cpc,actions,action_values",
         limit: "100",
+        time_increment: "1",
       });
 
       const response = await fetch(`${url}?${params.toString()}`);
@@ -47,16 +52,41 @@ export class MetaAdsService {
       }
 
       const data = await response.json();
-      return (data.data || []).map((insight: any) => ({
-        campaign_id: String(insight.campaign_id || ""),
-        campaign_name: String(insight.campaign_name || ""),
-        spend: Number.parseFloat(insight.spend || "0"),
-        impressions: Number.parseInt(insight.impressions || "0", 10),
-        clicks: Number.parseInt(insight.clicks || "0", 10),
-        ctr: Number.parseFloat(insight.ctr || "0"),
-        cpc: Number.parseFloat(insight.cpc || "0"),
-        date_start: String(insight.date_start || dateRange.since),
-        date_stop: String(insight.date_stop || dateRange.until),
+      const campaignsMap = new Map<string, any>();
+
+      (data.data || []).forEach((insight: any) => {
+        const campaignId = String(insight.campaign_id || "");
+        if (!campaignId) return;
+
+        if (!campaignsMap.has(campaignId)) {
+          campaignsMap.set(campaignId, {
+            campaign_id: campaignId,
+            campaign_name: String(insight.campaign_name || ""),
+            spend: 0,
+            impressions: 0,
+            clicks: 0,
+            date_start: String(insight.date_start || dateRange.since),
+            date_stop: String(insight.date_stop || dateRange.until),
+          });
+        }
+
+        const campaign = campaignsMap.get(campaignId);
+        campaign.spend += Number.parseFloat(insight.spend || "0");
+        campaign.impressions += Number.parseInt(insight.impressions || "0", 10);
+        campaign.clicks += Number.parseInt(insight.clicks || "0", 10);
+        campaign.date_stop = String(insight.date_stop || campaign.date_stop);
+      });
+
+      return Array.from(campaignsMap.values()).map((campaign: any) => ({
+        campaign_id: campaign.campaign_id,
+        campaign_name: campaign.campaign_name,
+        spend: campaign.spend,
+        impressions: campaign.impressions,
+        clicks: campaign.clicks,
+        ctr: campaign.impressions > 0 ? (campaign.clicks / campaign.impressions) * 100 : 0,
+        cpc: campaign.clicks > 0 ? campaign.spend / campaign.clicks : 0,
+        date_start: campaign.date_start,
+        date_stop: campaign.date_stop,
       }));
     } catch (error) {
       console.error("Error fetching Meta campaign insights:", error);

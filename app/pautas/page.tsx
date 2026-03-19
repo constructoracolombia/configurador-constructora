@@ -431,6 +431,25 @@ export default function PautasPage() {
                 {sincronizando ? "Sincronizando..." : "🔄 Sincronizar con Meta"}
               </Button>
 
+              <Button
+                onClick={async () => {
+                  const response = await fetch("/api/meta-sync", {
+                    method: "GET",
+                  });
+                  const data = await response.json();
+                  console.log("Meta API Status:", data);
+
+                  const testResponse = await fetch("/api/meta-test");
+                  const testData = await testResponse.json();
+                  console.log("Test Result:", testData);
+                  alert(JSON.stringify(testData, null, 2));
+                }}
+                variant="outline"
+                size="sm"
+              >
+                🔍 Test Conexión Meta
+              </Button>
+
               {ultimaSync && (
                 <span className="text-xs text-gray-500">Última sync: {ultimaSync}</span>
               )}
@@ -584,10 +603,8 @@ export default function PautasPage() {
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {campanas.map((campana) => {
               const tieneMetricas = campana.spend > 0;
-              const cpl =
-                tieneMetricas && campana.total_leads > 0
-                  ? campana.spend / campana.total_leads
-                  : 0;
+              const tieneLeads = campana.total_leads > 0;
+              const cpl = tieneMetricas && tieneLeads ? campana.spend / campana.total_leads : 0;
               const ingresosCerrados =
                 campana.cerrados * (campana.pipeline_total / Math.max(campana.total_leads, 1));
               const roi =
@@ -618,6 +635,11 @@ export default function PautasPage() {
                               {campana.contenidos.length} creativos
                             </span>
                           )}
+                          {!tieneLeads && tieneMetricas && (
+                            <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
+                              Sin conversiones aún
+                            </span>
+                          )}
                         </div>
                       </div>
                       {tieneMetricas && (
@@ -633,16 +655,44 @@ export default function PautasPage() {
                   <CardContent>
                     {/* Métricas principales */}
                     <div className="mb-4 grid grid-cols-3 gap-4">
-                      <div className="rounded-lg bg-blue-50 p-3 text-center">
-                        <div className="text-2xl font-bold text-blue-600">{campana.total_leads}</div>
+                      <div
+                        className={`rounded-lg p-3 text-center ${
+                          tieneLeads ? "bg-blue-50" : "bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`text-2xl font-bold ${
+                            tieneLeads ? "text-blue-600" : "text-gray-400"
+                          }`}
+                        >
+                          {campana.total_leads}
+                        </div>
                         <div className="mt-1 text-xs text-gray-600">Leads</div>
                       </div>
-                      <div className="rounded-lg bg-green-50 p-3 text-center">
-                        <div className="text-2xl font-bold text-green-600">{campana.cerrados}</div>
+                      <div
+                        className={`rounded-lg p-3 text-center ${
+                          campana.cerrados > 0 ? "bg-green-50" : "bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`text-2xl font-bold ${
+                            campana.cerrados > 0 ? "text-green-600" : "text-gray-400"
+                          }`}
+                        >
+                          {campana.cerrados}
+                        </div>
                         <div className="mt-1 text-xs text-gray-600">Cerrados</div>
                       </div>
-                      <div className="rounded-lg bg-purple-50 p-3 text-center">
-                        <div className="text-2xl font-bold text-purple-600">
+                      <div
+                        className={`rounded-lg p-3 text-center ${
+                          campana.tasa_conversion > 0 ? "bg-purple-50" : "bg-gray-50"
+                        }`}
+                      >
+                        <div
+                          className={`text-2xl font-bold ${
+                            campana.tasa_conversion > 0 ? "text-purple-600" : "text-gray-400"
+                          }`}
+                        >
                           {campana.tasa_conversion.toFixed(1)}%
                         </div>
                         <div className="mt-1 text-xs text-gray-600">Conversión</div>
@@ -652,6 +702,9 @@ export default function PautasPage() {
                     {/* Métricas de Meta Ads */}
                     {tieneMetricas && (
                       <div className="space-y-3 border-t pt-4">
+                        <div className="mb-3 text-xs font-medium text-gray-700">
+                          📊 Métricas de Meta Ads
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <div className="mb-1 text-xs text-gray-500">Impresiones</div>
@@ -666,35 +719,62 @@ export default function PautasPage() {
                             </div>
                           </div>
                           <div>
-                            <div className="mb-1 text-xs text-gray-500">CTR</div>
+                            <div className="mb-1 text-xs text-gray-500">
+                              CTR (Click-Through Rate)
+                            </div>
                             <div className="font-semibold text-gray-900">
                               {campana.ctr.toFixed(2)}%
                             </div>
                           </div>
                           <div>
-                            <div className="mb-1 text-xs text-gray-500">CPC</div>
+                            <div className="mb-1 text-xs text-gray-500">
+                              CPC (Costo por Click)
+                            </div>
                             <div className="font-semibold text-gray-900">
                               {formatoPrecio(campana.cpc)}
                             </div>
                           </div>
                         </div>
 
-                        {/* ROI y CPL destacados */}
-                        <div className="grid grid-cols-2 gap-4 border-t pt-3">
-                          <div className="rounded-lg bg-orange-50 p-3 text-center">
-                            <div className="mb-1 text-xs text-gray-600">CPL</div>
-                            <div className="text-lg font-bold text-orange-600">{formatoPrecio(cpl)}</div>
-                          </div>
-                          <div className="rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 p-3 text-center">
-                            <div className="mb-1 text-xs text-gray-600">ROI</div>
-                            <div
-                              className={`text-lg font-bold ${roi >= 0 ? "text-green-600" : "text-red-600"}`}
-                            >
-                              {roi >= 0 ? "+" : ""}
-                              {roi.toFixed(0)}%
+                        {/* ROI y CPL destacados - solo si hay leads */}
+                        {tieneLeads && (
+                          <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                            <div className="rounded-lg bg-orange-50 p-3 text-center">
+                              <div className="mb-1 text-xs text-gray-600">CPL (Costo por Lead)</div>
+                              <div className="text-lg font-bold text-orange-600">
+                                {formatoPrecio(cpl)}
+                              </div>
+                            </div>
+                            <div className="rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 p-3 text-center">
+                              <div className="mb-1 text-xs text-gray-600">ROI</div>
+                              <div
+                                className={`text-lg font-bold ${roi >= 0 ? "text-green-600" : "text-red-600"}`}
+                              >
+                                {roi >= 0 ? "+" : ""}
+                                {roi.toFixed(0)}%
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
+
+                        {!tieneLeads && (
+                          <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                            <div className="flex items-start gap-2">
+                              <span className="text-lg text-blue-600">ℹ️</span>
+                              <div className="flex-1">
+                                <div className="text-xs font-medium text-blue-900">
+                                  Campaña activa sin conversiones
+                                </div>
+                                <div className="mt-1 text-xs text-blue-700">
+                                  Has invertido {formatoPrecio(campana.spend)} con {campana.clicks}{" "}
+                                  clicks.
+                                  {campana.clicks > 0 &&
+                                    ` CPL estimado al primer lead: ${formatoPrecio(campana.spend)}`}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
