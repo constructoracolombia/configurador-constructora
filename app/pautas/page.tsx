@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -235,19 +235,6 @@ export default function PautasPage() {
       console.error("Error cargando métricas Meta:", error);
     }
   };
-
-  const topConversion = useMemo(
-    () => [...campanas].sort((a, b) => b.tasa_conversion - a.tasa_conversion).slice(0, 3),
-    [campanas]
-  );
-  const topLeads = useMemo(
-    () => [...campanas].sort((a, b) => b.total_leads - a.total_leads).slice(0, 3),
-    [campanas]
-  );
-  const topPipeline = useMemo(
-    () => [...campanas].sort((a, b) => b.pipeline_total - a.pipeline_total).slice(0, 3),
-    [campanas]
-  );
 
   if (mostrarLogin) {
     return (
@@ -586,67 +573,502 @@ export default function PautasPage() {
           </CardContent>
         </Card>
 
+        {/* Grid de Campañas Detalladas */}
         {campanas.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">🏆 Mayor Conversión</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {topConversion.map((c, i) => (
-                  <div key={`${c.campana}-${i}`} className="mb-3 last:mb-0">
-                    <div className="flex items-center justify-between">
-                      <span className="truncate text-sm font-medium text-gray-900">
-                        {c.campana}
-                      </span>
-                      <span className="text-sm font-bold text-green-600">
-                        {c.tasa_conversion.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {campanas.map((campana) => {
+              const metricas = metricasMetaMap.get(campana.campana);
+              const tieneMetricas = !!metricas;
+              const cpl =
+                tieneMetricas && campana.total_leads > 0
+                  ? (metricas?.spend || 0) / campana.total_leads
+                  : 0;
+              const ingresosCerrados =
+                campana.cerrados * (campana.pipeline_total / Math.max(campana.total_leads, 1));
+              const roi =
+                tieneMetricas && (metricas?.spend || 0) > 0
+                  ? ((ingresosCerrados - (metricas?.spend || 0)) / (metricas?.spend || 1)) * 100
+                  : 0;
 
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">📈 Más Leads</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {topLeads.map((c, i) => (
-                  <div key={`${c.campana}-${i}`} className="mb-3 last:mb-0">
-                    <div className="flex items-center justify-between">
-                      <span className="truncate text-sm font-medium text-gray-900">
-                        {c.campana}
-                      </span>
-                      <span className="text-sm font-bold text-blue-600">
-                        {c.total_leads} leads
-                      </span>
+              return (
+                <Card key={campana.campana} className="border-0 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="mb-1 text-base font-bold text-gray-900">
+                          {campana.campana}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-medium ${
+                              campana.origen === "PAUTA_META"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {campana.origen.replace("PAUTA_", "")}
+                          </span>
+                          {campana.contenidos.length > 0 && (
+                            <span className="text-xs text-gray-500">
+                              {campana.contenidos.length} creativos
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {tieneMetricas && (
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-gray-900">
+                            {formatoPrecio(metricas?.spend || 0)}
+                          </div>
+                          <div className="text-xs text-gray-500">Invertido</div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Métricas principales */}
+                    <div className="mb-4 grid grid-cols-3 gap-4">
+                      <div className="rounded-lg bg-blue-50 p-3 text-center">
+                        <div className="text-2xl font-bold text-blue-600">{campana.total_leads}</div>
+                        <div className="mt-1 text-xs text-gray-600">Leads</div>
+                      </div>
+                      <div className="rounded-lg bg-green-50 p-3 text-center">
+                        <div className="text-2xl font-bold text-green-600">{campana.cerrados}</div>
+                        <div className="mt-1 text-xs text-gray-600">Cerrados</div>
+                      </div>
+                      <div className="rounded-lg bg-purple-50 p-3 text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {campana.tasa_conversion.toFixed(1)}%
+                        </div>
+                        <div className="mt-1 text-xs text-gray-600">Conversión</div>
+                      </div>
+                    </div>
 
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">💰 Mayor Pipeline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {topPipeline.map((c, i) => (
-                  <div key={`${c.campana}-${i}`} className="mb-3 last:mb-0">
-                    <div className="flex items-center justify-between">
-                      <span className="truncate text-sm font-medium text-gray-900">
-                        {c.campana}
-                      </span>
-                      <span className="text-sm font-bold text-orange-600">
-                        {formatoPrecio(c.pipeline_total)}
-                      </span>
+                    {/* Métricas de Meta Ads */}
+                    {tieneMetricas && (
+                      <div className="space-y-3 border-t pt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Impresiones</div>
+                            <div className="font-semibold text-gray-900">
+                              {(metricas?.impressions || 0).toLocaleString("es-CO")}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Clicks</div>
+                            <div className="font-semibold text-gray-900">
+                              {(metricas?.clicks || 0).toLocaleString("es-CO")}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">CTR</div>
+                            <div className="font-semibold text-gray-900">
+                              {(metricas?.ctr || 0).toFixed(2)}%
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">CPC</div>
+                            <div className="font-semibold text-gray-900">
+                              {formatoPrecio(metricas?.cpc || 0)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ROI y CPL destacados */}
+                        <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                          <div className="rounded-lg bg-orange-50 p-3 text-center">
+                            <div className="mb-1 text-xs text-gray-600">CPL</div>
+                            <div className="text-lg font-bold text-orange-600">{formatoPrecio(cpl)}</div>
+                          </div>
+                          <div className="rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 p-3 text-center">
+                            <div className="mb-1 text-xs text-gray-600">ROI</div>
+                            <div
+                              className={`text-lg font-bold ${roi >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {roi >= 0 ? "+" : ""}
+                              {roi.toFixed(0)}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Creativos */}
+                    {campana.contenidos.length > 0 && (
+                      <div className="mt-4 border-t pt-4">
+                        <div className="mb-2 text-xs font-medium text-gray-700">Creativos:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {campana.contenidos.map((contenido, idx) => (
+                            <span
+                              key={idx}
+                              className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                            >
+                              {contenido}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Distribución de leads */}
+                    <div className="mt-4 border-t pt-4">
+                      <div className="mb-2 text-xs font-medium text-gray-700">Pipeline:</div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Prospección</span>
+                          <span className="font-medium">{campana.en_prospeccion} leads</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Negociación</span>
+                          <span className="font-medium text-orange-600">
+                            {campana.en_negociacion} leads
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-t pt-2 text-xs">
+                          <span className="font-medium text-gray-700">Pipeline Total</span>
+                          <span className="font-bold text-gray-900">
+                            {formatoPrecio(campana.pipeline_total)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Alerta de rendimiento */}
+                    {tieneMetricas && (
+                      <div className="mt-4 border-t pt-4">
+                        {cpl > 50000 && (
+                          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                            <span className="text-lg text-amber-600">⚠️</span>
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-amber-900">CPL elevado</div>
+                              <div className="mt-1 text-xs text-amber-700">
+                                El costo por lead está por encima del promedio recomendado
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {campana.tasa_conversion >= 15 && (
+                          <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3">
+                            <span className="text-lg text-green-600">🎯</span>
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-green-900">
+                                Excelente conversión
+                              </div>
+                              <div className="mt-1 text-xs text-green-700">
+                                Esta campaña está superando el benchmark de conversión
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {roi >= 100 && (
+                          <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                            <span className="text-lg text-emerald-600">💰</span>
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-emerald-900">
+                                ROI sobresaliente
+                              </div>
+                              <div className="mt-1 text-xs text-emerald-700">
+                                Cada peso invertido genera más del doble en retorno
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Análisis de Creativos */}
+        {campanas.length > 0 && (
+          <Card className="mt-6 border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle>🎨 Análisis de Creativos</CardTitle>
+              <p className="mt-1 text-sm text-gray-600">
+                Rendimiento por tipo de contenido (utm_content)
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                type CreativoMetric = {
+                  contenido: string;
+                  total_leads: number;
+                  cerrados: number;
+                  campanas: string[];
+                };
+                const creativosMap = new Map<string, CreativoMetric>();
+
+                campanas.forEach((campana) => {
+                  campana.contenidos.forEach((contenido: string) => {
+                    if (!creativosMap.has(contenido)) {
+                      creativosMap.set(contenido, {
+                        contenido,
+                        total_leads: 0,
+                        cerrados: 0,
+                        campanas: [],
+                      });
+                    }
+
+                    const creativo = creativosMap.get(contenido);
+                    if (!creativo) return;
+                    const divisor = Math.max(campana.contenidos.length, 1);
+                    const leadsDelContenido = Math.floor(campana.total_leads / divisor);
+                    const cerradosDelContenido = Math.floor(campana.cerrados / divisor);
+
+                    creativo.total_leads += leadsDelContenido;
+                    creativo.cerrados += cerradosDelContenido;
+                    creativo.campanas.push(campana.campana);
+                  });
+                });
+
+                const creativos = Array.from(creativosMap.values())
+                  .sort((a, b) => b.total_leads - a.total_leads)
+                  .slice(0, 10);
+
+                return (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {creativos.map((creativo, idx) => {
+                      const conversion =
+                        creativo.total_leads > 0
+                          ? (creativo.cerrados / creativo.total_leads) * 100
+                          : 0;
+
+                      return (
+                        <div
+                          key={idx}
+                          className="rounded-xl border-2 border-gray-200 p-4 transition-colors hover:border-purple-300"
+                        >
+                          <div className="mb-3 flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="mb-1 text-sm font-semibold text-gray-900">
+                                {creativo.contenido}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {creativo.campanas.length} campaña(s)
+                              </div>
+                            </div>
+                            <div
+                              className={`text-lg ${
+                                conversion >= 15
+                                  ? "text-green-600"
+                                  : conversion >= 10
+                                    ? "text-orange-600"
+                                    : "text-gray-600"
+                              }`}
+                            >
+                              {conversion >= 15 ? "🔥" : conversion >= 10 ? "👍" : "📊"}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                              <div className="text-lg font-bold text-blue-600">
+                                {creativo.total_leads}
+                              </div>
+                              <div className="text-xs text-gray-600">Leads</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-bold text-green-600">
+                                {creativo.cerrados}
+                              </div>
+                              <div className="text-xs text-gray-600">Cerrados</div>
+                            </div>
+                            <div>
+                              <div className="text-lg font-bold text-purple-600">
+                                {conversion.toFixed(1)}%
+                              </div>
+                              <div className="text-xs text-gray-600">Conv.</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Análisis Comparativo */}
+        {campanas.length > 0 && (
+          <div className="mt-6">
+            <h2 className="mb-4 text-lg font-bold text-gray-900">📊 Análisis Comparativo</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {/* Mejor ROI */}
+              <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <span className="text-lg">💰</span>
+                    Mejor ROI
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    type RoiCampana = CampanaMetrics & { roi: number };
+                    const campanasConROI: RoiCampana[] = campanas
+                      .map((c) => {
+                        const metricas = metricasMetaMap.get(c.campana);
+                        if (!metricas || metricas.spend === 0) return null;
+                        const ingresos = c.cerrados * (c.pipeline_total / Math.max(c.total_leads, 1));
+                        const roi = ((ingresos - metricas.spend) / metricas.spend) * 100;
+                        return { ...c, roi };
+                      })
+                      .filter((c): c is RoiCampana => c !== null && c.roi > 0)
+                      .sort((a, b) => b.roi - a.roi)
+                      .slice(0, 3);
+
+                    return campanasConROI.length > 0 ? (
+                      <div className="space-y-3">
+                        {campanasConROI.map((c, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="truncate text-xs font-medium text-gray-900">
+                                {c.campana}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {c.cerrados} cerrados de {c.total_leads} leads
+                              </div>
+                            </div>
+                            <div className="ml-2 text-right">
+                              <div className="text-sm font-bold text-green-600">
+                                +{c.roi.toFixed(0)}%
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-4 text-center text-xs text-gray-500">
+                        Sin datos de ROI aún
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* Mejor CPL */}
+              <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <span className="text-lg">💵</span>
+                    Menor CPL
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    type CplCampana = CampanaMetrics & { cpl: number };
+                    const campanasConCPL: CplCampana[] = campanas
+                      .map((c) => {
+                        const metricas = metricasMetaMap.get(c.campana);
+                        if (!metricas || c.total_leads === 0) return null;
+                        const cpl = metricas.spend / c.total_leads;
+                        return { ...c, cpl };
+                      })
+                      .filter((c): c is CplCampana => c !== null)
+                      .sort((a, b) => a.cpl - b.cpl)
+                      .slice(0, 3);
+
+                    return campanasConCPL.length > 0 ? (
+                      <div className="space-y-3">
+                        {campanasConCPL.map((c, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="truncate text-xs font-medium text-gray-900">
+                                {c.campana}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {c.total_leads} leads generados
+                              </div>
+                            </div>
+                            <div className="ml-2 text-right">
+                              <div className="text-sm font-bold text-blue-600">
+                                {formatoPrecio(c.cpl)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-4 text-center text-xs text-gray-500">
+                        Sin datos de CPL aún
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* Mayor Conversión */}
+              <Card className="border-0 bg-gradient-to-br from-purple-50 to-pink-50 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <span className="text-lg">🎯</span>
+                    Mayor Conversión
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[...campanas]
+                      .sort((a, b) => b.tasa_conversion - a.tasa_conversion)
+                      .slice(0, 3)
+                      .map((c, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="truncate text-xs font-medium text-gray-900">
+                              {c.campana}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {c.cerrados} de {c.total_leads} convertidos
+                            </div>
+                          </div>
+                          <div className="ml-2 text-right">
+                            <div className="text-sm font-bold text-purple-600">
+                              {c.tasa_conversion.toFixed(1)}%
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Más Leads */}
+              <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <span className="text-lg">📈</span>
+                    Más Leads
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[...campanas]
+                      .sort((a, b) => b.total_leads - a.total_leads)
+                      .slice(0, 3)
+                      .map((c, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="truncate text-xs font-medium text-gray-900">
+                              {c.campana}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {formatoPrecio(c.pipeline_total)} pipeline
+                            </div>
+                          </div>
+                          <div className="ml-2 text-right">
+                            <div className="text-sm font-bold text-orange-600">
+                              {c.total_leads} leads
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </div>
