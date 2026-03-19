@@ -65,6 +65,8 @@ interface ConversacionWhatsapp {
   mensaje_bot: string | null;
   leido: boolean | null;
   respondido_at: string | null;
+  atendido_por?: string | null;
+  notas?: string | null;
 }
 
 export default function AdminDashboard() {
@@ -85,6 +87,55 @@ export default function AdminDashboard() {
   const [realtimeConectado, setRealtimeConectado] = useState(false);
 
   const PASSWORD_ADMIN = "admin2026"; // Cambiar en producción
+
+  const enviarLinkConfigurador = async (conversacion: ConversacionWhatsapp) => {
+    const mensaje = `Hola ${conversacion.nombre || "Cliente"}! 👋
+
+Gracias por tu interés en Constructora Colombia.
+
+Te comparto el link para que armes tu presupuesto personalizado en 5 minutos:
+
+👉 https://ppto.constructoracolombia.com/presupuestos
+
+Es GRATIS y recibes tu PDF al instante.
+
+¿Tienes alguna duda antes de empezar?`;
+
+    try {
+      const response = await fetch("/api/evolution-send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telefono: conversacion.telefono,
+          mensaje,
+        }),
+      });
+
+      if (response.ok) {
+        alert("✅ Link enviado por WhatsApp");
+
+        const { error } = await supabase
+          .from("conversaciones_whatsapp")
+          .update({
+            leido: true,
+            atendido_por: "Jeisson",
+            notas: "Link al configurador enviado",
+          })
+          .eq("id", conversacion.id);
+
+        if (error) {
+          console.error("Error marcando conversación como atendida:", error);
+        }
+
+        await cargarConversaciones();
+      } else {
+        alert("❌ Error enviando mensaje");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("❌ Error de conexión");
+    }
+  };
 
   const cargarConversaciones = async () => {
     const { data, error } = await supabase
@@ -658,13 +709,14 @@ export default function AdminDashboard() {
                       <TableHead className="text-brand-textSecondary">Mensaje Cliente</TableHead>
                       <TableHead className="text-brand-textSecondary">Respuesta Bot</TableHead>
                       <TableHead className="text-brand-textSecondary">Estado</TableHead>
+                      <TableHead className="text-brand-textSecondary">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {conversaciones.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={7}
                           className="py-8 text-center text-brand-textSecondary"
                         >
                           No hay conversaciones registradas
@@ -692,6 +744,15 @@ export default function AdminDashboard() {
                             <Badge className={conv.leido ? "bg-gray-600" : "bg-green-600"}>
                               {conv.leido ? "Leído" : "No leído"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              onClick={() => void enviarLinkConfigurador(conv)}
+                              size="sm"
+                              className="bg-green-600 text-white hover:bg-green-700"
+                            >
+                              📊 Enviar Link Presupuesto
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))

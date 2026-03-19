@@ -17,6 +17,7 @@ import { formatoPrecio } from "@/lib/utils/format";
 
 interface CampanaMetrics {
   campana: string;
+  campaign_id: string | null;
   total_leads: number;
   en_prospeccion: number;
   en_negociacion: number;
@@ -26,18 +27,12 @@ interface CampanaMetrics {
   tasa_conversion: number;
   origen: string;
   contenidos: string[];
-}
-
-interface MetaInsightRow {
-  campaign_name: string;
+  // Metricas de Meta
   spend: number;
   impressions: number;
   clicks: number;
   ctr: number;
   cpc: number;
-  date_start: string;
-  date_stop: string;
-  synced_at?: string;
 }
 
 export default function PautasPage() {
@@ -50,9 +45,6 @@ export default function PautasPage() {
   const [campanas, setCampanas] = useState<CampanaMetrics[]>([]);
   const [filtroOrigen, setFiltroOrigen] = useState("TODOS");
   const [filtroFecha, setFiltroFecha] = useState("30");
-  const [metricasMetaMap, setMetricasMetaMap] = useState<Map<string, MetaInsightRow>>(
-    new Map()
-  );
   const [sincronizando, setSincronizando] = useState(false);
   const [ultimaSync, setUltimaSync] = useState<string | null>(null);
 
@@ -80,70 +72,105 @@ export default function PautasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autenticado, filtroOrigen, filtroFecha]);
 
-  useEffect(() => {
-    if (autenticado) {
-      void cargarMetricasMeta();
-    }
-  }, [autenticado]);
-
   const cargarDatos = async () => {
     setCargando(true);
     try {
       const fechaInicio = new Date();
       fechaInicio.setDate(fechaInicio.getDate() - Number.parseInt(filtroFecha, 10));
 
-      let query = supabase
+      const { data: metricasMeta } = await supabase
+        .from("meta_campaign_insights")
+        .select("*")
+        .gte("date_start", fechaInicio.toISOString().split("T")[0])
+        .order("date_start", { ascending: false });
+
+      let queryLeads = supabase
         .from("leads")
         .select("*")
         .not("utm_campaign", "is", null)
         .gte("created_at", fechaInicio.toISOString());
 
       if (filtroOrigen !== "TODOS") {
-        query = query.eq("origen", filtroOrigen);
+        queryLeads = queryLeads.eq("origen", filtroOrigen);
       }
 
-      const { data: leadsConPauta } = await query;
+      const { data: leadsConPauta } = await queryLeads;
       const leads = leadsConPauta || [];
 
-      const campanaMap = new Map<string, any>();
+      const campanasMetaMap = new Map<string, any>();
 
-      leads.forEach((lead) => {
-        const campana = lead.utm_campaign || "Sin campaña";
-
-        if (!campanaMap.has(campana)) {
-          campanaMap.set(campana, {
-            campana,
+      (metricasMeta || []).forEach((metrica: any) => {
+        const campanaName = metrica.campaign_name;
+        if (!campanasMetaMap.has(campanaName)) {
+          campanasMetaMap.set(campanaName, {
+            campana: campanaName,
+            campaign_id: metrica.campaign_id || null,
             total_leads: 0,
             en_prospeccion: 0,
             en_negociacion: 0,
             cerrados: 0,
             perdidos: 0,
             pipeline_total: 0,
-            origen: lead.origen || "Desconocido",
+            origen: "PAUTA_META",
             contenidos: new Set<string>(),
+            spend: Number(metrica.spend || 0),
+            impressions: Number(metrica.impressions || 0),
+            clicks: Number(metrica.clicks || 0),
+            ctr: Number(metrica.ctr || 0),
+            cpc: Number(metrica.cpc || 0),
           });
-        }
-
-        const metrics = campanaMap.get(campana);
-        metrics.total_leads++;
-
-        if (lead.etapa === "PROSPECCION") metrics.en_prospeccion++;
-        if (lead.etapa === "NEGOCIACION") metrics.en_negociacion++;
-        if (lead.etapa === "CIERRE") metrics.cerrados++;
-        if (lead.etapa === "PERDIDO" || lead.etapa === "DESCALIFICADO") {
-          metrics.perdidos++;
-        }
-
-        if (!["PERDIDO", "DESCALIFICADO"].includes(lead.etapa)) {
-          metrics.pipeline_total += lead.presupuesto_estimado || 0;
-        }
-
-        if (lead.utm_content) {
-          metrics.contenidos.add(lead.utm_content);
+        } else {
+          const campana = campanasMetaMap.get(campanaName);
+          campana.spend += Number(metrica.spend || 0);
+          campana.impressions += Number(metrica.impressions || 0);
+          campana.clicks += Number(metrica.clicks || 0);
+          campana.ctr = campana.impressions > 0 ? (campana.clicks / campana.impressions) * 100 : 0;
+          campana.cpc = campana.clicks > 0 ? campana.spend / campana.clicks : 0;
         }
       });
 
-      const campanasArray: CampanaMetrics[] = Array.from(campanaMap.values()).map(
+      leads.forEach((lead: any) => {
+        const campanaName = lead.utm_campaign || "Sin campaña";
+        if (!campanasMetaMap.has(campanaName)) {
+          campanasMetaMap.set(campanaName, {
+            campana: campanaName,
+            campaign_id: null,
+            total_leads: 0,
+            en_prospeccion: 0,
+            en_negociacion: 0,
+            cerrados: 0,
+            perdidos: 0,
+            pipeline_total: 0,
+            origen: lead.origen || "WEB",
+            contenidos: new Set<string>(),
+            spend: 0,
+            impressions: 0,
+            clicks: 0,
+            ctr: 0,
+            cpc: 0,
+          });
+        }
+
+        const campana = campanasMetaMap.get(campanaName);
+        campana.total_leads++;
+
+        if (lead.etapa === "PROSPECCION") campana.en_prospeccion++;
+        if (lead.etapa === "NEGOCIACION") campana.en_negociacion++;
+        if (lead.etapa === "CIERRE") campana.cerrados++;
+        if (lead.etapa === "PERDIDO" || lead.etapa === "DESCALIFICADO") {
+          campana.perdidos++;
+        }
+
+        if (!["PERDIDO", "DESCALIFICADO"].includes(lead.etapa)) {
+          campana.pipeline_total += lead.presupuesto_estimado || 0;
+        }
+
+        if (lead.utm_content) {
+          campana.contenidos.add(lead.utm_content);
+        }
+      });
+
+      const campanasArray: CampanaMetrics[] = Array.from(campanasMetaMap.values()).map(
         (c) => ({
           ...c,
           contenidos: Array.from(c.contenidos),
@@ -151,7 +178,12 @@ export default function PautasPage() {
         })
       );
 
-      campanasArray.sort((a, b) => b.total_leads - a.total_leads);
+      campanasArray.sort((a, b) => {
+        if (b.total_leads !== a.total_leads) {
+          return b.total_leads - a.total_leads;
+        }
+        return b.spend - a.spend;
+      });
       setCampanas(campanasArray);
 
       const totalLeadsPautas = leads.length;
@@ -173,7 +205,7 @@ export default function PautasPage() {
         total_campanas: campanasArray.length,
       });
     } catch (error) {
-      console.error("Error cargando datos de pautas:", error);
+      console.error("Error cargando datos:", error);
     } finally {
       setCargando(false);
     }
@@ -203,7 +235,6 @@ export default function PautasPage() {
         const result = await response.json();
         alert(`✅ ${result.synced} campañas sincronizadas con Meta`);
         setUltimaSync(new Date().toLocaleString("es-CO"));
-        await cargarMetricasMeta();
         await cargarDatos();
       } else {
         const error = await response.json();
@@ -214,25 +245,6 @@ export default function PautasPage() {
       alert("❌ Error de conexión con Meta");
     } finally {
       setSincronizando(false);
-    }
-  };
-
-  const cargarMetricasMeta = async () => {
-    try {
-      const { data } = await supabase
-        .from("meta_campaign_insights")
-        .select("*")
-        .order("date_start", { ascending: false });
-
-      if (data) {
-        const map = new Map<string, MetaInsightRow>();
-        (data as MetaInsightRow[]).forEach((insight) => {
-          map.set(insight.campaign_name, insight);
-        });
-        setMetricasMetaMap(map);
-      }
-    } catch (error) {
-      console.error("Error cargando métricas Meta:", error);
     }
   };
 
@@ -512,27 +524,21 @@ export default function PautasPage() {
                         {formatoPrecio(campana.pipeline_total)}
                       </td>
                       <td className="px-4 py-4 text-right text-gray-600">
-                        {metricasMetaMap.has(campana.campana)
-                          ? formatoPrecio(metricasMetaMap.get(campana.campana)?.spend || 0)
-                          : "-"}
+                        {campana.spend > 0 ? formatoPrecio(campana.spend) : "-"}
                       </td>
                       <td className="px-4 py-4 text-center font-medium">
-                        {metricasMetaMap.has(campana.campana) && campana.total_leads > 0
-                          ? formatoPrecio(
-                              (metricasMetaMap.get(campana.campana)?.spend || 0) /
-                                campana.total_leads
-                            )
+                        {campana.spend > 0 && campana.total_leads > 0
+                          ? formatoPrecio(campana.spend / campana.total_leads)
                           : "-"}
                       </td>
                       <td className="px-4 py-4 text-center font-bold">
                         {(() => {
-                          const metricas = metricasMetaMap.get(campana.campana);
-                          if (!metricas || metricas.spend === 0) return "-";
+                          if (campana.spend === 0) return "-";
 
                           const ingresosCerrados =
                             campana.cerrados *
                             (campana.pipeline_total / Math.max(campana.total_leads, 1));
-                          const roi = ((ingresosCerrados - metricas.spend) / metricas.spend) * 100;
+                          const roi = ((ingresosCerrados - campana.spend) / campana.spend) * 100;
 
                           return (
                             <span className={roi >= 0 ? "text-green-600" : "text-red-600"}>
@@ -577,17 +583,16 @@ export default function PautasPage() {
         {campanas.length > 0 && (
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
             {campanas.map((campana) => {
-              const metricas = metricasMetaMap.get(campana.campana);
-              const tieneMetricas = !!metricas;
+              const tieneMetricas = campana.spend > 0;
               const cpl =
                 tieneMetricas && campana.total_leads > 0
-                  ? (metricas?.spend || 0) / campana.total_leads
+                  ? campana.spend / campana.total_leads
                   : 0;
               const ingresosCerrados =
                 campana.cerrados * (campana.pipeline_total / Math.max(campana.total_leads, 1));
               const roi =
-                tieneMetricas && (metricas?.spend || 0) > 0
-                  ? ((ingresosCerrados - (metricas?.spend || 0)) / (metricas?.spend || 1)) * 100
+                tieneMetricas && campana.spend > 0
+                  ? ((ingresosCerrados - campana.spend) / campana.spend) * 100
                   : 0;
 
               return (
@@ -618,7 +623,7 @@ export default function PautasPage() {
                       {tieneMetricas && (
                         <div className="text-right">
                           <div className="text-2xl font-bold text-gray-900">
-                            {formatoPrecio(metricas?.spend || 0)}
+                            {formatoPrecio(campana.spend)}
                           </div>
                           <div className="text-xs text-gray-500">Invertido</div>
                         </div>
@@ -651,25 +656,25 @@ export default function PautasPage() {
                           <div>
                             <div className="mb-1 text-xs text-gray-500">Impresiones</div>
                             <div className="font-semibold text-gray-900">
-                              {(metricas?.impressions || 0).toLocaleString("es-CO")}
+                              {campana.impressions.toLocaleString("es-CO")}
                             </div>
                           </div>
                           <div>
                             <div className="mb-1 text-xs text-gray-500">Clicks</div>
                             <div className="font-semibold text-gray-900">
-                              {(metricas?.clicks || 0).toLocaleString("es-CO")}
+                              {campana.clicks.toLocaleString("es-CO")}
                             </div>
                           </div>
                           <div>
                             <div className="mb-1 text-xs text-gray-500">CTR</div>
                             <div className="font-semibold text-gray-900">
-                              {(metricas?.ctr || 0).toFixed(2)}%
+                              {campana.ctr.toFixed(2)}%
                             </div>
                           </div>
                           <div>
                             <div className="mb-1 text-xs text-gray-500">CPC</div>
                             <div className="font-semibold text-gray-900">
-                              {formatoPrecio(metricas?.cpc || 0)}
+                              {formatoPrecio(campana.cpc)}
                             </div>
                           </div>
                         </div>
@@ -911,10 +916,9 @@ export default function PautasPage() {
                     type RoiCampana = CampanaMetrics & { roi: number };
                     const campanasConROI: RoiCampana[] = campanas
                       .map((c) => {
-                        const metricas = metricasMetaMap.get(c.campana);
-                        if (!metricas || metricas.spend === 0) return null;
+                        if (c.spend === 0) return null;
                         const ingresos = c.cerrados * (c.pipeline_total / Math.max(c.total_leads, 1));
-                        const roi = ((ingresos - metricas.spend) / metricas.spend) * 100;
+                        const roi = ((ingresos - c.spend) / c.spend) * 100;
                         return { ...c, roi };
                       })
                       .filter((c): c is RoiCampana => c !== null && c.roi > 0)
@@ -963,9 +967,8 @@ export default function PautasPage() {
                     type CplCampana = CampanaMetrics & { cpl: number };
                     const campanasConCPL: CplCampana[] = campanas
                       .map((c) => {
-                        const metricas = metricasMetaMap.get(c.campana);
-                        if (!metricas || c.total_leads === 0) return null;
-                        const cpl = metricas.spend / c.total_leads;
+                        if (c.spend === 0 || c.total_leads === 0) return null;
+                        const cpl = c.spend / c.total_leads;
                         return { ...c, cpl };
                       })
                       .filter((c): c is CplCampana => c !== null)
