@@ -142,6 +142,42 @@ export default function ResumenPage() {
       }
 
       console.log("✅ Cotización guardada exitosamente en DB");
+
+      const cotizacionId = data?.[0]?.id as string | undefined;
+      if (cotizacionId) {
+        try {
+          // Crear lead automáticamente desde cotización web
+          const { data: lead, error: leadError } = await supabase
+            .from("leads")
+            .insert({
+              nombre: clienteNombre,
+              telefono: clienteTelefono || "Sin teléfono",
+              email: clienteEmail,
+              proyecto: proyectoData?.nombre,
+              presupuesto_estimado: getTotal(),
+              fuente: "WEB",
+              fuente_detalle: "Configurador online",
+              etapa: "COTIZACION",
+              probabilidad: 40,
+              cotizacion_id: cotizacionId,
+            })
+            .select("id")
+            .single();
+
+          if (leadError) {
+            console.error("⚠️ No se pudo crear lead:", leadError);
+          } else if (lead?.id) {
+            await supabase.from("lead_actividades").insert({
+              lead_id: lead.id,
+              tipo: "NOTA",
+              descripcion: `Cotización generada: ${numeroCotizacion}. Total: ${formatoPrecio(getTotal())}`,
+            });
+          }
+        } catch (leadFlowError) {
+          console.error("⚠️ Error integrando lead desde cotización:", leadFlowError);
+        }
+      }
+
       return { success: true, data };
     } catch (error) {
       console.error("❌ Error:", error);

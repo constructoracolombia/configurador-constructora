@@ -14,6 +14,7 @@ import {
   Calculator,
   Users,
   BarChart3,
+  Activity,
   ArrowRight,
   Lock,
   Sparkles,
@@ -321,6 +322,13 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  <Button
+                    onClick={() => router.push("/centro-operaciones")}
+                    className="bg-white font-semibold text-black hover:bg-gray-200"
+                  >
+                    <Activity className="mr-2 h-4 w-4" />
+                    Centro de Operaciones
+                  </Button>
                   <Button
                     onClick={() => router.push("/")}
                     className="border-brand-border bg-white font-semibold text-black hover:bg-gray-200"
