@@ -29,6 +29,8 @@ type Lead = {
   nombre_proyecto: string | null;
   origen: string | null;
   fecha_contacto: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
 };
 
 type EtapaVisual = {
@@ -160,7 +162,7 @@ export default function CentroOperacionesPage() {
       const { data: leadsData, error } = await supabase
         .from("leads")
         .select(
-          "id,nombre,telefono,email,etapa,presupuesto_estimado,tipo_proyecto,nombre_proyecto,origen,fecha_contacto,updated_at"
+          "id,nombre,telefono,email,etapa,presupuesto_estimado,tipo_proyecto,nombre_proyecto,origen,fecha_contacto,utm_campaign,utm_content,updated_at"
         )
         .order("updated_at", { ascending: false });
 
@@ -590,6 +592,20 @@ export default function CentroOperacionesPage() {
                           {lead.origen && (
                             <div className="inline-block rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-600">
                               {lead.origen.replace(/_/g, " ")}
+                            </div>
+                          )}
+
+                          {/* Campaña de origen */}
+                          {lead.utm_campaign && (
+                            <div className="mb-1 truncate rounded bg-blue-50 px-2 py-1 text-[10px] text-blue-700">
+                              📢 {lead.utm_campaign}
+                            </div>
+                          )}
+
+                          {/* Contenido del anuncio */}
+                          {lead.utm_content && (
+                            <div className="truncate text-[10px] text-gray-500">
+                              🎯 {lead.utm_content}
                             </div>
                           )}
 

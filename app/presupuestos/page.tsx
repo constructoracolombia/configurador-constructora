@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { proyectos } from "@/lib/data/catalogo";
 import { useCotizador } from "@/lib/store/cotizador";
+import { useTrackingParams } from "@/lib/hooks/useTrackingParams";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImagenOptimizada } from "@/components/ImagenOptimizada";
@@ -24,6 +25,8 @@ const BROCHURE_URLS: Record<string, string> = {
 };
 
 export default function PresupuestosPage() {
+  const trackingParams = useTrackingParams();
+  void trackingParams;
   const router = useRouter();
   const setProyecto = useCotizador((state) => state.setProyecto);
   const [loading, setLoading] = useState(false);

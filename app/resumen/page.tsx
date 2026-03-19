@@ -8,6 +8,7 @@ import { formatoPrecio } from "@/lib/utils/format";
 import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
 import { subirPresupuesto } from "@/lib/utils/storage-service";
 import { supabase } from "@/lib/supabase/client";
+import { getStoredTrackingParams } from "@/lib/hooks/useTrackingParams";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Clock, ArrowLeft } from "lucide-react";
@@ -146,6 +147,9 @@ export default function ResumenPage() {
       const cotizacionId = data?.[0]?.id as string | undefined;
       if (cotizacionId) {
         try {
+          const trackingParams = getStoredTrackingParams();
+          const utmSource = trackingParams?.utm_source?.toLowerCase() ?? null;
+
           // Crear lead automáticamente desde cotización web
           const { data: lead, error: leadError } = await supabase
             .from("leads")
@@ -156,10 +160,25 @@ export default function ResumenPage() {
               proyecto: proyectoData?.nombre,
               presupuesto_estimado: getTotal(),
               fuente: "WEB",
+              origen:
+                utmSource === "facebook" || utmSource === "instagram"
+                  ? "PAUTA_META"
+                  : utmSource === "google"
+                    ? "PAUTA_GOOGLE"
+                    : "WEB",
               fuente_detalle: "Configurador online",
               etapa: "COTIZACION",
               probabilidad: 40,
               cotizacion_id: cotizacionId,
+              utm_source: trackingParams?.utm_source,
+              utm_medium: trackingParams?.utm_medium,
+              utm_campaign: trackingParams?.utm_campaign,
+              utm_content: trackingParams?.utm_content,
+              utm_term: trackingParams?.utm_term,
+              fbclid: trackingParams?.fbclid,
+              gclid: trackingParams?.gclid,
+              landing_page: trackingParams?.landing_page,
+              referrer: trackingParams?.referrer,
             })
             .select("id")
             .single();
