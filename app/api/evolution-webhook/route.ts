@@ -278,6 +278,7 @@ function parseIncoming(body: any) {
     telefono,
     contenido: String(contenido),
     nombreContacto: String(nombreContacto),
+    rawMessage: firstMessage,
   };
 }
 
@@ -294,7 +295,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const { telefono, contenido, nombreContacto } = parsed;
+    const { telefono, contenido, nombreContacto, rawMessage } = parsed;
     const cliente = { nombre: nombreContacto, telefono };
 
     console.log("👤 De:", nombreContacto, telefono);
@@ -303,6 +304,30 @@ export async function POST(request: Request) {
     let conversacionId: string | null = null;
 
     if (supabase) {
+      const contextInfo = rawMessage?.message?.extendedTextMessage?.contextInfo;
+      const quotedAd = contextInfo?.quotedAd;
+      let utmParams = {
+        utm_source: null as string | null,
+        utm_medium: null as string | null,
+        utm_campaign: null as string | null,
+        utm_content: null as string | null,
+      };
+
+      if (quotedAd) {
+        utmParams = {
+          utm_source: quotedAd.utm_source || "whatsapp",
+          utm_medium: quotedAd.utm_medium || "paid",
+          utm_campaign: quotedAd.utm_campaign || null,
+          utm_content: quotedAd.utm_content || null,
+        };
+      }
+
+      const { count } = await supabase
+        .from("conversaciones_whatsapp")
+        .select("id", { count: "exact", head: true })
+        .eq("telefono", telefono);
+      const esPrimerMensaje = (count || 0) === 0;
+
       const { data: conversacion, error: convError } = await supabase
         .from("conversaciones_whatsapp")
         .insert({
@@ -311,6 +336,10 @@ export async function POST(request: Request) {
           mensaje_cliente: contenido,
           fuente: "whatsapp_evolution",
           leido: false,
+          utm_source: esPrimerMensaje ? utmParams.utm_source : null,
+          utm_medium: esPrimerMensaje ? utmParams.utm_medium : null,
+          utm_campaign: esPrimerMensaje ? utmParams.utm_campaign : null,
+          utm_content: esPrimerMensaje ? utmParams.utm_content : null,
         })
         .select("id")
         .single();
