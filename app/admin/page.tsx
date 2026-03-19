@@ -27,6 +27,7 @@ import {
   LayoutDashboard,
   RefreshCw,
   Radio,
+  MessageSquare,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import { motion } from "framer-motion";
@@ -55,18 +56,50 @@ interface Estadisticas {
   planMasPopular: string;
 }
 
+interface ConversacionWhatsapp {
+  id: string;
+  created_at: string;
+  telefono: string;
+  nombre: string | null;
+  mensaje_cliente: string | null;
+  mensaje_bot: string | null;
+  leido: boolean | null;
+  respondido_at: string | null;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [autenticado, setAutenticado] = useState(false);
   const [password, setPassword] = useState("");
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
+  const [conversaciones, setConversaciones] = useState<ConversacionWhatsapp[]>(
+    []
+  );
   const [estadisticas, setEstadisticas] = useState<Estadisticas | null>(null);
+  const [vistaActual, setVistaActual] = useState<"cotizaciones" | "whatsapp">(
+    "cotizaciones"
+  );
   const [busqueda, setBusqueda] = useState("");
   const [filtroProyecto, setFiltroProyecto] = useState("todos");
   const [cargando, setCargando] = useState(false);
   const [realtimeConectado, setRealtimeConectado] = useState(false);
 
   const PASSWORD_ADMIN = "admin2026"; // Cambiar en producción
+
+  const cargarConversaciones = async () => {
+    const { data, error } = await supabase
+      .from("conversaciones_whatsapp")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Error cargando conversaciones WhatsApp:", error);
+      return;
+    }
+
+    setConversaciones((data as ConversacionWhatsapp[]) || []);
+  };
 
   const handleLogin = () => {
     if (password === PASSWORD_ADMIN) {
@@ -89,6 +122,7 @@ export default function AdminDashboard() {
       if (error) throw error;
 
       setCotizaciones((cotizacionesData as Cotizacion[]) || []);
+      await cargarConversaciones();
 
       if (cotizacionesData && cotizacionesData.length > 0) {
         const totalCotizaciones = cotizacionesData.length;
@@ -203,6 +237,7 @@ export default function AdminDashboard() {
   const proyectosUnicos = Array.from(
     new Set(cotizaciones.map((c) => c.proyecto_nombre))
   );
+  const conversacionesNoLeidas = conversaciones.filter((c) => !c.leido).length;
 
   if (!autenticado) {
     return (
@@ -309,8 +344,35 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Estadísticas */}
-        {estadisticas && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={() => setVistaActual("cotizaciones")}
+            className={
+              vistaActual === "cotizaciones"
+                ? "bg-brand-primary font-semibold text-black hover:bg-brand-secondary"
+                : "bg-brand-card text-brand-text hover:bg-brand-border"
+            }
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Cotizaciones
+          </Button>
+          <Button
+            onClick={() => setVistaActual("whatsapp")}
+            className={
+              vistaActual === "whatsapp"
+                ? "bg-brand-primary font-semibold text-black hover:bg-brand-secondary"
+                : "bg-brand-card text-brand-text hover:bg-brand-border"
+            }
+          >
+            <MessageSquare className="mr-2 h-4 w-4" />
+            WhatsApp ({conversacionesNoLeidas})
+          </Button>
+        </div>
+
+        {vistaActual === "cotizaciones" ? (
+          <>
+            {/* Estadísticas */}
+            {estadisticas && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -398,10 +460,10 @@ export default function AdminDashboard() {
               </Card>
             </motion.div>
           </div>
-        )}
+            )}
 
-        {/* Insights */}
-        {estadisticas && estadisticas.totalCotizaciones > 0 && (
+            {/* Insights */}
+            {estadisticas && estadisticas.totalCotizaciones > 0 && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Card className="border-brand-border bg-brand-card">
               <CardHeader>
@@ -431,10 +493,10 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </div>
-        )}
+            )}
 
-        {/* Filtros y Búsqueda */}
-        <Card className="border-brand-border bg-brand-card">
+            {/* Filtros y Búsqueda */}
+            <Card className="border-brand-border bg-brand-card">
           <CardContent className="p-6">
             <div className="flex flex-col gap-4 md:flex-row">
               <div className="relative flex-1">
@@ -467,10 +529,10 @@ export default function AdminDashboard() {
               </Button>
             </div>
           </CardContent>
-        </Card>
+            </Card>
 
-        {/* Tabla de Cotizaciones */}
-        <Card className="border-brand-border bg-brand-card">
+            {/* Tabla de Cotizaciones */}
+            <Card className="border-brand-border bg-brand-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-brand-text">
               <Users className="h-5 w-5 text-brand-primary" />
@@ -575,7 +637,71 @@ export default function AdminDashboard() {
               </Table>
             </div>
           </CardContent>
-        </Card>
+            </Card>
+          </>
+        ) : (
+          <Card className="border-brand-border bg-brand-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-brand-text">
+                <MessageSquare className="h-5 w-5 text-brand-primary" />
+                Conversaciones WhatsApp ({conversaciones.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-brand-border">
+                      <TableHead className="text-brand-textSecondary">Fecha</TableHead>
+                      <TableHead className="text-brand-textSecondary">Cliente</TableHead>
+                      <TableHead className="text-brand-textSecondary">Teléfono</TableHead>
+                      <TableHead className="text-brand-textSecondary">Mensaje Cliente</TableHead>
+                      <TableHead className="text-brand-textSecondary">Respuesta Bot</TableHead>
+                      <TableHead className="text-brand-textSecondary">Estado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {conversaciones.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-8 text-center text-brand-textSecondary"
+                        >
+                          No hay conversaciones registradas
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      conversaciones.map((conv) => (
+                        <TableRow key={conv.id} className="border-brand-border">
+                          <TableCell className="text-brand-textSecondary">
+                            {new Date(conv.created_at).toLocaleString("es-CO")}
+                          </TableCell>
+                          <TableCell className="font-medium text-brand-text">
+                            {conv.nombre || "Cliente"}
+                          </TableCell>
+                          <TableCell className="text-brand-textSecondary">
+                            {conv.telefono}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate text-brand-textSecondary">
+                            {conv.mensaje_cliente || "-"}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate text-brand-textSecondary">
+                            {conv.mensaje_bot || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={conv.leido ? "bg-gray-600" : "bg-green-600"}>
+                              {conv.leido ? "Leído" : "No leído"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
