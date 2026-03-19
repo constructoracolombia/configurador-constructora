@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { proyectos } from "@/lib/data/catalogo";
 import { useCotizador } from "@/lib/store/cotizador";
@@ -24,7 +24,7 @@ const BROCHURE_URLS: Record<string, string> = {
   "Fontana de la Sierra": "https://constructoracolombia.com/brochure_fontanasierra",
 };
 
-export default function PresupuestosPage() {
+function PresupuestosContent() {
   const trackingParams = useTrackingParams();
   void trackingParams;
   const router = useRouter();
@@ -352,5 +352,19 @@ export default function PresupuestosPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function PresupuestosPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-brand-dark text-brand-text">
+          Cargando...
+        </div>
+      }
+    >
+      <PresupuestosContent />
+    </Suspense>
   );
 }
