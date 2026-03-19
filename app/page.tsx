@@ -455,7 +455,7 @@ export default function CentroOperacionesPage() {
           </Card>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card
             className="group cursor-pointer border-0 shadow-sm transition-shadow hover:shadow-md"
             onClick={() => router.push("/presupuestos")}
@@ -517,6 +517,29 @@ export default function CentroOperacionesPage() {
               </p>
               <div className="text-xs text-gray-500">
                 Dashboard de cotizaciones
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="group cursor-pointer border-0 shadow-sm transition-shadow hover:shadow-md"
+            onClick={() => router.push("/pautas")}
+          >
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+                  <TrendingUp className="h-7 w-7 text-white" />
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 transition-colors group-hover:text-purple-600" />
+              </div>
+              <h3 className="mb-2 text-lg font-bold text-gray-900">
+                Análisis de Pautas
+              </h3>
+              <p className="mb-4 text-sm text-gray-600">
+                Rendimiento de campañas Meta Ads y Google
+              </p>
+              <div className="text-xs text-gray-500">
+                ROI, conversión y métricas
               </div>
             </CardContent>
           </Card>
