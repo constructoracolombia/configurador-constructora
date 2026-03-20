@@ -141,6 +141,7 @@ const crearFormularioVacio = (): NuevoLeadForm => ({
 export default function CentroOperacionesPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [autenticado, setAutenticado] = useState(false);
   const [mostrarLogin, setMostrarLogin] = useState(true);
   const [cargando, setCargando] = useState(false);
 
@@ -172,62 +173,105 @@ export default function CentroOperacionesPage() {
       leads: [],
     }))
   );
+  const [leads, setLeads] = useState<Lead[]>([]);
 
   useEffect(() => {
     const auth = localStorage.getItem("admin_auth");
     if (auth === "true") {
+      setAutenticado(true);
       setMostrarLogin(false);
-      void cargarDatos();
     }
   }, []);
+
+  useEffect(() => {
+    if (autenticado) {
+      console.log("🔐 Usuario autenticado, cargando datos...");
+      void cargarDatos();
+    } else {
+      console.log("🚫 Usuario no autenticado");
+    }
+  }, [autenticado]);
 
   const cargarDatos = async () => {
     setCargando(true);
     try {
-      const { data: leadsData, error } = await supabase
+      console.log("🔄 Cargando datos del dashboard...");
+
+      const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
-        .select(
-          "id,nombre,telefono,email,etapa,presupuesto_estimado,tipo_proyecto,nombre_proyecto,origen,fecha_contacto,utm_campaign,utm_content,observaciones,responsable,prioridad,es_caliente,updated_at"
-        )
-        .order("updated_at", { ascending: false });
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (leadsError) {
+        console.error("❌ Error cargando leads:", leadsError);
+        throw leadsError;
+      }
 
-      const leads = ((leadsData || []) as Lead[]).map((lead) => ({
+      console.log("✅ Leads cargados:", leadsData?.length || 0);
+
+      const leadsNormalizados = ((leadsData || []) as Lead[]).map((lead) => ({
         ...lead,
         presupuesto_estimado: lead.presupuesto_estimado ?? 0,
       }));
 
-      const total = leads.length;
-      const prospeccion = leads.filter(
-        (l) => l.etapa === "PROSPECCION"
-      ).length;
-      const negociacion = leads.filter(
-        (l) => l.etapa === "NEGOCIACION"
-      ).length;
-      const cerrados = leads.filter((l) => l.etapa === "CIERRE").length;
-      const pipeline = leads
-        .filter((l) => !["PERDIDO", "DESCALIFICADO"].includes(l.etapa))
-        .reduce((sum, l) => sum + (l.presupuesto_estimado || 0), 0);
-      const tasa = total > 0 ? (cerrados / total) * 100 : 0;
+      setLeads(leadsNormalizados);
 
-      setKpis({
-        totalLeads: total,
-        enProspeccion: prospeccion,
-        enNegociacion: negociacion,
-        cerrados,
-        pipelineTotal: pipeline,
-        tasaConversion: tasa,
+      // Normaliza etapas antiguas/nuevas para que siempre se visualicen.
+      const normalizarEtapa = (etapa: string) => {
+        const valor = (etapa || "").toUpperCase();
+        if (valor === "REUNION") return "PRESENTACION";
+        if (valor === "COTIZACION_ENVIADA") return "COTIZACION";
+        return valor;
+      };
+
+      const etapasConDatos = ETAPAS_VISUALES.map((etapa) => {
+        const leadsEtapa = leadsNormalizados.filter(
+          (l) => normalizarEtapa(l.etapa) === etapa.key
+        );
+        return {
+          ...etapa,
+          cantidad: leadsEtapa.length,
+          leads: leadsEtapa,
+        };
       });
 
-      const etapasConDatos = ETAPAS_VISUALES.map((etapa) => ({
-        ...etapa,
-        cantidad: leads.filter((l) => l.etapa === etapa.key).length,
-        leads: leads.filter((l) => l.etapa === etapa.key),
-      }));
+      console.log(
+        "📊 Leads por etapa:",
+        etapasConDatos.map((e) => `${e.nombre}: ${e.cantidad}`)
+      );
       setLeadsPorEtapa(etapasConDatos);
+
+      const totalLeads = leadsNormalizados.length;
+      const enProspeccion = leadsNormalizados.filter(
+        (l) => normalizarEtapa(l.etapa) === "PROSPECCION"
+      ).length;
+      const enNegociacion = leadsNormalizados.filter(
+        (l) => normalizarEtapa(l.etapa) === "NEGOCIACION"
+      ).length;
+      const cerrados = leadsNormalizados.filter(
+        (l) => normalizarEtapa(l.etapa) === "CIERRE"
+      ).length;
+      const conversionPromedio =
+        totalLeads > 0 ? (cerrados / totalLeads) * 100 : 0;
+      const pipelineTotal = leadsNormalizados
+        .filter((l) =>
+          !["PERDIDO", "DESCALIFICADO"].includes(normalizarEtapa(l.etapa))
+        )
+        .reduce((sum, l) => sum + (l.presupuesto_estimado || 0), 0);
+
+      setKpis({
+        totalLeads,
+        enProspeccion,
+        enNegociacion,
+        cerrados,
+        tasaConversion: conversionPromedio,
+        pipelineTotal,
+      });
+
+      console.log("✅ Dashboard cargado correctamente");
     } catch (error) {
-      console.error("Error cargando datos del Centro de Operaciones:", error);
+      console.error("❌ Error en cargarDatos:", error);
+      alert("Error cargando datos del dashboard. Revisa la consola.");
     } finally {
       setCargando(false);
     }
@@ -236,8 +280,8 @@ export default function CentroOperacionesPage() {
   const handleLogin = () => {
     if (password === "admin2026") {
       localStorage.setItem("admin_auth", "true");
+      setAutenticado(true);
       setMostrarLogin(false);
-      void cargarDatos();
     } else {
       alert("Contraseña incorrecta");
     }
@@ -580,6 +624,7 @@ export default function CentroOperacionesPage() {
               <Button
                 onClick={() => {
                   localStorage.removeItem("admin_auth");
+                  setAutenticado(false);
                   setMostrarLogin(true);
                 }}
                 variant="ghost"
@@ -593,6 +638,27 @@ export default function CentroOperacionesPage() {
       </div>
 
       <div className="mx-auto max-w-[1600px] px-6 py-8">
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-blue-900">Debug Dashboard</div>
+              <div className="text-sm text-blue-700">
+                Leads en estado: {leads.length} | Por etapa:{" "}
+                {leadsPorEtapa.map((e) => e.cantidad).join(", ")}
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                console.log("📊 Estado actual:", { leads, leadsPorEtapa, kpis });
+                void cargarDatos();
+              }}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              🔄 Recargar Datos
+            </button>
+          </div>
+        </div>
+
         <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
