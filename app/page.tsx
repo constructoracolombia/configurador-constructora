@@ -368,6 +368,8 @@ export default function CentroOperacionesPage() {
   };
 
   const abrirModalEditar = (lead: Lead) => {
+    console.log("📝 Abriendo modal para lead:", lead);
+
     setLeadEditando({
       id: lead.id,
       fecha_contacto: lead.fecha_contacto || new Date().toISOString().split("T")[0],
@@ -382,7 +384,7 @@ export default function CentroOperacionesPage() {
         : "",
       observaciones: lead.observaciones || "",
       responsable: lead.responsable || "Jeisson",
-      es_caliente: lead.es_caliente || false,
+      es_caliente: lead.es_caliente === true,
       prioridad: lead.prioridad || "MEDIA",
     });
     setMostrarModalEditar(true);
@@ -401,44 +403,65 @@ export default function CentroOperacionesPage() {
     }
 
     setGuardandoEdicion(true);
+
     try {
-      const { error } = await supabase
+      console.log("💾 Guardando lead:", leadEditando);
+
+      const datosActualizar = {
+        nombre: leadEditando.nombre.trim(),
+        telefono: leadEditando.telefono.trim(),
+        email: leadEditando.email?.trim() || null,
+        fecha_contacto: leadEditando.fecha_contacto,
+        origen: leadEditando.origen,
+        tipo_proyecto: leadEditando.tipo_proyecto,
+        nombre_proyecto: leadEditando.nombre_proyecto?.trim() || null,
+        presupuesto_estimado: leadEditando.presupuesto_estimado
+          ? Number.parseFloat(leadEditando.presupuesto_estimado.toString())
+          : null,
+        observaciones: leadEditando.observaciones?.trim() || null,
+        responsable: leadEditando.responsable,
+        es_caliente: leadEditando.es_caliente === true,
+        prioridad: leadEditando.prioridad,
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log("📝 Datos a actualizar:", datosActualizar);
+
+      const { data, error } = await supabase
         .from("leads")
-        .update({
-          nombre: leadEditando.nombre,
-          telefono: leadEditando.telefono,
-          email: leadEditando.email || null,
-          fecha_contacto: leadEditando.fecha_contacto,
-          origen: leadEditando.origen,
-          tipo_proyecto: leadEditando.tipo_proyecto,
-          nombre_proyecto: leadEditando.nombre_proyecto || null,
-          presupuesto_estimado: leadEditando.presupuesto_estimado
-            ? Number.parseFloat(leadEditando.presupuesto_estimado)
-            : null,
-          observaciones: leadEditando.observaciones || null,
-          responsable: leadEditando.responsable,
-          es_caliente: leadEditando.es_caliente,
-          prioridad: leadEditando.prioridad,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", leadEditando.id);
+        .update(datosActualizar)
+        .eq("id", leadEditando.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Error de Supabase:", error);
+        throw new Error(`Error de Supabase: ${error.message} (${error.code})`);
+      }
 
-      await supabase.from("lead_actividades").insert({
-        lead_id: leadEditando.id,
-        tipo: "NOTA",
-        descripcion: "Lead actualizado",
-        usuario: "Admin",
-      });
+      console.log("✅ Lead actualizado:", data);
+
+      const { error: actividadError } = await supabase
+        .from("lead_actividades")
+        .insert({
+          lead_id: leadEditando.id,
+          tipo: "NOTA",
+          descripcion: leadEditando.es_caliente
+            ? "Lead actualizado y marcado como caliente 🔥"
+            : "Lead actualizado",
+          usuario: "Admin",
+        });
+
+      if (actividadError) {
+        console.warn("⚠️ Error registrando actividad:", actividadError);
+      }
 
       alert("✅ Lead actualizado exitosamente");
       setMostrarModalEditar(false);
       setLeadEditando(null);
       await cargarDatos();
-    } catch (error) {
-      console.error("Error actualizando lead:", error);
-      alert("❌ Error al actualizar lead");
+    } catch (error: any) {
+      console.error("❌ Error completo:", error);
+      alert(`❌ Error al actualizar lead: ${error.message || "Error desconocido"}`);
     } finally {
       setGuardandoEdicion(false);
     }
@@ -1248,14 +1271,19 @@ export default function CentroOperacionesPage() {
                 <label className="flex cursor-pointer items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={leadEditando.es_caliente}
-                    onChange={(e) =>
-                      setLeadEditando({
-                        ...leadEditando,
-                        es_caliente: e.target.checked,
-                        prioridad: e.target.checked ? "ALTA" : "MEDIA",
-                      })
-                    }
+                    checked={leadEditando?.es_caliente === true}
+                    onChange={(e) => {
+                      console.log("🔥 Checkbox cambiado a:", e.target.checked);
+                      setLeadEditando((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              es_caliente: e.target.checked,
+                              prioridad: e.target.checked ? "ALTA" : prev.prioridad,
+                            }
+                          : prev
+                      );
+                    }}
                     className="h-5 w-5 cursor-pointer"
                   />
                   <div className="flex-1">
@@ -1264,7 +1292,7 @@ export default function CentroOperacionesPage() {
                       Lead Caliente
                     </div>
                     <div className="mt-1 text-xs text-gray-600">
-                      Marca este lead como prioritario (alta prioridad)
+                      Marca este lead como prioritario (prioridad alta)
                     </div>
                   </div>
                 </label>
