@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import {
   Calculator,
   Users,
@@ -198,7 +199,7 @@ export default function CentroOperacionesPage() {
       const etapasConDatos = ETAPAS_VISUALES.map((etapa) => ({
         ...etapa,
         cantidad: leads.filter((l) => l.etapa === etapa.key).length,
-        leads: leads.filter((l) => l.etapa === etapa.key).slice(0, 3),
+        leads: leads.filter((l) => l.etapa === etapa.key),
       }));
       setLeadsPorEtapa(etapasConDatos);
     } catch (error) {
@@ -299,7 +300,7 @@ export default function CentroOperacionesPage() {
   };
 
   const getColorClasses = (color: string) => {
-    const colores: Record<string, string> = {
+    const colores: any = {
       blue: "bg-blue-50 border-blue-200 text-blue-700",
       purple: "bg-purple-50 border-purple-200 text-purple-700",
       yellow: "bg-yellow-50 border-yellow-200 text-yellow-700",
@@ -308,6 +309,74 @@ export default function CentroOperacionesPage() {
       green: "bg-green-50 border-green-200 text-green-700",
     };
     return colores[color] || colores.blue;
+  };
+
+  const handleDragEnd = async (result: any) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) {
+      return;
+    }
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    const etapaAnterior = source.droppableId;
+    const etapaNueva = destination.droppableId;
+    const leadId = draggableId;
+
+    if (
+      etapaNueva === "CIERRE" ||
+      etapaNueva === "PERDIDO" ||
+      etapaNueva === "DESCALIFICADO"
+    ) {
+      const nombreEtapa = leadsPorEtapa.find((e) => e.key === etapaNueva)?.nombre;
+      const confirmacion = confirm(
+        `¿Confirmas mover este lead a ${nombreEtapa || etapaNueva}?`
+      );
+
+      if (!confirmacion) {
+        return;
+      }
+    }
+
+    console.log(`Moviendo lead ${leadId} de ${etapaAnterior} a ${etapaNueva}`);
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          etapa: etapaNueva,
+          ultima_interaccion: new Date().toISOString(),
+        })
+        .eq("id", leadId);
+
+      if (error) {
+        console.error("Error actualizando lead:", error);
+        alert("❌ Error al mover el lead");
+        return;
+      }
+
+      await supabase.from("lead_actividades").insert({
+        lead_id: leadId,
+        tipo: "CAMBIO_ETAPA",
+        descripcion: `Lead movido de ${etapaAnterior} a ${etapaNueva}`,
+        resultado: "Cambio de etapa manual",
+        usuario: "Admin",
+      });
+
+      await cargarDatos();
+
+      const nombreEtapa = leadsPorEtapa.find((e) => e.key === etapaNueva)?.nombre;
+      console.log(`✅ Lead movido a ${nombreEtapa || etapaNueva}`);
+    } catch (error) {
+      console.error("Error en drag & drop:", error);
+      alert("❌ Error al mover el lead");
+    }
   };
 
   if (mostrarLogin) {
@@ -545,116 +614,139 @@ export default function CentroOperacionesPage() {
           </Card>
         </div>
 
+        {/* Flujo Comercial - Drag & Drop Kanban */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
-            <h2 className="mb-6 text-lg font-bold text-gray-900">Flujo Comercial</h2>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              {leadsPorEtapa.map((etapa) => (
-                <div
-                  key={etapa.key}
-                  className={`rounded-xl border-2 p-4 ${getColorClasses(etapa.color)}`}
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <div className="text-lg font-bold">{etapa.cantidad}</div>
-                      <div className="text-xs font-medium">{etapa.nombre}</div>
-                    </div>
-                    <div className="rounded bg-white/50 px-2 py-1 text-xs">
-                      {etapa.dias} días
-                    </div>
-                  </div>
-
-                  {/* Botón agregar lead - SOLO en Prospección */}
-                  {etapa.permiteCrear && (
-                    <button
-                      onClick={() => abrirModalLead(etapa.key)}
-                      className="mb-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg border-2 border-dashed border-current bg-white/60 text-xs font-semibold transition-all hover:bg-white/90"
-                    >
-                      <span className="text-lg">+</span> Nuevo Lead
-                    </button>
-                  )}
-
-                  {etapa.leads.length > 0 ? (
-                    <div className="space-y-2">
-                      {etapa.leads.map((lead) => (
-                        <div
-                          key={lead.id}
-                          className="cursor-pointer rounded-lg border border-gray-200 bg-white p-3 text-xs transition-shadow hover:shadow-md"
-                          onClick={() => {
-                            console.log("Ver detalle lead:", lead);
-                          }}
-                        >
-                          <div className="mb-1 truncate font-bold text-gray-900">
-                            {lead.nombre}
-                          </div>
-
-                          <div className="mb-1 flex items-center gap-1 text-gray-600">
-                            <span className="text-[10px]">📱</span>
-                            {lead.telefono || "Sin teléfono"}
-                          </div>
-
-                          {lead.tipo_proyecto && (
-                            <div className="mb-1 text-[10px] text-gray-500">
-                              🏗️ {lead.tipo_proyecto}
-                            </div>
-                          )}
-
-                          {lead.nombre_proyecto && (
-                            <div className="mb-1 truncate text-[10px] text-gray-500">
-                              📍 {lead.nombre_proyecto}
-                            </div>
-                          )}
-
-                          {lead.presupuesto_estimado ? (
-                            <div className="mb-1 text-[11px] font-semibold text-gray-900">
-                              💰 {formatoPrecio(lead.presupuesto_estimado)}
-                            </div>
-                          ) : null}
-
-                          {lead.origen && (
-                            <div className="inline-block rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-600">
-                              {lead.origen.replace(/_/g, " ")}
-                            </div>
-                          )}
-
-                          {/* Campaña de origen */}
-                          {lead.utm_campaign && (
-                            <div className="mb-1 truncate rounded bg-blue-50 px-2 py-1 text-[10px] text-blue-700">
-                              📢 {lead.utm_campaign}
-                            </div>
-                          )}
-
-                          {/* Contenido del anuncio */}
-                          {lead.utm_content && (
-                            <div className="truncate text-[10px] text-gray-500">
-                              🎯 {lead.utm_content}
-                            </div>
-                          )}
-
-                          {lead.fecha_contacto && (
-                            <div className="mt-2 text-[10px] text-gray-400">
-                              {new Date(lead.fecha_contacto).toLocaleDateString(
-                                "es-CO"
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {etapa.cantidad > 3 && (
-                        <div className="py-2 text-center text-xs text-gray-600">
-                          +{etapa.cantidad - 3} más
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="rounded-lg bg-white/30 py-6 text-center text-xs text-gray-500">
-                      Sin leads
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Flujo Comercial</h2>
+              <div className="text-xs text-gray-500">
+                💡 Arrastra las tarjetas para mover leads entre etapas
+              </div>
             </div>
+
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                {leadsPorEtapa.map((etapa) => (
+                  <Droppable key={etapa.key} droppableId={etapa.key}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`min-h-[400px] rounded-xl border-2 p-4 transition-colors ${
+                          snapshot.isDraggingOver
+                            ? "border-blue-500 bg-blue-50"
+                            : getColorClasses(etapa.color)
+                        }`}
+                      >
+                        <div className="mb-3 flex items-center justify-between">
+                          <div>
+                            <div className="text-lg font-bold">{etapa.cantidad}</div>
+                            <div className="text-xs font-medium">{etapa.nombre}</div>
+                          </div>
+                          <div className="rounded bg-white/50 px-2 py-1 text-xs">
+                            {etapa.dias} días
+                          </div>
+                        </div>
+
+                        {/* Botón agregar lead - SOLO en Prospección */}
+                        {etapa.permiteCrear && (
+                          <button
+                            onClick={() => abrirModalLead(etapa.key)}
+                            className="mb-3 flex h-9 w-full items-center justify-center gap-1 rounded-lg border-2 border-dashed border-current bg-white/60 text-xs font-semibold transition-all hover:bg-white/90"
+                          >
+                            <span className="text-lg">+</span> Nuevo Lead
+                          </button>
+                        )}
+
+                        <div className="space-y-2">
+                          {etapa.leads.map((lead, index) => (
+                            <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                              {(dragProvided, dragSnapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  {...dragProvided.dragHandleProps}
+                                  className={`cursor-move rounded-lg border-2 bg-white p-3 text-xs transition-all ${
+                                    dragSnapshot.isDragging
+                                      ? "rotate-2 border-blue-500 shadow-lg"
+                                      : "border-gray-200 hover:shadow-md"
+                                  }`}
+                                >
+                                  <div className="mb-1 flex items-center gap-2 truncate font-bold text-gray-900">
+                                    <span className="text-gray-400">⋮⋮</span>
+                                    {lead.nombre}
+                                  </div>
+
+                                  <div className="mb-1 flex items-center gap-1 text-gray-600">
+                                    <span className="text-[10px]">📱</span>
+                                    {lead.telefono || "Sin teléfono"}
+                                  </div>
+
+                                  {lead.tipo_proyecto && (
+                                    <div className="mb-1 text-[10px] text-gray-500">
+                                      🏗️ {lead.tipo_proyecto}
+                                    </div>
+                                  )}
+
+                                  {lead.nombre_proyecto && (
+                                    <div className="mb-1 truncate text-[10px] text-gray-500">
+                                      📍 {lead.nombre_proyecto}
+                                    </div>
+                                  )}
+
+                                  {lead.presupuesto_estimado && (
+                                    <div className="mb-1 text-[11px] font-semibold text-gray-900">
+                                      💰 {formatoPrecio(lead.presupuesto_estimado)}
+                                    </div>
+                                  )}
+
+                                  {lead.origen && (
+                                    <div className="mb-1 inline-block rounded bg-gray-100 px-2 py-1 text-[10px] text-gray-600">
+                                      {lead.origen.replace(/_/g, " ")}
+                                    </div>
+                                  )}
+
+                                  {lead.utm_campaign && (
+                                    <div className="mb-1 truncate rounded bg-blue-50 px-2 py-1 text-[10px] text-blue-700">
+                                      📢 {lead.utm_campaign}
+                                    </div>
+                                  )}
+
+                                  {lead.utm_content && (
+                                    <div className="truncate text-[10px] text-gray-500">
+                                      🎯 {lead.utm_content}
+                                    </div>
+                                  )}
+
+                                  {lead.fecha_contacto && (
+                                    <div className="mt-2 text-[10px] text-gray-400">
+                                      {new Date(lead.fecha_contacto).toLocaleDateString("es-CO")}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+
+                        {etapa.cantidad > 3 && (
+                          <div className="mt-2 py-2 text-center text-xs text-gray-600">
+                            +{etapa.cantidad - 3} más
+                          </div>
+                        )}
+
+                        {etapa.leads.length === 0 && (
+                          <div className="mt-2 rounded-lg bg-white/30 py-6 text-center text-xs text-gray-500">
+                            Sin leads
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
+                ))}
+              </div>
+            </DragDropContext>
           </CardContent>
         </Card>
       </div>
