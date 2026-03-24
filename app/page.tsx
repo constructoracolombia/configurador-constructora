@@ -217,20 +217,27 @@ export default function CentroOperacionesPage() {
     try {
       console.log("🔄 Cargando datos del dashboard...");
 
+      // Sin filtro deleted_at en la query: si la columna no existe en Supabase, PostgREST falla.
       const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
         .select("*")
-        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (leadsError) {
         console.error("❌ Error cargando leads:", leadsError);
+        alert(
+          `Error de Supabase: ${leadsError.message}\nCódigo: ${leadsError.code ?? "—"}`
+        );
         throw leadsError;
       }
 
-      console.log("✅ Leads cargados:", leadsData?.length || 0);
+      console.log("✅ Leads cargados (raw):", leadsData?.length || 0);
 
-      const leadsNormalizados = ((leadsData || []) as Lead[]).map((lead) => ({
+      const sinArchivados = (leadsData || []).filter(
+        (row: Lead & { deleted_at?: string | null }) => !row.deleted_at
+      );
+
+      const leadsNormalizados = (sinArchivados as Lead[]).map((lead) => ({
         ...lead,
         presupuesto_estimado: lead.presupuesto_estimado ?? 0,
       }));
@@ -276,7 +283,9 @@ export default function CentroOperacionesPage() {
         totalLeads > 0 ? (cerrados / totalLeads) * 100 : 0;
       const pipelineTotal = leadsNormalizados
         .filter((l) =>
-          !["PERDIDO", "DESCALIFICADO"].includes(normalizarEtapa(l.etapa))
+          !["PERDIDO", "DESCALIFICADO", "ELIMINADO"].includes(
+            normalizarEtapa(l.etapa)
+          )
         )
         .reduce((sum, l) => sum + (l.presupuesto_estimado || 0), 0);
 
@@ -290,9 +299,18 @@ export default function CentroOperacionesPage() {
       });
 
       console.log("✅ Dashboard cargado correctamente");
-    } catch (error) {
-      console.error("❌ Error en cargarDatos:", error);
-      alert("Error cargando datos del dashboard. Revisa la consola.");
+    } catch (error: unknown) {
+      console.error("❌ Error completo en cargarDatos:", error);
+      const err = error as { message?: string; stack?: string };
+      console.error("Stack trace:", err?.stack);
+      const msg =
+        err?.message ??
+        (typeof error === "object" && error !== null && "toString" in error
+          ? String((error as { toString(): string }).toString())
+          : String(error));
+      alert(
+        `Error cargando datos del dashboard:\n\n${msg}\n\nRevisa la consola para más detalles.`
+      );
     } finally {
       setCargando(false);
     }
@@ -488,35 +506,13 @@ export default function CentroOperacionesPage() {
     }
   };
 
-  const toggleLeadCaliente = async (lead: Lead, e: ReactMouseEvent) => {
+  const toggleLeadCaliente = async (_lead: Lead, e: ReactMouseEvent) => {
     e.stopPropagation();
 
-    try {
-      const nuevoEstado = !lead.es_caliente;
+    alert("⚠️ Funcionalidad de Lead Caliente temporalmente deshabilitada");
+    return;
 
-      const { error } = await supabase
-        .from("leads")
-        .update({
-          es_caliente: nuevoEstado,
-          prioridad: nuevoEstado ? "ALTA" : "MEDIA",
-        })
-        .eq("id", lead.id);
-
-      if (error) throw error;
-
-      await supabase.from("lead_actividades").insert({
-        lead_id: lead.id,
-        tipo: "NOTA",
-        descripcion: nuevoEstado
-          ? "Marcado como lead caliente 🔥"
-          : "Desmarcado como lead caliente",
-        usuario: "Admin",
-      });
-
-      await cargarDatos();
-    } catch (error) {
-      console.error("Error:", error);
-    }
+    // TODO: Habilitar cuando la columna es_caliente exista en Supabase
   };
 
   const eliminarLead = async (lead: any, e: ReactMouseEvent) => {
@@ -621,18 +617,28 @@ export default function CentroOperacionesPage() {
 
   const resaltarTexto = (texto: string, terminoBusqueda: string) => {
     if (!terminoBusqueda.trim() || !texto) return texto;
-    const regex = new RegExp(`(${terminoBusqueda.trim()})`, "gi");
-    const partes = texto.split(regex);
 
-    return partes.map((parte, i) =>
-      regex.test(parte) ? (
-        <mark key={i} className="rounded bg-yellow-200 px-0.5 font-semibold text-gray-900">
-          {parte}
-        </mark>
-      ) : (
-        parte
-      )
-    );
+    try {
+      const term = terminoBusqueda.trim();
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${escaped})`, "gi");
+      const partes = texto.split(regex);
+
+      return partes.map((parte, i) =>
+        parte.toLowerCase() === term.toLowerCase() ? (
+          <mark
+            key={i}
+            className="rounded bg-yellow-200 px-0.5 font-semibold text-gray-900"
+          >
+            {parte}
+          </mark>
+        ) : (
+          parte
+        )
+      );
+    } catch {
+      return texto;
+    }
   };
 
   const handleDragEnd = async (result: any) => {
