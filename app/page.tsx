@@ -220,6 +220,7 @@ export default function CentroOperacionesPage() {
       const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
         .select("*")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (leadsError) {
@@ -515,6 +516,69 @@ export default function CentroOperacionesPage() {
       await cargarDatos();
     } catch (error) {
       console.error("Error:", error);
+    }
+  };
+
+  const eliminarLead = async (lead: any, e: ReactMouseEvent) => {
+    e.stopPropagation();
+
+    const confirmacion = confirm(
+      `⚠️ ¿Estás seguro de eliminar este lead?\n\n` +
+        `Nombre: ${lead.nombre}\n` +
+        `Teléfono: ${lead.telefono}\n` +
+        `Proyecto: ${lead.nombre_proyecto || "Sin proyecto"}\n` +
+        `Presupuesto: ${
+          lead.presupuesto_estimado ? formatoPrecio(lead.presupuesto_estimado) : "Sin presupuesto"
+        }\n\n` +
+        `El lead se archivará y podrá recuperarse si es necesario.`
+    );
+
+    if (!confirmacion) {
+      return;
+    }
+
+    const presupuesto = Number(lead.presupuesto_estimado || 0);
+    if (
+      presupuesto > 20000000 ||
+      lead.etapa === "NEGOCIACION" ||
+      lead.etapa === "CIERRE"
+    ) {
+      const segundaConfirmacion = confirm(
+        `⚠️ CONFIRMACIÓN ADICIONAL\n\n` +
+          `Este lead tiene un valor alto o está en etapa avanzada.\n\n` +
+          `¿REALMENTE deseas eliminarlo?`
+      );
+
+      if (!segundaConfirmacion) {
+        return;
+      }
+    }
+
+    try {
+      console.log("🗑️ Eliminando lead (soft delete):", lead.id);
+
+      await supabase.from("lead_actividades").insert({
+        lead_id: lead.id,
+        tipo: "NOTA",
+        descripcion: `Lead eliminado: ${lead.nombre} - ${lead.telefono}`,
+        resultado: "Archivado desde el dashboard",
+        usuario: "Admin",
+      });
+
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          deleted_at: new Date().toISOString(),
+        })
+        .eq("id", lead.id);
+
+      if (error) throw new Error(`Error de Supabase: ${error.message}`);
+
+      alert(`✅ Lead "${lead.nombre}" eliminado exitosamente`);
+      await cargarDatos();
+    } catch (error: any) {
+      console.error("❌ Error:", error);
+      alert(`❌ Error al eliminar: ${error.message}`);
     }
   };
 
@@ -1015,7 +1079,7 @@ export default function CentroOperacionesPage() {
                                   {...dragProvided.draggableProps}
                                   {...dragProvided.dragHandleProps}
                                   onClick={() => abrirModalEditar(lead)}
-                                  className={`cursor-pointer rounded-lg border-2 bg-white p-3 text-xs transition-all ${
+                                  className={`group cursor-pointer rounded-lg border-2 bg-white p-3 text-xs transition-all ${
                                     dragSnapshot.isDragging
                                       ? "rotate-2 border-blue-500 shadow-lg"
                                       : lead.es_caliente
@@ -1024,29 +1088,38 @@ export default function CentroOperacionesPage() {
                                   }`}
                                 >
                                   <div className="mb-2 flex items-center justify-between">
-                                    <div className="flex flex-1 items-center gap-2">
-                                      <span className="cursor-move text-gray-400">⋮⋮</span>
-                                      <div className="flex-1 truncate font-bold text-gray-900">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                      <span className="cursor-move flex-shrink-0 text-gray-400">⋮⋮</span>
+                                      <div className="min-w-0 flex-1 truncate font-bold text-gray-900">
                                         {busqueda
                                           ? resaltarTexto(lead.nombre, busqueda)
                                           : lead.nombre}
                                       </div>
                                     </div>
-                                    <button
-                                      onClick={(e) => void toggleLeadCaliente(lead, e)}
-                                      className={`text-lg transition-all hover:scale-110 ${
-                                        lead.es_caliente
-                                          ? "animate-pulse"
-                                          : "opacity-30 hover:opacity-100"
-                                      }`}
-                                      title={
-                                        lead.es_caliente
-                                          ? "Lead caliente - Click para desmarcar"
-                                          : "Marcar como lead caliente"
-                                      }
-                                    >
-                                      🔥
-                                    </button>
+                                    <div className="flex flex-shrink-0 items-center gap-1">
+                                      <button
+                                        onClick={(e) => void toggleLeadCaliente(lead, e)}
+                                        className={`text-lg transition-all hover:scale-110 ${
+                                          lead.es_caliente
+                                            ? "animate-pulse"
+                                            : "opacity-30 hover:opacity-100"
+                                        }`}
+                                        title={
+                                          lead.es_caliente
+                                            ? "Lead caliente - Click para desmarcar"
+                                            : "Marcar como lead caliente"
+                                        }
+                                      >
+                                        🔥
+                                      </button>
+                                      <button
+                                        onClick={(e) => void eliminarLead(lead, e)}
+                                        className="text-base text-red-500 opacity-0 transition-opacity hover:scale-110 hover:text-red-700 group-hover:opacity-100"
+                                        title="Eliminar lead"
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
                                   </div>
 
                                   {lead.prioridad === "ALTA" && (
@@ -1623,20 +1696,35 @@ export default function CentroOperacionesPage() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 z-10 flex gap-3 border-t border-gray-200 bg-white p-6">
+            <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white p-6">
+              <div className="mb-3 flex gap-3">
+                <button
+                  onClick={() => setMostrarModalEditar(false)}
+                  className="h-11 flex-1 rounded-lg border border-gray-300 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                  disabled={guardandoEdicion}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => void guardarEdicionLead()}
+                  disabled={guardandoEdicion}
+                  className="h-11 flex-1 rounded-lg bg-blue-600 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {guardandoEdicion ? "Guardando..." : "Guardar Cambios"}
+                </button>
+              </div>
+
               <button
-                onClick={() => setMostrarModalEditar(false)}
-                className="h-11 flex-1 rounded-lg border border-gray-300 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                onClick={(e) => {
+                  if (!leadEditando) return;
+                  setMostrarModalEditar(false);
+                  void eliminarLead(leadEditando as any, e);
+                }}
                 disabled={guardandoEdicion}
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border-2 border-red-300 font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Cancelar
-              </button>
-              <button
-                onClick={() => void guardarEdicionLead()}
-                disabled={guardandoEdicion}
-                className="h-11 flex-1 rounded-lg bg-blue-600 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {guardandoEdicion ? "Guardando..." : "Guardar Cambios"}
+                <span>🗑️</span>
+                Eliminar Lead
               </button>
             </div>
           </div>
