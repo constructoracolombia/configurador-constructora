@@ -174,6 +174,7 @@ export default function CentroOperacionesPage() {
     }))
   );
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [busqueda, setBusqueda] = useState("");
 
   useEffect(() => {
     const auth = localStorage.getItem("admin_auth");
@@ -191,6 +192,25 @@ export default function CentroOperacionesPage() {
       console.log("🚫 Usuario no autenticado");
     }
   }, [autenticado]);
+
+  // Atajo: Ctrl/Cmd+K enfoca búsqueda, Esc limpia.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        document
+          .querySelector<HTMLInputElement>('input[type="text"][placeholder*="Buscar"]')
+          ?.focus();
+      }
+
+      if (e.key === "Escape" && busqueda) {
+        setBusqueda("");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [busqueda]);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -508,6 +528,47 @@ export default function CentroOperacionesPage() {
       green: "bg-green-50 border-green-200 text-green-700",
     };
     return colores[color] || colores.blue;
+  };
+
+  const filtrarLeads = (leadsEtapa: Lead[]) => {
+    if (!busqueda.trim()) {
+      return leadsEtapa;
+    }
+
+    const termino = busqueda.toLowerCase().trim();
+    return leadsEtapa.filter((lead) => {
+      if (lead.nombre?.toLowerCase().includes(termino)) return true;
+
+      const telefonoLimpio = lead.telefono?.replace(/[\s-]/g, "");
+      const terminoLimpio = termino.replace(/[\s-]/g, "");
+      if (telefonoLimpio?.includes(terminoLimpio)) return true;
+
+      if (lead.email?.toLowerCase().includes(termino)) return true;
+      if (lead.nombre_proyecto?.toLowerCase().includes(termino)) return true;
+      if (lead.tipo_proyecto?.toLowerCase().includes(termino)) return true;
+      if (lead.utm_campaign?.toLowerCase().includes(termino)) return true;
+      if (lead.utm_content?.toLowerCase().includes(termino)) return true;
+      if (lead.responsable?.toLowerCase().includes(termino)) return true;
+      if (lead.observaciones?.toLowerCase().includes(termino)) return true;
+
+      return false;
+    });
+  };
+
+  const resaltarTexto = (texto: string, terminoBusqueda: string) => {
+    if (!terminoBusqueda.trim() || !texto) return texto;
+    const regex = new RegExp(`(${terminoBusqueda.trim()})`, "gi");
+    const partes = texto.split(regex);
+
+    return partes.map((parte, i) =>
+      regex.test(parte) ? (
+        <mark key={i} className="rounded bg-yellow-200 px-0.5 font-semibold text-gray-900">
+          {parte}
+        </mark>
+      ) : (
+        parte
+      )
+    );
   };
 
   const handleDragEnd = async (result: any) => {
@@ -835,6 +896,62 @@ export default function CentroOperacionesPage() {
           </Card>
         </div>
 
+        {/* Buscador de Leads */}
+        <Card className="mb-4 border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span className="text-lg text-gray-400">🔍</span>
+                </div>
+                <input
+                  type="text"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Buscar por nombre, teléfono, email, proyecto, campaña... (Ctrl+K)"
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {busqueda && (
+                  <button
+                    onClick={() => setBusqueda("")}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  >
+                    <span className="text-xl">✕</span>
+                  </button>
+                )}
+              </div>
+
+              {busqueda && (
+                <div className="whitespace-nowrap text-sm text-gray-600">
+                  {(() => {
+                    const totalFiltrados = leadsPorEtapa.reduce(
+                      (sum, etapa) => sum + filtrarLeads(etapa.leads).length,
+                      0
+                    );
+                    return (
+                      <span>
+                        <span className="font-semibold text-blue-600">{totalFiltrados}</span> de{" "}
+                        <span className="font-semibold">{leads.length}</span> leads
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
+            {!busqueda && (
+              <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
+                <span className="text-gray-400">💡 Busca por:</span>
+                <span className="rounded bg-gray-100 px-2 py-1">Nombre</span>
+                <span className="rounded bg-gray-100 px-2 py-1">Teléfono</span>
+                <span className="rounded bg-gray-100 px-2 py-1">Email</span>
+                <span className="rounded bg-gray-100 px-2 py-1">Proyecto</span>
+                <span className="rounded bg-gray-100 px-2 py-1">Campaña</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Flujo Comercial - Drag & Drop Kanban */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
@@ -847,7 +964,10 @@ export default function CentroOperacionesPage() {
 
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                {leadsPorEtapa.map((etapa) => (
+                {leadsPorEtapa.map((etapa) => {
+                  const leadsFiltrados = filtrarLeads(etapa.leads);
+                  const cantidadFiltrada = leadsFiltrados.length;
+                  return (
                   <Droppable key={etapa.key} droppableId={etapa.key}>
                     {(provided, snapshot) => (
                       <div
@@ -861,7 +981,14 @@ export default function CentroOperacionesPage() {
                       >
                         <div className="mb-3 flex items-center justify-between">
                           <div>
-                            <div className="text-lg font-bold">{etapa.cantidad}</div>
+                            <div className="text-lg font-bold">
+                              {cantidadFiltrada}
+                              {busqueda && cantidadFiltrada !== etapa.cantidad && (
+                                <span className="ml-1 text-xs font-normal text-gray-500">
+                                  de {etapa.cantidad}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs font-medium">{etapa.nombre}</div>
                           </div>
                           <div className="rounded bg-white/50 px-2 py-1 text-xs">
@@ -880,7 +1007,7 @@ export default function CentroOperacionesPage() {
                         )}
 
                         <div className="space-y-2">
-                          {etapa.leads.map((lead, index) => (
+                          {leadsFiltrados.map((lead, index) => (
                             <Draggable key={lead.id} draggableId={lead.id} index={index}>
                               {(dragProvided, dragSnapshot) => (
                                 <div
@@ -900,7 +1027,9 @@ export default function CentroOperacionesPage() {
                                     <div className="flex flex-1 items-center gap-2">
                                       <span className="cursor-move text-gray-400">⋮⋮</span>
                                       <div className="flex-1 truncate font-bold text-gray-900">
-                                        {lead.nombre}
+                                        {busqueda
+                                          ? resaltarTexto(lead.nombre, busqueda)
+                                          : lead.nombre}
                                       </div>
                                     </div>
                                     <button
@@ -1009,15 +1138,16 @@ export default function CentroOperacionesPage() {
                           </div>
                         )}
 
-                        {etapa.leads.length === 0 && (
+                        {leadsFiltrados.length === 0 && (
                           <div className="mt-2 rounded-lg bg-white/30 py-6 text-center text-xs text-gray-500">
-                            Sin leads
+                            {busqueda ? "Sin resultados" : "Sin leads"}
                           </div>
                         )}
                       </div>
                     )}
                   </Droppable>
-                ))}
+                  );
+                })}
               </div>
             </DragDropContext>
           </CardContent>
