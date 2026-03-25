@@ -103,6 +103,14 @@ type Kpis = {
   pipeline_total: number;
 };
 
+/** Alinea valores de etapa en BD con las claves del Kanban (6 columnas). */
+const normalizarEtapa = (etapa: string) => {
+  const valor = (etapa || "").toUpperCase();
+  if (valor === "REUNION") return "PRESENTACION";
+  if (valor === "COTIZACION_ENVIADA") return "COTIZACION";
+  return valor;
+};
+
 const ETAPAS_VISUALES: EtapaVisual[] = [
   {
     nombre: "Prospección",
@@ -144,20 +152,6 @@ const ETAPAS_VISUALES: EtapaVisual[] = [
     key: "CIERRE",
     color: "green",
     dias: "21-30",
-    permiteCrear: false,
-  },
-  {
-    nombre: "No Cerrados",
-    key: "PERDIDO",
-    color: "red",
-    dias: "",
-    permiteCrear: false,
-  },
-  {
-    nombre: "Descalificado",
-    key: "DESCALIFICADO",
-    color: "red",
-    dias: "",
     permiteCrear: false,
   },
 ];
@@ -286,16 +280,12 @@ export default function CentroOperacionesPage() {
 
       setLeads(leadsNormalizados);
 
-      // Normaliza etapas antiguas/nuevas para que siempre se visualicen.
-      const normalizarEtapa = (etapa: string) => {
-        const valor = (etapa || "").toUpperCase();
-        if (valor === "REUNION") return "PRESENTACION";
-        if (valor === "COTIZACION_ENVIADA") return "COTIZACION";
-        return valor;
-      };
+      const leadsEnFlujoPrincipal = leadsNormalizados.filter(
+        (l) => !["PERDIDO", "DESCALIFICADO"].includes(normalizarEtapa(l.etapa))
+      );
 
       const etapasConDatos = ETAPAS_VISUALES.map((etapa) => {
-        const leadsEtapa = leadsNormalizados.filter(
+        const leadsEtapa = leadsEnFlujoPrincipal.filter(
           (l) => normalizarEtapa(l.etapa) === etapa.key
         );
         return {
@@ -312,10 +302,10 @@ export default function CentroOperacionesPage() {
       setLeadsPorEtapa(etapasConDatos);
 
       const totalLeads = leadsNormalizados.length;
-      const enProspeccion = leadsNormalizados.filter(
+      const enProspeccion = leadsEnFlujoPrincipal.filter(
         (l) => normalizarEtapa(l.etapa) === "PROSPECCION"
       ).length;
-      const enNegociacion = leadsNormalizados.filter(
+      const enNegociacion = leadsEnFlujoPrincipal.filter(
         (l) => normalizarEtapa(l.etapa) === "NEGOCIACION"
       ).length;
       const cerrados = leadsNormalizados.filter(
@@ -733,6 +723,44 @@ export default function CentroOperacionesPage() {
     }
   };
 
+  const enviarANoCerrados = async (lead: Lead, e: ReactMouseEvent) => {
+    e.stopPropagation();
+
+    const confirmacion = confirm(
+      `¿Marcar este lead como No Cerrado?\n\n` +
+        `Lead: ${lead.nombre}\n` +
+        `Proyecto: ${lead.nombre_proyecto || "Sin proyecto"}\n\n` +
+        `El lead se archivará pero podrás verlo en "Ver No Cerrados".`
+    );
+
+    if (!confirmacion) return;
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          etapa: "PERDIDO",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", lead.id);
+
+      if (error) throw error;
+
+      await supabase.from("lead_actividades").insert({
+        lead_id: lead.id,
+        tipo: "CAMBIO_ETAPA",
+        descripcion: "Lead marcado como No Cerrado",
+        resultado: "Archivado en No Cerrados",
+        usuario: "Admin",
+      });
+
+      await cargarDatos();
+    } catch (error: any) {
+      console.error("Error:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
   const getColorClasses = (color: string) => {
     const colores: Record<string, string> = {
       blue: "bg-blue-50 border-blue-200 text-blue-700",
@@ -819,19 +847,6 @@ export default function CentroOperacionesPage() {
       const nombreEtapa = leadsPorEtapa.find((e) => e.key === etapaNueva)?.nombre;
       const confirmacion = confirm(
         `¿Confirmas mover este lead a ${nombreEtapa || etapaNueva}?`
-      );
-
-      if (!confirmacion) {
-        return;
-      }
-    }
-
-    if (etapaNueva === "PERDIDO" || etapaNueva === "DESCALIFICADO") {
-      const nombreEtapa = leadsPorEtapa.find((e) => e.key === etapaNueva)?.nombre;
-      const confirmacion = confirm(
-        `¿Confirmas que este lead NO se cerró?\n\n` +
-          `Se moverá a "${nombreEtapa || etapaNueva}".\n\n` +
-          `Puedes agregar notas sobre el motivo en el campo de observaciones.`
       );
 
       if (!confirmacion) {
@@ -1210,7 +1225,10 @@ export default function CentroOperacionesPage() {
         {/* Sección To-Do - Tareas Pendientes */}
         {(() => {
           const tareasPendientes = leads.filter(
-            (l) => l.proximo_paso && !l.proximo_paso_completado
+            (l) =>
+              l.proximo_paso &&
+              !l.proximo_paso_completado &&
+              !["PERDIDO", "DESCALIFICADO"].includes(normalizarEtapa(l.etapa))
           );
 
           const tareasVencidas = tareasPendientes.filter((l) => {
@@ -1463,15 +1481,38 @@ export default function CentroOperacionesPage() {
         {/* Flujo Comercial - Drag & Drop Kanban */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Flujo Comercial</h2>
-              <div className="text-xs text-gray-500">
-                💡 Arrastra las tarjetas para mover leads entre etapas
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Flujo Comercial</h2>
+                <div className="mt-1 text-xs text-gray-500">
+                  💡 Arrastra las tarjetas para mover leads entre etapas
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => router.push("/no-cerrados")}
+                className="flex shrink-0 items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-700 transition-colors hover:bg-red-100"
+              >
+                <span className="text-lg">📁</span>
+                <div className="text-left">
+                  <div className="text-sm font-semibold">Ver No Cerrados</div>
+                  <div className="text-xs text-red-600">
+                    {
+                      leads.filter((l) =>
+                        ["PERDIDO", "DESCALIFICADO"].includes(
+                          normalizarEtapa(l.etapa)
+                        )
+                      ).length
+                    }{" "}
+                    archivados
+                  </div>
+                </div>
+              </button>
             </div>
 
             <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 {leadsPorEtapa.map((etapa) => {
                   const leadsFiltrados = filtrarLeads(etapa.leads);
                   const cantidadFiltrada = leadsFiltrados.length;
@@ -1705,6 +1746,16 @@ export default function CentroOperacionesPage() {
                                       className="mt-2 w-full border-t border-gray-200 pt-2 text-left text-[10px] font-medium text-blue-600 hover:text-blue-800"
                                     >
                                       + Agregar próximo paso
+                                    </button>
+                                  )}
+
+                                  {normalizarEtapa(lead.etapa) !== "CIERRE" && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => void enviarANoCerrados(lead, e)}
+                                      className="mt-2 w-full border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400 transition-colors hover:text-red-600"
+                                    >
+                                      ❌ Enviar a No Cerrados
                                     </button>
                                   )}
 
