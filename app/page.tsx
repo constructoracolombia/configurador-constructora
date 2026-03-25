@@ -92,6 +92,17 @@ type EditarLeadForm = {
   proximo_paso_completado: boolean;
 };
 
+type Kpis = {
+  total_leads: number;
+  en_prospeccion: number;
+  en_negociacion: number;
+  cerrados: number;
+  perdidos: number;
+  conversion: number;
+  tasa_cierre: number;
+  pipeline_total: number;
+};
+
 const ETAPAS_VISUALES: EtapaVisual[] = [
   {
     nombre: "Prospección",
@@ -135,6 +146,20 @@ const ETAPAS_VISUALES: EtapaVisual[] = [
     dias: "21-30",
     permiteCrear: false,
   },
+  {
+    nombre: "No Cerrados",
+    key: "PERDIDO",
+    color: "red",
+    dias: "",
+    permiteCrear: false,
+  },
+  {
+    nombre: "Descalificado",
+    key: "DESCALIFICADO",
+    color: "red",
+    dias: "",
+    permiteCrear: false,
+  },
 ];
 
 const crearFormularioVacio = (): NuevoLeadForm => ({
@@ -176,13 +201,15 @@ export default function CentroOperacionesPage() {
     fecha_limite: "",
   });
 
-  const [kpis, setKpis] = useState({
-    totalLeads: 0,
-    enProspeccion: 0,
-    enNegociacion: 0,
+  const [kpis, setKpis] = useState<Kpis>({
+    total_leads: 0,
+    en_prospeccion: 0,
+    en_negociacion: 0,
     cerrados: 0,
-    pipelineTotal: 0,
-    tasaConversion: 0,
+    perdidos: 0,
+    conversion: 0,
+    tasa_cierre: 0,
+    pipeline_total: 0,
   });
 
   const [leadsPorEtapa, setLeadsPorEtapa] = useState<EtapaConDatos[]>(
@@ -236,10 +263,10 @@ export default function CentroOperacionesPage() {
     try {
       console.log("🔄 Cargando datos del dashboard...");
 
-      // Sin filtro deleted_at en la query: si la columna no existe en Supabase, PostgREST falla.
       const { data: leadsData, error: leadsError } = await supabase
         .from("leads")
         .select("*")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (leadsError) {
@@ -252,11 +279,7 @@ export default function CentroOperacionesPage() {
 
       console.log("✅ Leads cargados (raw):", leadsData?.length || 0);
 
-      const sinArchivados = (leadsData || []).filter(
-        (row: Lead & { deleted_at?: string | null }) => !row.deleted_at
-      );
-
-      const leadsNormalizados = (sinArchivados as Lead[]).map((lead) => ({
+      const leadsNormalizados = ((leadsData || []) as Lead[]).map((lead) => ({
         ...lead,
         presupuesto_estimado: lead.presupuesto_estimado ?? 0,
       }));
@@ -298,6 +321,14 @@ export default function CentroOperacionesPage() {
       const cerrados = leadsNormalizados.filter(
         (l) => normalizarEtapa(l.etapa) === "CIERRE"
       ).length;
+      const perdidos = leadsNormalizados.filter((l) =>
+        ["PERDIDO", "DESCALIFICADO"].includes(normalizarEtapa(l.etapa))
+      ).length;
+
+      const leadsFinalizados = cerrados + perdidos;
+      const tasaCierre =
+        leadsFinalizados > 0 ? (cerrados / leadsFinalizados) * 100 : 0;
+
       const conversionPromedio =
         totalLeads > 0 ? (cerrados / totalLeads) * 100 : 0;
       const pipelineTotal = leadsNormalizados
@@ -309,12 +340,14 @@ export default function CentroOperacionesPage() {
         .reduce((sum, l) => sum + (l.presupuesto_estimado || 0), 0);
 
       setKpis({
-        totalLeads,
-        enProspeccion,
-        enNegociacion,
+        total_leads: totalLeads,
+        en_prospeccion: enProspeccion,
+        en_negociacion: enNegociacion,
         cerrados,
-        tasaConversion: conversionPromedio,
-        pipelineTotal,
+        perdidos,
+        conversion: conversionPromedio,
+        tasa_cierre: tasaCierre,
+        pipeline_total: pipelineTotal,
       });
 
       console.log("✅ Dashboard cargado correctamente");
@@ -669,31 +702,14 @@ export default function CentroOperacionesPage() {
       return;
     }
 
-    const presupuesto = Number(lead.presupuesto_estimado || 0);
-    if (
-      presupuesto > 20000000 ||
-      lead.etapa === "NEGOCIACION" ||
-      lead.etapa === "CIERRE"
-    ) {
-      const segundaConfirmacion = confirm(
-        `⚠️ CONFIRMACIÓN ADICIONAL\n\n` +
-          `Este lead tiene un valor alto o está en etapa avanzada.\n\n` +
-          `¿REALMENTE deseas eliminarlo?`
-      );
-
-      if (!segundaConfirmacion) {
-        return;
-      }
-    }
-
     try {
-      console.log("🗑️ Eliminando lead (soft delete):", lead.id);
+      console.log("🗑️ Archivando lead:", lead.id);
 
       await supabase.from("lead_actividades").insert({
         lead_id: lead.id,
         tipo: "NOTA",
-        descripcion: `Lead eliminado: ${lead.nombre} - ${lead.telefono}`,
-        resultado: "Archivado desde el dashboard",
+        descripcion: `Lead archivado: ${lead.nombre} - ${lead.telefono}`,
+        resultado: "Eliminado desde el dashboard",
         usuario: "Admin",
       });
 
@@ -704,24 +720,28 @@ export default function CentroOperacionesPage() {
         })
         .eq("id", lead.id);
 
-      if (error) throw new Error(`Error de Supabase: ${error.message}`);
+      if (error) {
+        console.error("Error de Supabase:", error);
+        throw new Error(`Error de Supabase: ${error.message}`);
+      }
 
       alert(`✅ Lead "${lead.nombre}" eliminado exitosamente`);
       await cargarDatos();
     } catch (error: any) {
-      console.error("❌ Error:", error);
+      console.error("❌ Error completo:", error);
       alert(`❌ Error al eliminar: ${error.message}`);
     }
   };
 
   const getColorClasses = (color: string) => {
-    const colores: any = {
+    const colores: Record<string, string> = {
       blue: "bg-blue-50 border-blue-200 text-blue-700",
       purple: "bg-purple-50 border-purple-200 text-purple-700",
       yellow: "bg-yellow-50 border-yellow-200 text-yellow-700",
       orange: "bg-orange-50 border-orange-200 text-orange-700",
       teal: "bg-teal-50 border-teal-200 text-teal-700",
       green: "bg-green-50 border-green-200 text-green-700",
+      red: "bg-red-50 border-red-200 text-red-700",
     };
     return colores[color] || colores.blue;
   };
@@ -795,14 +815,23 @@ export default function CentroOperacionesPage() {
     const etapaNueva = destination.droppableId;
     const leadId = draggableId;
 
-    if (
-      etapaNueva === "CIERRE" ||
-      etapaNueva === "PERDIDO" ||
-      etapaNueva === "DESCALIFICADO"
-    ) {
+    if (etapaNueva === "CIERRE") {
       const nombreEtapa = leadsPorEtapa.find((e) => e.key === etapaNueva)?.nombre;
       const confirmacion = confirm(
         `¿Confirmas mover este lead a ${nombreEtapa || etapaNueva}?`
+      );
+
+      if (!confirmacion) {
+        return;
+      }
+    }
+
+    if (etapaNueva === "PERDIDO" || etapaNueva === "DESCALIFICADO") {
+      const nombreEtapa = leadsPorEtapa.find((e) => e.key === etapaNueva)?.nombre;
+      const confirmacion = confirm(
+        `¿Confirmas que este lead NO se cerró?\n\n` +
+          `Se moverá a "${nombreEtapa || etapaNueva}".\n\n` +
+          `Puedes agregar notas sobre el motivo en el campo de observaciones.`
       );
 
       if (!confirmacion) {
@@ -949,7 +978,7 @@ export default function CentroOperacionesPage() {
           </div>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="mb-4 flex items-center justify-between">
@@ -959,7 +988,7 @@ export default function CentroOperacionesPage() {
                 <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
               <div className="mb-1 text-3xl font-bold text-gray-900">
-                {kpis.totalLeads}
+                {kpis.total_leads}
               </div>
               <div className="text-sm text-gray-600">Leads Totales</div>
             </CardContent>
@@ -974,7 +1003,7 @@ export default function CentroOperacionesPage() {
                 <Clock className="h-5 w-5 text-orange-600" />
               </div>
               <div className="mb-1 text-3xl font-bold text-gray-900">
-                {kpis.enNegociacion}
+                {kpis.en_negociacion}
               </div>
               <div className="text-sm text-gray-600">En Negociación</div>
             </CardContent>
@@ -987,7 +1016,7 @@ export default function CentroOperacionesPage() {
                   <Target className="h-6 w-6 text-green-600" />
                 </div>
                 <div className="text-sm font-semibold text-green-600">
-                  {kpis.tasaConversion.toFixed(1)}%
+                  {kpis.conversion.toFixed(1)}%
                 </div>
               </div>
               <div className="mb-1 text-3xl font-bold text-gray-900">
@@ -1005,9 +1034,29 @@ export default function CentroOperacionesPage() {
                 </div>
               </div>
               <div className="mb-1 text-2xl font-bold text-gray-900">
-                {formatoPrecio(kpis.pipelineTotal)}
+                {formatoPrecio(kpis.pipeline_total)}
               </div>
               <div className="text-sm text-gray-600">Pipeline Total</div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-green-100">
+                  <span className="text-2xl">📊</span>
+                </div>
+                <div className="flex-1">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {kpis.tasa_cierre.toFixed(1)}%
+                  </div>
+                  <div className="text-sm text-gray-600">Tasa de Cierre</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {kpis.cerrados} cerrados de {kpis.cerrados + kpis.perdidos}{" "}
+                    finalizados
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1422,7 +1471,7 @@ export default function CentroOperacionesPage() {
             </div>
 
             <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
                 {leadsPorEtapa.map((etapa) => {
                   const leadsFiltrados = filtrarLeads(etapa.leads);
                   const cantidadFiltrada = leadsFiltrados.length;
@@ -1451,7 +1500,7 @@ export default function CentroOperacionesPage() {
                             <div className="text-xs font-medium">{etapa.nombre}</div>
                           </div>
                           <div className="rounded bg-white/50 px-2 py-1 text-xs">
-                            {etapa.dias} días
+                            {etapa.dias ? `${etapa.dias} días` : "—"}
                           </div>
                         </div>
 

@@ -10,3 +10,8 @@ WHERE deleted_at IS NULL;
 -- Comentario
 COMMENT ON COLUMN leads.deleted_at IS
 'Fecha de eliminación (soft delete). NULL = no eliminado';
+
+-- Verificación (opcional):
+-- SELECT column_name, data_type, is_nullable
+-- FROM information_schema.columns
+-- WHERE table_name = 'leads' AND column_name = 'deleted_at';
