@@ -1244,14 +1244,19 @@ export default function CentroOperacionesPage() {
                               e.stopPropagation();
                               void toggleProximoPasoCompletado(lead, e);
                             }}
-                            className="mt-1 h-4 w-4 cursor-pointer"
+                            className="mt-1 h-4 w-4 flex-shrink-0 cursor-pointer"
                             onClick={(e) => e.stopPropagation()}
                           />
                           <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center gap-2">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
                               <span className="font-semibold text-gray-900">
                                 {lead.nombre}
                               </span>
+                              {lead.tipo_proyecto && (
+                                <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                                  {lead.tipo_proyecto}
+                                </span>
+                              )}
                               <span className="rounded bg-red-200 px-2 py-0.5 text-xs font-semibold text-red-800">
                                 Vencida{" "}
                                 {Math.abs(
@@ -1266,6 +1271,11 @@ export default function CentroOperacionesPage() {
                                 día(s)
                               </span>
                             </div>
+                            {lead.nombre_proyecto && (
+                              <div className="mb-1 text-xs text-gray-600">
+                                📍 {lead.nombre_proyecto}
+                              </div>
+                            )}
                             <div className="text-sm text-gray-700">
                               {lead.proximo_paso}
                             </div>
@@ -1293,18 +1303,28 @@ export default function CentroOperacionesPage() {
                               e.stopPropagation();
                               void toggleProximoPasoCompletado(lead, e);
                             }}
-                            className="mt-1 h-4 w-4 cursor-pointer"
+                            className="mt-1 h-4 w-4 flex-shrink-0 cursor-pointer"
                             onClick={(e) => e.stopPropagation()}
                           />
                           <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center gap-2">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
                               <span className="font-semibold text-gray-900">
                                 {lead.nombre}
                               </span>
+                              {lead.tipo_proyecto && (
+                                <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                                  {lead.tipo_proyecto}
+                                </span>
+                              )}
                               <span className="rounded bg-orange-200 px-2 py-0.5 text-xs font-semibold text-orange-800">
                                 Hoy
                               </span>
                             </div>
+                            {lead.nombre_proyecto && (
+                              <div className="mb-1 text-xs text-gray-600">
+                                📍 {lead.nombre_proyecto}
+                              </div>
+                            )}
                             <div className="text-sm text-gray-700">
                               {lead.proximo_paso}
                             </div>
@@ -1346,14 +1366,19 @@ export default function CentroOperacionesPage() {
                               e.stopPropagation();
                               void toggleProximoPasoCompletado(lead, e);
                             }}
-                            className="mt-1 h-4 w-4 cursor-pointer"
+                            className="mt-1 h-4 w-4 flex-shrink-0 cursor-pointer"
                             onClick={(e) => e.stopPropagation()}
                           />
                           <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center gap-2">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
                               <span className="font-semibold text-gray-900">
                                 {lead.nombre}
                               </span>
+                              {lead.tipo_proyecto && (
+                                <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                                  {lead.tipo_proyecto}
+                                </span>
+                              )}
                               {lead.proximo_paso_fecha_limite && (
                                 <span
                                   className={`rounded px-2 py-0.5 text-xs font-semibold ${
@@ -1368,6 +1393,11 @@ export default function CentroOperacionesPage() {
                                 </span>
                               )}
                             </div>
+                            {lead.nombre_proyecto && (
+                              <div className="mb-1 text-xs text-gray-600">
+                                📍 {lead.nombre_proyecto}
+                              </div>
+                            )}
                             <div className="text-sm text-gray-700">
                               {lead.proximo_paso}
                             </div>
