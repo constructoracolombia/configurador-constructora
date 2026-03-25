@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type SyntheticEvent as ReactSyntheticEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import {
@@ -36,6 +41,10 @@ type Lead = {
   responsable: string | null;
   prioridad: string | null;
   es_caliente: boolean | null;
+  proximo_paso?: string | null;
+  proximo_paso_fecha_limite?: string | null;
+  proximo_paso_completado?: boolean | null;
+  proximo_paso_completado_fecha?: string | null;
 };
 
 type EtapaVisual = {
@@ -78,6 +87,9 @@ type EditarLeadForm = {
   responsable: string;
   es_caliente: boolean;
   prioridad: string;
+  proximo_paso: string | null;
+  proximo_paso_fecha_limite: string | null;
+  proximo_paso_completado: boolean;
 };
 
 const ETAPAS_VISUALES: EtapaVisual[] = [
@@ -156,6 +168,13 @@ export default function CentroOperacionesPage() {
   const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
   const [leadEditando, setLeadEditando] = useState<EditarLeadForm | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+
+  const [mostrarModalProximoPaso, setMostrarModalProximoPaso] = useState(false);
+  const [leadProximoPaso, setLeadProximoPaso] = useState<Lead | null>(null);
+  const [editandoProximoPaso, setEditandoProximoPaso] = useState({
+    texto: "",
+    fecha_limite: "",
+  });
 
   const [kpis, setKpis] = useState({
     totalLeads: 0,
@@ -425,8 +444,125 @@ export default function CentroOperacionesPage() {
       responsable: lead.responsable || "Jeisson",
       es_caliente: lead.es_caliente === true,
       prioridad: lead.prioridad || "MEDIA",
+      proximo_paso: lead.proximo_paso ?? null,
+      proximo_paso_fecha_limite: lead.proximo_paso_fecha_limite ?? null,
+      proximo_paso_completado: lead.proximo_paso_completado === true,
     });
     setMostrarModalEditar(true);
+  };
+
+  const abrirModalProximoPaso = (lead: Lead, e?: ReactSyntheticEvent) => {
+    e?.stopPropagation();
+    setLeadProximoPaso(lead);
+    setEditandoProximoPaso({
+      texto: lead.proximo_paso || "",
+      fecha_limite: lead.proximo_paso_fecha_limite
+        ? String(lead.proximo_paso_fecha_limite).slice(0, 10)
+        : "",
+    });
+    setMostrarModalProximoPaso(true);
+  };
+
+  const guardarProximoPaso = async () => {
+    if (!leadProximoPaso) return;
+    if (!editandoProximoPaso.texto.trim()) {
+      alert("Escribe el próximo paso");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          proximo_paso: editandoProximoPaso.texto.trim(),
+          proximo_paso_fecha_limite: editandoProximoPaso.fecha_limite || null,
+          proximo_paso_completado: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", leadProximoPaso.id);
+
+      if (error) throw error;
+
+      await supabase.from("lead_actividades").insert({
+        lead_id: leadProximoPaso.id,
+        tipo: "NOTA",
+        descripcion: `Próximo paso: ${editandoProximoPaso.texto.trim()}`,
+        usuario: "Admin",
+      });
+
+      setMostrarModalProximoPaso(false);
+      setLeadProximoPaso(null);
+      await cargarDatos();
+    } catch (error: any) {
+      console.error("Error:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const toggleProximoPasoCompletado = async (
+    lead: Lead,
+    e: ReactSyntheticEvent
+  ) => {
+    e.stopPropagation();
+
+    if (!lead.proximo_paso) {
+      abrirModalProximoPaso(lead);
+      return;
+    }
+
+    try {
+      const nuevoEstado = !lead.proximo_paso_completado;
+
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          proximo_paso_completado: nuevoEstado,
+          proximo_paso_completado_fecha: nuevoEstado
+            ? new Date().toISOString()
+            : null,
+        })
+        .eq("id", lead.id);
+
+      if (error) throw error;
+
+      await supabase.from("lead_actividades").insert({
+        lead_id: lead.id,
+        tipo: "NOTA",
+        descripcion: nuevoEstado
+          ? `✅ Completado: ${lead.proximo_paso}`
+          : `⏳ Reabierto: ${lead.proximo_paso}`,
+        usuario: "Admin",
+      });
+
+      await cargarDatos();
+    } catch (error: any) {
+      console.error("Error:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const eliminarProximoPaso = async (lead: Lead) => {
+    if (!confirm("¿Eliminar el próximo paso?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("leads")
+        .update({
+          proximo_paso: null,
+          proximo_paso_completado: false,
+          proximo_paso_fecha_limite: null,
+          proximo_paso_completado_fecha: null,
+        })
+        .eq("id", lead.id);
+
+      if (error) throw error;
+
+      setMostrarModalProximoPaso(false);
+      setLeadProximoPaso(null);
+      await cargarDatos();
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
+    }
   };
 
   const guardarEdicionLead = async () => {
@@ -1022,6 +1158,229 @@ export default function CentroOperacionesPage() {
           </CardContent>
         </Card>
 
+        {/* Sección To-Do - Tareas Pendientes */}
+        {(() => {
+          const tareasPendientes = leads.filter(
+            (l) => l.proximo_paso && !l.proximo_paso_completado
+          );
+
+          const tareasVencidas = tareasPendientes.filter((l) => {
+            if (!l.proximo_paso_fecha_limite) return false;
+            return new Date(l.proximo_paso_fecha_limite) < new Date();
+          });
+
+          const tareasHoy = tareasPendientes.filter((l) => {
+            if (!l.proximo_paso_fecha_limite) return false;
+            const hoy = new Date().toISOString().split("T")[0];
+            return l.proximo_paso_fecha_limite === hoy;
+          });
+
+          const tareasProximas = tareasPendientes.filter((l) => {
+            if (!l.proximo_paso_fecha_limite) return false;
+            const fecha = new Date(l.proximo_paso_fecha_limite);
+            const hoy = new Date();
+            const enTresDias = new Date();
+            enTresDias.setDate(enTresDias.getDate() + 3);
+            return fecha > hoy && fecha <= enTresDias;
+          });
+
+          if (tareasPendientes.length === 0) return null;
+
+          return (
+            <Card className="mb-4 border-0 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">✅</span>
+                    <div>
+                      <CardTitle className="text-lg">To-Do: Próximos Pasos</CardTitle>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {tareasPendientes.length} tarea(s) pendiente(s)
+                        {tareasVencidas.length > 0 && (
+                          <span className="ml-2 font-semibold text-red-600">
+                            · {tareasVencidas.length} vencida(s)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {tareasVencidas.length > 0 && (
+                      <div className="rounded-lg bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                        🚨 {tareasVencidas.length} vencidas
+                      </div>
+                    )}
+                    {tareasHoy.length > 0 && (
+                      <div className="rounded-lg bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                        ⏰ {tareasHoy.length} hoy
+                      </div>
+                    )}
+                    {tareasProximas.length > 0 && (
+                      <div className="rounded-lg bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                        📅 {tareasProximas.length} próximas
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-64 space-y-2 overflow-y-auto">
+                  {tareasVencidas.length > 0 && (
+                    <div>
+                      <div className="mb-2 text-xs font-semibold text-red-600">
+                        🚨 VENCIDAS
+                      </div>
+                      {tareasVencidas.map((lead) => (
+                        <div
+                          key={lead.id}
+                          className="flex cursor-pointer items-start gap-3 rounded-lg border-l-4 border-red-500 bg-red-50 p-3 transition-colors hover:bg-red-100"
+                          onClick={() => abrirModalEditar(lead)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              void toggleProximoPasoCompletado(lead, e);
+                            }}
+                            className="mt-1 h-4 w-4 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className="font-semibold text-gray-900">
+                                {lead.nombre}
+                              </span>
+                              <span className="rounded bg-red-200 px-2 py-0.5 text-xs font-semibold text-red-800">
+                                Vencida{" "}
+                                {Math.abs(
+                                  Math.floor(
+                                    (new Date().getTime() -
+                                      new Date(
+                                        lead.proximo_paso_fecha_limite!
+                                      ).getTime()) /
+                                      (1000 * 60 * 60 * 24)
+                                  )
+                                )}{" "}
+                                día(s)
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-700">
+                              {lead.proximo_paso}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {tareasHoy.length > 0 && (
+                    <div>
+                      <div className="mb-2 text-xs font-semibold text-orange-600">
+                        ⏰ HOY
+                      </div>
+                      {tareasHoy.map((lead) => (
+                        <div
+                          key={lead.id}
+                          className="flex cursor-pointer items-start gap-3 rounded-lg border-l-4 border-orange-500 bg-orange-50 p-3 transition-colors hover:bg-orange-100"
+                          onClick={() => abrirModalEditar(lead)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              void toggleProximoPasoCompletado(lead, e);
+                            }}
+                            className="mt-1 h-4 w-4 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className="font-semibold text-gray-900">
+                                {lead.nombre}
+                              </span>
+                              <span className="rounded bg-orange-200 px-2 py-0.5 text-xs font-semibold text-orange-800">
+                                Hoy
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-700">
+                              {lead.proximo_paso}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {tareasPendientes
+                    .filter(
+                      (l) =>
+                        !tareasVencidas.includes(l) && !tareasHoy.includes(l)
+                    )
+                    .sort((a, b) => {
+                      if (!a.proximo_paso_fecha_limite) return 1;
+                      if (!b.proximo_paso_fecha_limite) return -1;
+                      return (
+                        new Date(a.proximo_paso_fecha_limite).getTime() -
+                        new Date(b.proximo_paso_fecha_limite).getTime()
+                      );
+                    })
+                    .map((lead) => {
+                      const esProxima = tareasProximas.includes(lead);
+                      return (
+                        <div
+                          key={lead.id}
+                          className={`flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 ${
+                            esProxima
+                              ? "border-l-4 border-blue-500 bg-blue-50"
+                              : "border-l-4 border-gray-300 bg-gray-50"
+                          }`}
+                          onClick={() => abrirModalEditar(lead)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              void toggleProximoPasoCompletado(lead, e);
+                            }}
+                            className="mt-1 h-4 w-4 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className="font-semibold text-gray-900">
+                                {lead.nombre}
+                              </span>
+                              {lead.proximo_paso_fecha_limite && (
+                                <span
+                                  className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                                    esProxima
+                                      ? "bg-blue-200 text-blue-800"
+                                      : "bg-gray-200 text-gray-700"
+                                  }`}
+                                >
+                                  {new Date(
+                                    lead.proximo_paso_fecha_limite
+                                  ).toLocaleDateString("es-CO")}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-700">
+                              {lead.proximo_paso}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Flujo Comercial - Drag & Drop Kanban */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
@@ -1194,6 +1553,80 @@ export default function CentroOperacionesPage() {
                                     <div className="mt-2 line-clamp-2 border-l-2 border-gray-300 bg-gray-50 p-2 text-[10px] italic text-gray-500">
                                       {lead.observaciones}
                                     </div>
+                                  )}
+
+                                  {lead.proximo_paso && (
+                                    <div className="mt-2 border-t border-gray-200 pt-2">
+                                      <div className="flex items-start gap-2">
+                                        <input
+                                          type="checkbox"
+                                          checked={lead.proximo_paso_completado === true}
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            void toggleProximoPasoCompletado(lead, e);
+                                          }}
+                                          className="mt-0.5 h-4 w-4 flex-shrink-0 cursor-pointer"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                          <div className="mb-0.5 text-[10px] text-gray-500">
+                                            Próximo paso:
+                                          </div>
+                                          <div
+                                            className={`text-[11px] ${
+                                              lead.proximo_paso_completado
+                                                ? "text-gray-400 line-through"
+                                                : "font-medium text-gray-700"
+                                            }`}
+                                          >
+                                            {lead.proximo_paso}
+                                          </div>
+                                          {lead.proximo_paso_fecha_limite &&
+                                            !lead.proximo_paso_completado && (
+                                              <div
+                                                className={`mt-1 text-[10px] ${
+                                                  new Date(
+                                                    lead.proximo_paso_fecha_limite
+                                                  ) < new Date()
+                                                    ? "font-semibold text-red-600"
+                                                    : new Date(
+                                                          lead.proximo_paso_fecha_limite
+                                                        )
+                                                          .toISOString()
+                                                          .split("T")[0] ===
+                                                        new Date()
+                                                          .toISOString()
+                                                          .split("T")[0]
+                                                      ? "font-semibold text-orange-600"
+                                                      : "text-gray-500"
+                                                }`}
+                                              >
+                                                📅{" "}
+                                                {new Date(
+                                                  lead.proximo_paso_fecha_limite
+                                                ).toLocaleDateString("es-CO")}
+                                              </div>
+                                            )}
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => abrirModalProximoPaso(lead, e)}
+                                          className="flex-shrink-0 text-xs text-blue-600 hover:text-blue-800"
+                                        >
+                                          ✏️
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {!lead.proximo_paso && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => abrirModalProximoPaso(lead, e)}
+                                      className="mt-2 w-full border-t border-gray-200 pt-2 text-left text-[10px] font-medium text-blue-600 hover:text-blue-800"
+                                    >
+                                      + Agregar próximo paso
+                                    </button>
                                   )}
 
                                   <div className="mt-2 flex items-center justify-between text-[10px] text-gray-400">
@@ -1684,6 +2117,76 @@ export default function CentroOperacionesPage() {
               </div>
 
               <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Próximo Paso
+                  </label>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const id = leadEditando.id;
+                      setMostrarModalEditar(false);
+                      setTimeout(() => {
+                        const L = leads.find((l) => l.id === id);
+                        if (L) abrirModalProximoPaso(L);
+                      }, 100);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    ✏️ Editar
+                  </button>
+                </div>
+                {leadEditando.proximo_paso ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={leadEditando.proximo_paso_completado === true}
+                        readOnly
+                        className="mt-0.5 h-4 w-4"
+                      />
+                      <div className="flex-1">
+                        <div
+                          className={`text-sm ${
+                            leadEditando.proximo_paso_completado
+                              ? "text-gray-400 line-through"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          {leadEditando.proximo_paso}
+                        </div>
+                        {leadEditando.proximo_paso_fecha_limite && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            📅{" "}
+                            {new Date(
+                              leadEditando.proximo_paso_fecha_limite
+                            ).toLocaleDateString("es-CO")}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const id = leadEditando.id;
+                      setMostrarModalEditar(false);
+                      setTimeout(() => {
+                        const L = leads.find((l) => l.id === id);
+                        if (L) abrirModalProximoPaso(L);
+                      }, 100);
+                    }}
+                    className="h-11 w-full rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-600 transition-colors hover:border-blue-500 hover:text-blue-600"
+                  >
+                    + Agregar próximo paso
+                  </button>
+                )}
+              </div>
+
+              <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   Observaciones
                 </label>
@@ -1731,6 +2234,127 @@ export default function CentroOperacionesPage() {
               >
                 <span>🗑️</span>
                 Eliminar Lead
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarModalProximoPaso && leadProximoPaso && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white">
+            <div className="border-b border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Próximo Paso</h2>
+                  <p className="mt-1 text-sm text-gray-600">{leadProximoPaso.nombre}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMostrarModalProximoPaso(false);
+                    setLeadProximoPaso(null);
+                  }}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-xl font-bold text-gray-600 transition-colors hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  ¿Qué sigue? *
+                </label>
+                <textarea
+                  value={editandoProximoPaso.texto}
+                  onChange={(e) =>
+                    setEditandoProximoPaso({
+                      ...editandoProximoPaso,
+                      texto: e.target.value,
+                    })
+                  }
+                  placeholder="Ej: Enviar cotización por WhatsApp, Agendar reunión virtual, Hacer seguimiento..."
+                  rows={3}
+                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Fecha límite (opcional)
+                </label>
+                <input
+                  type="date"
+                  value={editandoProximoPaso.fecha_limite}
+                  onChange={(e) =>
+                    setEditandoProximoPaso({
+                      ...editandoProximoPaso,
+                      fecha_limite: e.target.value,
+                    })
+                  }
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <div className="mb-2 text-xs font-medium text-gray-700">
+                  Sugerencias rápidas:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "Enviar cotización",
+                    "Hacer seguimiento",
+                    "Agendar reunión",
+                    "Visita a obra",
+                    "Revisar presupuesto",
+                    "Firma de contrato",
+                  ].map((sugerencia) => (
+                    <button
+                      key={sugerencia}
+                      type="button"
+                      onClick={() =>
+                        setEditandoProximoPaso({
+                          ...editandoProximoPaso,
+                          texto: sugerencia,
+                        })
+                      }
+                      className="rounded-lg bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200"
+                    >
+                      {sugerencia}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 border-t border-gray-200 p-6">
+              {leadProximoPaso.proximo_paso && (
+                <button
+                  type="button"
+                  onClick={() => void eliminarProximoPaso(leadProximoPaso)}
+                  className="h-11 rounded-lg border border-red-300 px-4 font-medium text-red-600 transition-colors hover:bg-red-50"
+                >
+                  Eliminar
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setMostrarModalProximoPaso(false);
+                  setLeadProximoPaso(null);
+                }}
+                className="h-11 flex-1 rounded-lg border border-gray-300 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void guardarProximoPaso()}
+                className="h-11 flex-1 rounded-lg bg-blue-600 font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                Guardar
               </button>
             </div>
           </div>
