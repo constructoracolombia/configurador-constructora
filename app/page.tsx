@@ -16,7 +16,6 @@ import {
   Users,
   BarChart3,
   TrendingUp,
-  Clock,
   Target,
   ArrowRight,
   Activity,
@@ -996,79 +995,95 @@ export default function CentroOperacionesPage() {
         <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-blue-200">
                   <Users className="h-6 w-6 text-blue-600" />
                 </div>
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="mb-1 text-3xl font-bold text-gray-900">
-                {kpis.total_leads}
-              </div>
-              <div className="text-sm text-gray-600">Leads Totales</div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
-                  <Activity className="h-6 w-6 text-purple-600" />
-                </div>
-                <Clock className="h-5 w-5 text-orange-600" />
-              </div>
-              <div className="mb-1 text-3xl font-bold text-gray-900">
-                {kpis.en_negociacion}
-              </div>
-              <div className="text-sm text-gray-600">En Negociación</div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
-                  <Target className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="text-sm font-semibold text-green-600">
-                  {kpis.conversion.toFixed(1)}%
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {kpis.total_leads}
+                  </div>
+                  <div className="text-sm text-gray-600">Leads Totales</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Leads activos en base
+                  </div>
                 </div>
               </div>
-              <div className="mb-1 text-3xl font-bold text-gray-900">
-                {kpis.cerrados}
-              </div>
-              <div className="text-sm text-gray-600">Cerrados</div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
-                  <BarChart3 className="h-6 w-6 text-orange-600" />
-                </div>
-              </div>
-              <div className="mb-1 text-2xl font-bold text-gray-900">
-                {formatoPrecio(kpis.pipeline_total)}
-              </div>
-              <div className="text-sm text-gray-600">Pipeline Total</div>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-green-100">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-100 to-purple-200">
+                  <Activity className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {kpis.en_negociacion}
+                  </div>
+                  <div className="text-sm text-gray-600">En Negociación</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    En etapa de negociación
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-green-100 to-emerald-100">
+                  <Target className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {kpis.cerrados}
+                  </div>
+                  <div className="text-sm text-gray-600">Cerrados</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {kpis.conversion.toFixed(1)}% del total de leads
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-100">
+                  <BarChart3 className="h-6 w-6 text-orange-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-bold leading-tight text-gray-900">
+                    {formatoPrecio(kpis.pipeline_total)}
+                  </div>
+                  <div className="text-sm text-gray-600">Pipeline Total</div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Suma presupuestos (sin perdidos)
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* KPI: Tasa de Cierre */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-green-100">
                   <span className="text-2xl">📊</span>
                 </div>
                 <div className="flex-1">
                   <div className="text-2xl font-bold text-gray-900">
-                    {kpis.tasa_cierre.toFixed(1)}%
+                    {kpis.tasa_cierre?.toFixed(1) ?? 0}%
                   </div>
                   <div className="text-sm text-gray-600">Tasa de Cierre</div>
                   <div className="mt-1 text-xs text-gray-500">
-                    {kpis.cerrados} cerrados de {kpis.cerrados + kpis.perdidos}{" "}
-                    finalizados
+                    {kpis.cerrados || 0} cerrados de{" "}
+                    {(kpis.cerrados || 0) + (kpis.perdidos || 0)} finalizados
                   </div>
                 </div>
               </div>
