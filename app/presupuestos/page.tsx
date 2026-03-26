@@ -30,6 +30,10 @@ function PresupuestosContent() {
     setProyecto(proyecto.id);
 
     if (tipoProyecto === "acabados_premium") {
+      // San Juan: limpiar datos previos de plan/productos para evitar duplicidades
+      localStorage.removeItem("plan_seleccionado");
+      localStorage.removeItem("productos_seleccionados");
+      localStorage.removeItem("cotizador-storage");
       window.location.href = "/adicionales";
       return;
     }

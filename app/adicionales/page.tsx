@@ -42,21 +42,23 @@ export default function AdicionalesPage() {
       try {
         const productos = JSON.parse(productosGuardados);
         const idsObsoletos = [
-          "calentador-bosch",
-          "calentador",
           "lavadero-enchapado",
           "ampliacion-balcon",
-          "puerta-melamina-rh",
-          "puerta-melamina",
-          "puerta-corredera",
           "tuberia-agua-caliente",
           "tuberia-aire-acondicionado",
-          "tuberia-aire",
-          "mueble-alacena-vertical",
           "mueble-alacena",
           "mueble-bajo-lavadero",
           "mueble-lavadero",
           "mueble-sobre-nevera",
+          "nicho-iluminado",
+          "puerta-melamina-rh",
+          "puerta-melamina",
+          "puerta-corredera",
+          "calentador-bosch",
+          "calentador",
+          "tuberia-aire",
+          "mueble-alacena-vertical",
+          "mueble-lavadero",
           "mueble-nevera",
         ];
 
@@ -64,15 +66,23 @@ export default function AdicionalesPage() {
           (p) => !idsObsoletos.includes(p.id)
         );
 
+        console.log("🧹 Limpiando productos obsoletos...", {
+          antes: productos.length,
+          despues: productosLimpios.length,
+        });
+
         if (productosLimpios.length !== productos.length) {
           localStorage.setItem(
             "productos_seleccionados",
             JSON.stringify(productosLimpios)
           );
-          setProductosSeleccionados(productosLimpios);
         }
+
+        setProductosSeleccionados(productosLimpios);
       } catch (error) {
         console.error("Error limpiando productos:", error);
+        localStorage.removeItem("productos_seleccionados");
+        setProductosSeleccionados([]);
       }
     }
   }, []);
@@ -246,6 +256,19 @@ export default function AdicionalesPage() {
 
   return (
     <div ref={containerRef} className="min-h-screen bg-black pb-32">
+      {/* Botón de limpieza (solo desarrollo) */}
+      {process.env.NODE_ENV === "development" && (
+        <button
+          onClick={() => {
+            localStorage.removeItem("productos_seleccionados");
+            setProductosSeleccionados([]);
+            window.location.reload();
+          }}
+          className="fixed bottom-6 left-6 z-50 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white"
+        >
+          🧹 Limpiar localStorage
+        </button>
+      )}
       {/* Barra de progreso superior FIJA */}
       <div
         className={`fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-sm ${

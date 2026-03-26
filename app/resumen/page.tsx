@@ -80,6 +80,25 @@ export default function ResumenPage() {
         ? planesBase.intermedio
         : null;
 
+  const tipoProyecto =
+    typeof window !== "undefined"
+      ? localStorage.getItem("proyecto_tipo") || "vis_remodelacion"
+      : "vis_remodelacion";
+  const esSanJuan = tipoProyecto === "acabados_premium";
+
+  const totalAdicionales = adicionales.reduce((sum, adicional) => {
+    const qty = adicional.cantidad ?? 1;
+    return sum + getPrecioAdicional(adicional, planBase) * qty;
+  }, 0);
+
+  const planBasicoMonto = esSanJuan ? 0 : getPrecioPlanBase();
+  const inversionTotal = esSanJuan ? totalAdicionales : getTotal();
+  const bonusSanJuan = [
+    "Recorrido virtual 360°",
+    "Supervisión profesional",
+    "Garantía de calidad",
+  ];
+
   useEffect(() => {
     if (!planBase || !proyecto) {
       router.push("/presupuestos");
@@ -116,8 +135,8 @@ export default function ResumenPage() {
         proyecto_nombre: proyectoData?.nombre,
         plan_tipo: planBase,
         plan_nombre: planData.nombre,
-        precio_plan: getPrecioPlanBase(),
-        total: getTotal(),
+        precio_plan: esSanJuan ? 0 : getPrecioPlanBase(),
+        total: inversionTotal,
         pdf_url: pdfUrl,
         numero_cotizacion: numeroCotizacion,
         estado_crm: "NUEVO",
@@ -158,7 +177,7 @@ export default function ResumenPage() {
               telefono: clienteTelefono || "Sin teléfono",
               email: clienteEmail,
               proyecto: proyectoData?.nombre,
-              presupuesto_estimado: getTotal(),
+              presupuesto_estimado: inversionTotal,
               fuente: "WEB",
               origen:
                 utmSource === "facebook" || utmSource === "instagram"
@@ -189,7 +208,7 @@ export default function ResumenPage() {
             await supabase.from("lead_actividades").insert({
               lead_id: lead.id,
               tipo: "NOTA",
-              descripcion: `Cotización generada: ${numeroCotizacion}. Total: ${formatoPrecio(getTotal())}`,
+              descripcion: `Cotización generada: ${numeroCotizacion}. Total: ${formatoPrecio(inversionTotal)}`,
             });
           }
         } catch (leadFlowError) {
@@ -223,7 +242,7 @@ export default function ResumenPage() {
           clienteEmail,
           numeroCotizacion,
           proyecto: proyectoData?.nombre,
-          total: formatoPrecio(getTotal()),
+          total: formatoPrecio(inversionTotal),
           pdfUrl,
         }),
       });
@@ -270,10 +289,10 @@ export default function ResumenPage() {
         },
         plan: {
           nombre: planData.nombre,
-          precio: getPrecioPlanBase(),
+          precio: esSanJuan ? 0 : getPrecioPlanBase(),
           tiempoEntrega: planData.tiempoEntrega,
-          incluye: [...planData.incluye],
-          bonus: [...planData.bonus],
+          incluye: esSanJuan ? [] : [...planData.incluye],
+          bonus: esSanJuan ? bonusSanJuan : [...planData.bonus],
         },
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
@@ -284,7 +303,7 @@ export default function ResumenPage() {
             precio: precio * qty,
           };
         }),
-        total: getTotal(),
+        total: inversionTotal,
       };
 
       const pdfBlob = await generarCotizacionPDF(pdfData);
@@ -352,10 +371,10 @@ export default function ResumenPage() {
         },
         plan: {
           nombre: planData.nombre,
-          precio: getPrecioPlanBase(),
+          precio: esSanJuan ? 0 : getPrecioPlanBase(),
           tiempoEntrega: planData.tiempoEntrega,
-          incluye: [...planData.incluye],
-          bonus: [...planData.bonus],
+          incluye: esSanJuan ? [] : [...planData.incluye],
+          bonus: esSanJuan ? bonusSanJuan : [...planData.bonus],
         },
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
@@ -366,7 +385,7 @@ export default function ResumenPage() {
             precio: precio * qty,
           };
         }),
-        total: getTotal(),
+        total: inversionTotal,
       };
 
       // 3. Generar PDF
@@ -422,7 +441,7 @@ Acabo de generar mi presupuesto de remodelacion.
 ${success ? `Ver Detalle:\n${publicUrl}\n\n` : ""}*COTIZACION:* ${numeroCotizacion}
 *PROYECTO:* ${proyectoData?.nombre}
 *PLAN:* ${planData.nombre}
-*INVERSION ESTIMADA:* ${formatoPrecio(getTotal())}
+*INVERSION ESTIMADA:* ${formatoPrecio(inversionTotal)}
 
 Me gustaria resolver algunas dudas antes de continuar. Podrian ayudarme?`;
       }
@@ -555,81 +574,127 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                     <p className="mb-1 text-sm text-brand-textSecondary">
                       Plan seleccionado
                     </p>
-                    <p className="text-lg font-bold text-brand-primary">
-                      {planData.nombre}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-brand-textSecondary" />
-                      <span className="text-sm text-brand-textSecondary">
-                        {planData.tiempoEntrega} días hábiles
-                      </span>
-                    </div>
+                    {esSanJuan ? (
+                      <p className="text-lg font-bold text-brand-primary">
+                        Sin Plan Básico
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-lg font-bold text-brand-primary">
+                          {planData.nombre}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-brand-textSecondary" />
+                          <span className="text-sm text-brand-textSecondary">
+                            {planData.tiempoEntrega} días hábiles
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Desglose del plan - EXPANDIDO */}
-            <Card className="border-brand-border bg-brand-card">
-              <CardHeader>
-                <CardTitle className="text-brand-text">
-                  ¿Qué incluye el Plan {planData.nombre}?
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg bg-brand-dark p-4">
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-brand-textSecondary">
-                      Precio del Plan
-                    </span>
-                    <span className="text-2xl font-bold text-brand-primary">
-                      {formatoPrecio(getPrecioPlanBase())}
-                    </span>
-                  </div>
-                  <Separator className="mb-4 bg-brand-border" />
+            {!esSanJuan ? (
+              <Card className="border-brand-border bg-brand-card">
+                <CardHeader>
+                  <CardTitle className="text-brand-text">
+                    ¿Qué incluye el Plan {planData.nombre}?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg bg-brand-dark p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <span className="text-brand-textSecondary">
+                        Precio del Plan
+                      </span>
+                      <span className="text-2xl font-bold text-brand-primary">
+                        {formatoPrecio(getPrecioPlanBase())}
+                      </span>
+                    </div>
+                    <Separator className="mb-4 bg-brand-border" />
 
-                  <div className="space-y-3">
-                    <p className="mb-3 text-sm font-semibold text-brand-text">
-                      Todas las actividades incluidas:
-                    </p>
-                    <div className="grid gap-2">
-                      {planData.incluye.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex items-start gap-3"
-                        >
-                          <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-primary" />
-                          <span className="text-sm text-brand-textSecondary">
-                            {item}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      <p className="mb-3 text-sm font-semibold text-brand-text">
+                        Todas las actividades incluidas:
+                      </p>
+                      <div className="grid gap-2">
+                        {planData.incluye.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3"
+                          >
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-primary" />
+                            <span className="text-sm text-brand-textSecondary">
+                              {item}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Bonus */}
-                <div className="rounded-lg border-l-4 border-green-500 bg-gradient-to-br from-green-900/20 to-emerald-900/20 p-4">
-                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-text">
-                    <span className="text-xl">⭐</span>
-                    BONUS GRATIS INCLUIDOS:
-                  </p>
-                  <div className="grid gap-2">
-                    {planData.bonus.map((bonus, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start gap-3"
-                      >
-                        <span className="text-brand-primary">✓</span>
-                        <span className="text-sm text-brand-textSecondary">
-                          {bonus}
+                  {/* BONUS GRATIS - Ajustado */}
+                  <div className="bg-gradient-to-br from-green-900 to-green-800 border-2 border-green-600 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-3xl">⭐</span>
+                      <h3 className="text-xl font-bold text-white">
+                        BONUS GRATIS INCLUIDOS:
+                      </h3>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-3">
+                        <div className="text-green-400 text-lg">✓</div>
+                        <span className="text-white">
+                          Recorrido virtual 360°
                         </span>
                       </div>
-                    ))}
+                      <div className="flex items-start gap-3">
+                        <div className="text-green-400 text-lg">✓</div>
+                        <span className="text-white">
+                          Supervisión profesional
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="text-green-400 text-lg">✓</div>
+                        <span className="text-white">
+                          Garantía de calidad
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="bg-gradient-to-br from-green-900 to-green-800 border-2 border-green-600 rounded-2xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-3xl">⭐</span>
+                  <h3 className="text-xl font-bold text-white">
+                    BONUS GRATIS INCLUIDOS:
+                  </h3>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3">
+                    <div className="text-green-400 text-lg">✓</div>
+                    <span className="text-white">Recorrido virtual 360°</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="text-green-400 text-lg">✓</div>
+                    <span className="text-white">
+                      Supervisión profesional
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="text-green-400 text-lg">✓</div>
+                    <span className="text-white">Garantía de calidad</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            )}
 
             {/* Adicionales si hay */}
             {adicionales.length > 0 && (
@@ -674,50 +739,59 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
           {/* Columna lateral - Total sticky */}
           <div className="lg:col-span-1">
             <div className="sticky top-4 space-y-6">
-              <Card className="border-2 border-brand-primary bg-gradient-to-br from-brand-primary/10 to-brand-secondary/10">
+              <Card className="border-0 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-center text-brand-text">
+                  <CardTitle className="text-center text-black/80">
                     Inversión Total
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="text-center">
-                    <p className="text-5xl font-bold text-brand-primary">
-                      {formatoPrecio(getTotal())}
+                    <p className="text-4xl font-bold text-black mb-4">
+                      {formatoPrecio(inversionTotal)}
                     </p>
-                    <p className="mt-2 text-sm text-brand-textSecondary">
-                      Incluye plan base + {adicionales.length} adicionales
-                    </p>
+                    {!esSanJuan ? (
+                      <>
+                        {planBasicoMonto > 0 && (
+                          <p className="text-sm text-black/70 mb-1">
+                            Plan Básico Esencial: {formatoPrecio(planBasicoMonto)}
+                          </p>
+                        )}
+                        <p className="text-sm text-black/70">
+                          Adicionales: {formatoPrecio(totalAdicionales)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-black/70">
+                        Incluye {adicionales.length} adicionales seleccionados
+                      </p>
+                    )}
                   </div>
 
                   <Separator className="bg-brand-border" />
 
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-brand-textSecondary">
-                        Plan {planData.nombre}
-                      </span>
-                      <span className="text-brand-text">
-                        {formatoPrecio(getPrecioPlanBase())}
-                      </span>
-                    </div>
-                    {adicionales.length > 0 && (
+                  {!esSanJuan && (
+                    <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-brand-textSecondary">
-                          Adicionales
+                          Plan {planData.nombre}
                         </span>
                         <span className="text-brand-text">
-                          {formatoPrecio(
-                            adicionales.reduce(
-                              (sum, a) =>
-                                sum + a.precio * (a.cantidad ?? 1),
-                              0
-                            )
-                          )}
+                          {formatoPrecio(planBasicoMonto)}
                         </span>
                       </div>
-                    )}
-                  </div>
+                      {adicionales.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-brand-textSecondary">
+                            Adicionales
+                          </span>
+                          <span className="text-brand-text">
+                            {formatoPrecio(totalAdicionales)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
