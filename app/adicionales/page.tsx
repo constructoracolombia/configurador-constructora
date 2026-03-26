@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Sparkles, TrendingUp, Plus, Minus } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import { motion } from "framer-motion";
-import Image from "next/image";
 
 export default function AdicionalesPage() {
   const router = useRouter();
@@ -35,6 +34,48 @@ export default function AdicionalesPage() {
   const [productosSeleccionados, setProductosSeleccionados] = useState<any[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const esSanJuan = tipoProyecto === "acabados_premium";
+
+  useEffect(() => {
+    const productosGuardados = localStorage.getItem("productos_seleccionados");
+
+    if (productosGuardados) {
+      try {
+        const productos = JSON.parse(productosGuardados);
+        const idsObsoletos = [
+          "calentador-bosch",
+          "calentador",
+          "lavadero-enchapado",
+          "ampliacion-balcon",
+          "puerta-melamina-rh",
+          "puerta-melamina",
+          "puerta-corredera",
+          "tuberia-agua-caliente",
+          "tuberia-aire-acondicionado",
+          "tuberia-aire",
+          "mueble-alacena-vertical",
+          "mueble-alacena",
+          "mueble-bajo-lavadero",
+          "mueble-lavadero",
+          "mueble-sobre-nevera",
+          "mueble-nevera",
+        ];
+
+        const productosLimpios = (productos as any[]).filter(
+          (p) => !idsObsoletos.includes(p.id)
+        );
+
+        if (productosLimpios.length !== productos.length) {
+          localStorage.setItem(
+            "productos_seleccionados",
+            JSON.stringify(productosLimpios)
+          );
+          setProductosSeleccionados(productosLimpios);
+        }
+      } catch (error) {
+        console.error("Error limpiando productos:", error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const proyectoLs =
@@ -64,6 +105,7 @@ export default function AdicionalesPage() {
       "Carpintería",
       "Baños",
       "Cocina",
+      "Granitos",
       "Pisos",
       "Pintura",
       "Eléctrica",
@@ -73,6 +115,7 @@ export default function AdicionalesPage() {
       "Carpintería",
       "Baños",
       "Cocina",
+      "Granitos",
       "Pintura",
       "Iluminación",
       "Otros Acabados",
@@ -424,11 +467,16 @@ export default function AdicionalesPage() {
                         <div className="relative mb-3 h-48 w-full overflow-hidden rounded-lg bg-gray-800">
                           {producto.imagen &&
                           !producto.imagen.includes("placeholder") ? (
-                            <Image
+                            <img
                               src={producto.imagen}
                               alt={producto.nombre}
-                              fill
                               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.src =
+                                  `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23111827' width='400' height='300'/%3E%3Crect fill='%23EAB308' x='0' y='280' width='400' height='20'/%3E%3Ctext fill='%23FFFFFF' font-size='16' font-family='Arial' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3E${encodeURIComponent(
+                                    producto.nombre
+                                  )}%3C/text%3E%3C/svg%3E`;
+                              }}
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center text-4xl text-gray-500">
