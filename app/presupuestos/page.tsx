@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter } from "next/navigation";
 import { proyectos } from "@/lib/data/catalogo";
 import { useCotizador } from "@/lib/store/cotizador";
 import { useTrackingParams } from "@/lib/hooks/useTrackingParams";
@@ -12,9 +11,7 @@ import { Loader2, MapPin, Sparkles } from "lucide-react";
 function PresupuestosContent() {
   const trackingParams = useTrackingParams();
   void trackingParams;
-  const router = useRouter();
   const setProyecto = useCotizador((state) => state.setProyecto);
-  const setPlanBase = useCotizador((state) => state.setPlanBase);
   const [loading, setLoading] = useState(false);
   const [proyectoCargando, setProyectoCargando] = useState("");
 
@@ -28,16 +25,16 @@ function PresupuestosContent() {
 
     localStorage.setItem("proyecto_seleccionado", proyecto.nombre);
     localStorage.setItem("proyecto_tipo", tipoProyecto);
+    localStorage.setItem("proyecto_slug", proyecto.id);
 
     setProyecto(proyecto.id);
 
     if (tipoProyecto === "acabados_premium") {
-      setPlanBase("basico");
-      router.push(`/brochure?proyecto=${encodeURIComponent(proyecto.nombre)}`);
+      window.location.href = "/adicionales";
       return;
     }
 
-    router.push(`/plan?proyecto=${encodeURIComponent(proyecto.nombre)}`);
+    window.location.href = `/plan?proyecto=${encodeURIComponent(proyecto.nombre)}`;
   };
 
   return (

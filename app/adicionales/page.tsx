@@ -29,12 +29,16 @@ export default function AdicionalesPage() {
 
   const [scrollProgress, setScrollProgress] = useState(0);
   const [totalAnimado, setTotalAnimado] = useState(0);
+  const [proyectoSeleccionado, setProyectoSeleccionado] = useState("Ciudadela Verde");
   const [tipoProyecto, setTipoProyecto] = useState("vis_remodelacion");
   const containerRef = useRef<HTMLDivElement>(null);
   const esSanJuan = tipoProyecto === "acabados_premium";
 
   useEffect(() => {
+    const proyectoLs =
+      localStorage.getItem("proyecto_seleccionado") || "Ciudadela Verde";
     const tipo = localStorage.getItem("proyecto_tipo") || "vis_remodelacion";
+    setProyectoSeleccionado(proyectoLs);
     setTipoProyecto(tipo);
 
     if (tipo === "acabados_premium") {
@@ -52,17 +56,51 @@ export default function AdicionalesPage() {
   // lo que ya viene incluido en el plan (sobre todo Intermedio) para no cobrar doble.
   const productos = planBase ? adicionalesFiltrados(planBase) : [];
 
-  const categoriasPorTipo: Record<string, readonly string[]> = {
-    vis_remodelacion: categorias,
-    acabados_premium: ["Carpintería", "Baños", "Enchapes", "Otros"],
+  // Categorías según tipo de proyecto (con alias al catálogo real).
+  const categoriasPorTipo: Record<string, string[]> = {
+    vis_remodelacion: [
+      "Carpintería",
+      "Baños",
+      "Cocina",
+      "Pisos",
+      "Pintura",
+      "Eléctrica",
+      "Otros",
+    ],
+    acabados_premium: [
+      "Carpintería",
+      "Baños",
+      "Cocina",
+      "Pintura",
+      "Iluminación",
+      "Otros Acabados",
+    ],
   };
-  const categoriasActivas =
-    categoriasPorTipo[tipoProyecto] || categoriasPorTipo.vis_remodelacion;
 
-  const productosPorCategoria = categoriasActivas
+  const aliasCategorias: Record<string, string> = {
+    Pisos: "Enchapes",
+    Pintura: "Preliminares",
+    Eléctrica: "Otros",
+    Iluminación: "Otros",
+    "Otros Acabados": "Otros",
+  };
+  const categoriasDisponibles =
+    categoriasPorTipo[tipoProyecto] || categoriasPorTipo.vis_remodelacion;
+  const categoriasNormalizadas = Array.from(
+    new Set(
+      categoriasDisponibles.map((cat) => aliasCategorias[cat] || cat).filter((cat) =>
+        (categorias as readonly string[]).includes(cat)
+      )
+    )
+  );
+  const productosDisponibles = productos.filter((p) =>
+    categoriasNormalizadas.includes(p.categoria)
+  );
+
+  const productosPorCategoria = categoriasNormalizadas
     .map((cat) => ({
       categoria: cat,
-      productos: productos.filter((p) => p.categoria === cat),
+      productos: productosDisponibles.filter((p) => p.categoria === cat),
     }))
     .filter((g) => g.productos.length > 0);
 
@@ -121,22 +159,48 @@ export default function AdicionalesPage() {
   return (
     <div
       ref={containerRef}
-      className="min-h-screen bg-gradient-to-br from-brand-dark via-black to-brand-dark pb-32"
+      className={`min-h-screen pb-32 ${
+        esSanJuan
+          ? "bg-gray-50"
+          : "bg-gradient-to-br from-brand-dark via-black to-brand-dark"
+      }`}
     >
       {/* Barra de progreso superior FIJA */}
-      <div className="fixed left-0 right-0 top-0 z-50 border-b border-brand-border bg-brand-dark/95 backdrop-blur-sm">
+      <div
+        className={`fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-sm ${
+          esSanJuan
+            ? "border-gray-200 bg-white/95"
+            : "border-brand-border bg-brand-dark/95"
+        }`}
+      >
         <div className="mx-auto max-w-6xl p-4">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs text-brand-textSecondary">
+            <span
+              className={`text-xs ${
+                esSanJuan ? "text-gray-600" : "text-brand-textSecondary"
+              }`}
+            >
               Progreso de personalización
             </span>
-            <span className="text-xs font-bold text-brand-primary">
+            <span
+              className={`text-xs font-bold ${
+                esSanJuan ? "text-blue-600" : "text-brand-primary"
+              }`}
+            >
               {Math.round(scrollProgress)}%
             </span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-brand-border">
+          <div
+            className={`h-2 w-full overflow-hidden rounded-full ${
+              esSanJuan ? "bg-gray-200" : "bg-brand-border"
+            }`}
+          >
             <motion.div
-              className="h-full bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-primary"
+              className={`h-full ${
+                esSanJuan
+                  ? "bg-gradient-to-r from-blue-500 to-indigo-500"
+                  : "bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-primary"
+              }`}
               style={{ width: `${scrollProgress}%` }}
               transition={{ duration: 0.1 }}
             />
@@ -144,32 +208,103 @@ export default function AdicionalesPage() {
         </div>
       </div>
 
-      {/* Header */}
-      <div className="mx-auto max-w-6xl px-4 pb-8 pt-24">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/50 bg-brand-primary/20 px-4 py-2">
-            <Sparkles className="h-4 w-4 text-brand-primary" />
-            <span className="text-sm font-semibold text-brand-primary">
-              {esSanJuan
-                ? "Acabados premium para San Juan de la Cuesta"
-                : `Personaliza tu ${planBase === "basico" ? "Plan Básico" : "Plan Intermedio Plus"}`}
-            </span>
+      {/* Header San Juan de la Cuesta */}
+      {esSanJuan && (
+        <div className="bg-gradient-to-br from-blue-600 to-blue-800 pt-16 text-white">
+          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+            <div className="mb-8 text-center">
+              <h1 className="mb-2 text-4xl font-bold">Personaliza tu Apartamento</h1>
+              <div className="text-2xl font-semibold text-blue-100">
+                San Juan de la Cuesta
+              </div>
+            </div>
+
+            <div className="relative mb-8 h-64 overflow-hidden rounded-2xl shadow-2xl">
+              <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/50 to-transparent" />
+              <img
+                src="/proyectos/san-juan-cuesta.jpg"
+                alt="San Juan de la Cuesta"
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"%3E%3Crect fill="%234F46E5" width="1200" height="400"/%3E%3Ctext fill="white" font-size="32" font-family="Arial" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ESan Juan de la Cuesta%3C/text%3E%3C/svg%3E';
+                }}
+              />
+            </div>
+
+            <div className="mb-6 text-center">
+              <div className="inline-block rounded-xl border border-white/20 bg-white/10 px-6 py-4 backdrop-blur-sm">
+                <p className="text-lg text-white">
+                  <span className="font-semibold">Constructora Colombia</span>,
+                  {" "}tu aliado de confianza en{" "}
+                  <span className="font-semibold">San Juan de la Cuesta</span>{" "}
+                  para hacer realidad la remodelación de tus sueños
+                </p>
+              </div>
+            </div>
+
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="mb-2 text-xl text-blue-100">
+                Selecciona lo que deseas mejorar y calcula tu presupuesto de
+                remodelación
+              </p>
+              <p className="text-lg text-blue-200">
+                ⏱️ En solo 3 minutos obtendrás tu cotización personalizada
+              </p>
+            </div>
           </div>
-          <h1 className="mb-2 text-3xl font-bold text-brand-text md:text-4xl">
-            {esSanJuan
-              ? "Personaliza tu Apartamento"
-              : "Personaliza tu Remodelación"}
-          </h1>
-          <p className="text-brand-textSecondary">
-            {esSanJuan
-              ? "Selecciona los acabados y mejoras que deseas para tu nuevo hogar"
-              : "Selecciona los espacios y acabados que deseas remodelar"}
-          </p>
-        </motion.div>
+        </div>
+      )}
+
+      {/* Header Ciudadela Verde (original) */}
+      {!esSanJuan && (
+        <div className="mx-auto max-w-6xl px-4 pb-8 pt-24">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
+          >
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/50 bg-brand-primary/20 px-4 py-2">
+              <Sparkles className="h-4 w-4 text-brand-primary" />
+              <span className="text-sm font-semibold text-brand-primary">
+                {`Personaliza tu ${planBase === "basico" ? "Plan Básico" : "Plan Intermedio Plus"}`}
+              </span>
+            </div>
+            <h1 className="mb-2 text-3xl font-bold text-brand-text md:text-4xl">
+              Personaliza tu Remodelación
+            </h1>
+            <p className="text-brand-textSecondary">
+              Selecciona los espacios y acabados que deseas remodelar
+            </p>
+          </motion.div>
+        </div>
+      )}
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div
+          className={`mb-6 flex items-center gap-2 text-sm ${
+            esSanJuan ? "text-gray-600" : "text-brand-textSecondary"
+          }`}
+        >
+          <span>Inicio</span>
+          <span>›</span>
+          <span>{proyectoSeleccionado}</span>
+          <span>›</span>
+          <span className={esSanJuan ? "font-medium text-blue-600" : "font-medium text-brand-primary"}>
+            Personalizar
+          </span>
+        </div>
+
+        {esSanJuan && (
+          <div className="mb-8 text-center">
+            <h2 className="mb-2 text-2xl font-bold text-gray-900">
+              🏗️ Servicios de Remodelación Disponibles
+            </h2>
+            <p className="text-gray-600">
+              Selecciona las áreas y acabados que deseas mejorar en tu apartamento
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Contenido principal - Layout vertical por categorías */}
