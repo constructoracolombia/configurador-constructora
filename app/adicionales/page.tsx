@@ -19,8 +19,8 @@ export default function AdicionalesPage() {
     toggleAdicional,
     incrementarCantidad,
     decrementarCantidad,
+    removeAdicional,
     getCantidad,
-    getTotal,
     planBase,
     proyecto,
     setProyecto,
@@ -31,6 +31,8 @@ export default function AdicionalesPage() {
   const [totalAnimado, setTotalAnimado] = useState(0);
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState("Ciudadela Verde");
   const [tipoProyecto, setTipoProyecto] = useState("vis_remodelacion");
+  const [categoriaActiva, setCategoriaActiva] = useState("Todas");
+  const [productosSeleccionados, setProductosSeleccionados] = useState<any[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const esSanJuan = tipoProyecto === "acabados_premium";
 
@@ -144,6 +146,12 @@ export default function AdicionalesPage() {
     return () => clearInterval(interval);
   }, [seleccionados]);
 
+  useEffect(() => {
+    setProductosSeleccionados(
+      seleccionados.map((p) => ({ ...p, cantidad: p.cantidad ?? 1 }))
+    );
+  }, [seleccionados]);
+
   const estaSeleccionado = (id: string) => {
     return seleccionados.some((p) => p.id === id);
   };
@@ -152,19 +160,49 @@ export default function AdicionalesPage() {
     return getCantidad(id);
   };
 
+  const agregarProducto = (producto: any) => {
+    const yaExiste = productosSeleccionados.find((p) => p.id === producto.id);
+
+    if (yaExiste) {
+      setProductosSeleccionados(
+        productosSeleccionados.map((p) =>
+          p.id === producto.id ? { ...p, cantidad: (p.cantidad ?? 1) + 1 } : p
+        )
+      );
+      incrementarCantidad(producto.id, producto.maxCantidad ?? 999);
+    } else {
+      setProductosSeleccionados([
+        ...productosSeleccionados,
+        { ...producto, cantidad: 1 },
+      ]);
+      toggleAdicional(producto);
+    }
+  };
+
+  const quitarProducto = (productoId: string) => {
+    const producto = productosSeleccionados.find((p) => p.id === productoId);
+
+    if (producto && (producto.cantidad ?? 1) > 1) {
+      setProductosSeleccionados(
+        productosSeleccionados.map((p) =>
+          p.id === productoId ? { ...p, cantidad: (p.cantidad ?? 1) - 1 } : p
+        )
+      );
+      decrementarCantidad(productoId);
+    } else {
+      setProductosSeleccionados(
+        productosSeleccionados.filter((p) => p.id !== productoId)
+      );
+      removeAdicional(productoId);
+    }
+  };
+
   if (!planBase || !proyecto) {
     return null;
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`min-h-screen pb-32 ${
-        esSanJuan
-          ? "bg-gray-50"
-          : "bg-gradient-to-br from-brand-dark via-black to-brand-dark"
-      }`}
-    >
+    <div ref={containerRef} className="min-h-screen bg-black pb-32">
       {/* Barra de progreso superior FIJA */}
       <div
         className={`fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-sm ${
@@ -289,35 +327,68 @@ export default function AdicionalesPage() {
       )}
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div
-          className={`mb-6 flex items-center gap-2 text-sm ${
-            esSanJuan ? "text-gray-600" : "text-brand-textSecondary"
-          }`}
-        >
+        <div className="mb-6 flex items-center gap-2 text-sm text-gray-400">
           <span>Inicio</span>
           <span>›</span>
           <span>{proyectoSeleccionado}</span>
           <span>›</span>
-          <span className={esSanJuan ? "font-medium text-blue-600" : "font-medium text-brand-primary"}>
+          <span className="font-medium text-yellow-400">
             Personalizar
           </span>
         </div>
 
         {esSanJuan && (
           <div className="mb-8 text-center">
-            <h2 className="mb-2 text-2xl font-bold text-gray-900">
-              🏗️ Servicios de Remodelación Disponibles
+            <h2 className="mb-2 text-2xl font-bold text-white">
+              🏗️ Servicios de <span className="text-yellow-400">Remodelación</span>{" "}
+              Disponibles
             </h2>
-            <p className="text-gray-600">
+            <p className="text-gray-400">
               Selecciona las áreas y acabados que deseas mejorar en tu apartamento
             </p>
           </div>
         )}
       </div>
 
+      <div className="mx-auto mb-8 max-w-6xl px-4">
+        <div className="sticky top-24 rounded-2xl border-2 border-gray-800 bg-gradient-to-br from-gray-900 to-black p-6">
+          <h2 className="mb-4 text-xl font-bold text-white">Categorías</h2>
+          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <button
+              onClick={() => setCategoriaActiva("Todas")}
+              className={`rounded-xl px-4 py-3 text-left font-medium transition-all ${
+                categoriaActiva === "Todas"
+                  ? "bg-yellow-400 text-black"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              Todas
+            </button>
+            {categoriasNormalizadas.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoriaActiva(cat)}
+                className={`rounded-xl px-4 py-3 text-left font-medium transition-all ${
+                  categoriaActiva === cat
+                    ? "bg-yellow-400 text-black"
+                    : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Contenido principal - Layout vertical por categorías */}
       <div className="mx-auto max-w-6xl space-y-12 px-4">
-        {productosPorCategoria.map((grupo, grupoIdx) => (
+        {productosPorCategoria
+          .filter(
+            (grupo) =>
+              categoriaActiva === "Todas" || grupo.categoria === categoriaActiva
+          )
+          .map((grupo, grupoIdx) => (
           <motion.div
             key={grupo.categoria}
             initial={{ opacity: 0, y: 20 }}
@@ -326,10 +397,10 @@ export default function AdicionalesPage() {
             transition={{ delay: grupoIdx * 0.05 }}
           >
             <div className="mb-6">
-              <h2 className="mb-2 text-2xl font-bold text-brand-text">
+              <h2 className="mb-2 text-2xl font-bold text-white">
                 {grupo.categoria}
               </h2>
-              <div className="h-1 w-20 rounded-full bg-brand-primary" />
+              <div className="h-1 w-20 rounded-full bg-yellow-400" />
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -348,34 +419,25 @@ export default function AdicionalesPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Card
-                      onClick={() =>
-                        !permiteMultiples && toggleAdicional(producto)
-                      }
-                      className={`h-full cursor-pointer transition-all ${
-                        seleccionado
-                          ? "border-2 border-brand-primary bg-brand-primary/10 shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
-                          : "border border-brand-border bg-brand-card hover:border-brand-primary/50"
-                      }`}
-                    >
+                    <Card className="h-full overflow-hidden rounded-2xl border-2 border-gray-800 bg-gradient-to-br from-gray-900 to-black transition-all duration-300 hover:border-yellow-400">
                       <CardContent className="p-4">
-                        <div className="relative mb-3 aspect-[3/2] w-full overflow-hidden rounded-lg bg-brand-border">
+                        <div className="relative mb-3 h-48 w-full overflow-hidden rounded-lg bg-gray-800">
                           {producto.imagen &&
                           !producto.imagen.includes("placeholder") ? (
                             <Image
                               src={producto.imagen}
                               alt={producto.nombre}
                               fill
-                              className="object-cover"
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-4xl text-brand-textSecondary">
+                            <div className="flex h-full w-full items-center justify-center text-4xl text-gray-500">
                               🏗️
                             </div>
                           )}
 
                           <div className="absolute right-2 top-2">
-                            <Badge className="bg-brand-primary text-xs text-black">
+                            <Badge className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-black">
                               {producto.categoria}
                             </Badge>
                           </div>
@@ -388,61 +450,54 @@ export default function AdicionalesPage() {
                         </div>
 
                         <div>
-                          <h4 className="mb-1 text-sm font-semibold text-brand-text">
+                          <h4 className="mb-1 text-lg font-bold text-white">
                             {producto.nombre}
                           </h4>
-                          <p className="mb-3 line-clamp-2 text-xs text-brand-textSecondary">
+                          <p className="mb-3 line-clamp-2 text-sm text-gray-400">
                             {producto.descripcion}
                           </p>
 
-                          <div className="mb-3 flex items-center justify-between">
-                            <span className="text-base font-bold text-brand-primary">
-                              {formatoPrecio(producto.precio)}
-                            </span>
-                            {producto.codigo && (
-                              <span className="text-xs text-brand-textSecondary">
-                                #{producto.codigo}
-                              </span>
-                            )}
+                          <div className="mb-4 text-xl font-bold text-yellow-400">
+                            $ {producto.precio.toLocaleString("es-CO")}
                           </div>
 
-                          {permiteMultiples && (
-                            <div className="mt-3 flex items-center justify-center gap-3">
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  decrementarCantidad(producto.id);
-                                }}
-                                disabled={cantidad === 0}
-                                className="h-8 w-8 bg-brand-dark p-0 hover:bg-brand-border"
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
+                          {(() => {
+                            const productoEnCarrito = productosSeleccionados.find(
+                              (p) => p.id === producto.id
+                            );
 
-                              <span className="w-8 text-center text-lg font-bold text-brand-text">
-                                {cantidad}
-                              </span>
+                            if (productoEnCarrito) {
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => quitarProducto(producto.id)}
+                                    className="h-12 w-12 flex-shrink-0 rounded-xl bg-gray-800 text-xl font-bold text-yellow-400 transition-all hover:bg-gray-700"
+                                  >
+                                    −
+                                  </button>
+                                  <div className="flex h-12 flex-1 items-center justify-center rounded-xl bg-yellow-400 text-xl font-bold text-black">
+                                    {productoEnCarrito.cantidad}
+                                  </div>
+                                  <button
+                                    onClick={() => agregarProducto(producto)}
+                                    className="h-12 w-12 flex-shrink-0 rounded-xl bg-yellow-400 text-xl font-bold text-black transition-all hover:bg-yellow-500"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              );
+                            }
 
+                            return (
                               <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (cantidad === 0) {
-                                    toggleAdicional(producto);
-                                  }
-                                  incrementarCantidad(
-                                    producto.id,
-                                    producto.maxCantidad ?? 10
-                                  );
-                                }}
-                                disabled={
-                                  cantidad >= (producto.maxCantidad ?? 10)
-                                }
-                                className="h-8 w-8 bg-brand-primary p-0 text-black hover:bg-brand-secondary"
+                                onClick={() => agregarProducto(producto)}
+                                className="w-full rounded-xl bg-yellow-400 py-3 font-bold text-black transition-all duration-300 hover:bg-yellow-500"
                               >
-                                <Plus className="h-4 w-4" />
+                                <span className="mr-2 text-lg">+</span>
+                                Agregar
                               </Button>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       </CardContent>
                     </Card>
@@ -453,6 +508,58 @@ export default function AdicionalesPage() {
           </motion.div>
         ))}
       </div>
+
+      {productosSeleccionados.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="w-80 rounded-2xl border-2 border-yellow-400 bg-gradient-to-br from-gray-900 to-black p-6 shadow-2xl">
+            <h3 className="mb-4 flex items-center justify-between text-lg font-bold text-white">
+              <span>Tu Selección</span>
+              <span className="text-yellow-400">
+                {productosSeleccionados.length} items
+              </span>
+            </h3>
+
+            <div className="mb-4 max-h-60 space-y-2 overflow-y-auto">
+              {productosSeleccionados.map((p) => (
+                <div key={p.id} className="rounded-lg bg-gray-800/50 p-3 text-sm">
+                  <div className="mb-1 font-medium text-white">{p.nombre}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">x{p.cantidad}</span>
+                    <span className="font-bold text-yellow-400">
+                      $ {(p.precio * p.cantidad).toLocaleString("es-CO")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mb-4 border-t-2 border-gray-800 pt-4">
+              <div className="flex items-center justify-between text-lg">
+                <span className="font-bold text-white">Total:</span>
+                <span className="text-xl font-bold text-yellow-400">
+                  ${" "}
+                  {productosSeleccionados
+                    .reduce((sum, p) => sum + p.precio * p.cantidad, 0)
+                    .toLocaleString("es-CO")}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                localStorage.setItem(
+                  "productos_seleccionados",
+                  JSON.stringify(productosSeleccionados)
+                );
+                window.location.href = "/datos-cliente";
+              }}
+              className="w-full rounded-xl bg-yellow-400 px-4 py-3 font-bold text-black transition-all duration-300 hover:bg-yellow-500"
+            >
+              Continuar →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Footer sticky con total */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t-2 border-brand-primary bg-brand-dark/95 p-4 shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] backdrop-blur-sm">
