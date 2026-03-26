@@ -8,46 +8,37 @@ import { useTrackingParams } from "@/lib/hooks/useTrackingParams";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImagenOptimizada } from "@/components/ImagenOptimizada";
-import { ExternalLink, Loader2, MapPin, Sparkles } from "lucide-react";
-
-const BROCHURE_URLS: Record<string, string> = {
-  "Ciudadela Verde": "https://constructoracolombia.com/brochure_cv",
-  Beltramonto: "https://constructoracolombia.com/brochure_beltramonto",
-  Fiore: "https://constructoracolombia.com/brochure_fiore",
-  Azafrán: "https://constructoracolombia.com/brochure_azafran",
-  "Parque Oriente": "https://constructoracolombia.com/brochure_parqueoriente",
-  Aurora: "https://constructoracolombia.com/brochure_parqueoriente",
-  Montevista: "https://constructoracolombia.com/brochure_parqueoriente",
-  Montebello: "https://constructoracolombia.com/brochure_montebello",
-  "Alto Tramonti": "https://constructoracolombia.com/brochure_altotramonti",
-  "Morada del Viento": "https://constructoracolombia.com/brochure_moradaviento",
-  "Fontana de la Sierra": "https://constructoracolombia.com/brochure_fontanasierra",
-};
+import { Loader2, MapPin, Sparkles } from "lucide-react";
 
 function PresupuestosContent() {
   const trackingParams = useTrackingParams();
   void trackingParams;
   const router = useRouter();
   const setProyecto = useCotizador((state) => state.setProyecto);
+  const setPlanBase = useCotizador((state) => state.setPlanBase);
   const [loading, setLoading] = useState(false);
   const [proyectoCargando, setProyectoCargando] = useState("");
 
   const handleProyectoClick = (proyecto: (typeof proyectos)[number]) => {
-    const brochureUrl = BROCHURE_URLS[proyecto.nombre];
-
     setLoading(true);
     setProyectoCargando(proyecto.nombre);
+    const tipoProyecto =
+      "tipo" in proyecto && proyecto.tipo === "acabados_premium"
+        ? "acabados_premium"
+        : "vis_remodelacion";
 
-    if (brochureUrl) {
-      window.open(brochureUrl, "_blank", "noopener,noreferrer");
-      setTimeout(() => {
-        setLoading(false);
-        setProyectoCargando("");
-      }, 1500);
-    } else {
-      setProyecto(proyecto.id);
-      router.push("/plan");
+    localStorage.setItem("proyecto_seleccionado", proyecto.nombre);
+    localStorage.setItem("proyecto_tipo", tipoProyecto);
+
+    setProyecto(proyecto.id);
+
+    if (tipoProyecto === "acabados_premium") {
+      setPlanBase("basico");
+      router.push(`/brochure?proyecto=${encodeURIComponent(proyecto.nombre)}`);
+      return;
     }
+
+    router.push(`/plan?proyecto=${encodeURIComponent(proyecto.nombre)}`);
   };
 
   return (
@@ -178,9 +169,6 @@ function PresupuestosContent() {
                   ) : (
                     <>
                       Cotizar mi apartamento
-                      {BROCHURE_URLS[proyecto.nombre] && (
-                        <ExternalLink className="h-4 w-4" />
-                      )}
                     </>
                   )}
                 </Button>

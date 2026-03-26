@@ -23,23 +23,43 @@ export default function AdicionalesPage() {
     getTotal,
     planBase,
     proyecto,
+    setProyecto,
+    setPlanBase,
   } = useCotizador();
 
   const [scrollProgress, setScrollProgress] = useState(0);
   const [totalAnimado, setTotalAnimado] = useState(0);
+  const [tipoProyecto, setTipoProyecto] = useState("vis_remodelacion");
   const containerRef = useRef<HTMLDivElement>(null);
+  const esSanJuan = tipoProyecto === "acabados_premium";
 
   useEffect(() => {
+    const tipo = localStorage.getItem("proyecto_tipo") || "vis_remodelacion";
+    setTipoProyecto(tipo);
+
+    if (tipo === "acabados_premium") {
+      if (!proyecto) setProyecto("san-juan-cuesta");
+      if (!planBase) setPlanBase("basico");
+      return;
+    }
+
     if (!proyecto || !planBase) {
       router.push("/presupuestos");
     }
-  }, [proyecto, planBase, router]);
+  }, [planBase, proyecto, router, setPlanBase, setProyecto]);
 
   // Filtrado dinámico: planBase (selectedPlan) persiste desde /plan; evita mostrar
   // lo que ya viene incluido en el plan (sobre todo Intermedio) para no cobrar doble.
   const productos = planBase ? adicionalesFiltrados(planBase) : [];
 
-  const productosPorCategoria = categorias
+  const categoriasPorTipo: Record<string, readonly string[]> = {
+    vis_remodelacion: categorias,
+    acabados_premium: ["Carpintería", "Baños", "Enchapes", "Otros"],
+  };
+  const categoriasActivas =
+    categoriasPorTipo[tipoProyecto] || categoriasPorTipo.vis_remodelacion;
+
+  const productosPorCategoria = categoriasActivas
     .map((cat) => ({
       categoria: cat,
       productos: productos.filter((p) => p.categoria === cat),
@@ -134,15 +154,20 @@ export default function AdicionalesPage() {
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/50 bg-brand-primary/20 px-4 py-2">
             <Sparkles className="h-4 w-4 text-brand-primary" />
             <span className="text-sm font-semibold text-brand-primary">
-              Personaliza tu{" "}
-              {planBase === "basico" ? "Plan Básico" : "Plan Intermedio Plus"}
+              {esSanJuan
+                ? "Acabados premium para San Juan de la Cuesta"
+                : `Personaliza tu ${planBase === "basico" ? "Plan Básico" : "Plan Intermedio Plus"}`}
             </span>
           </div>
           <h1 className="mb-2 text-3xl font-bold text-brand-text md:text-4xl">
-            Arma tu Remodelación Perfecta
+            {esSanJuan
+              ? "Personaliza tu Apartamento"
+              : "Personaliza tu Remodelación"}
           </h1>
           <p className="text-brand-textSecondary">
-            Agrega los acabados premium que desees • Scroll para explorar
+            {esSanJuan
+              ? "Selecciona los acabados y mejoras que deseas para tu nuevo hogar"
+              : "Selecciona los espacios y acabados que deseas remodelar"}
           </p>
         </motion.div>
       </div>
