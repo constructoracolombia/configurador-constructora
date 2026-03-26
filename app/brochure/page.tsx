@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { useCotizador } from "@/lib/store/cotizador";
 
 function BrochureContent() {
@@ -25,12 +24,11 @@ function BrochureContent() {
       <div className="sticky top-0 z-10 border-b border-gray-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10">
-              <Image
+            <div className="relative flex h-10 w-10 items-center justify-center">
+              <img
                 src="/proyectos/logo-san-juan.png"
                 alt="San Juan de la Cuesta"
-                fill
-                className="object-contain"
+                className="max-h-full max-w-full object-contain"
               />
             </div>
             <div>
@@ -47,16 +45,13 @@ function BrochureContent() {
         </div>
       </div>
 
-      <div className="relative h-96 bg-gradient-to-br from-blue-900 to-blue-700">
-        <div className="absolute inset-0 opacity-20">
-          <Image
-            src="/proyectos/san-juan-cuesta.jpg"
-            alt="San Juan de la Cuesta"
-            fill
-            className="object-cover"
-            onLoad={() => setImagenCargada(true)}
-          />
-        </div>
+      <div className="relative h-96 overflow-hidden bg-gradient-to-br from-blue-900 to-blue-700">
+        <img
+          src="/proyectos/san-juan-cuesta.jpg"
+          alt="San Juan de la Cuesta"
+          className="absolute inset-0 h-full w-full object-cover opacity-20"
+          onLoad={() => setImagenCargada(true)}
+        />
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
           <div className="text-white">
             <div className="mb-4 inline-block rounded-full bg-white/20 px-3 py-1 text-sm font-medium backdrop-blur-sm">
@@ -168,19 +163,17 @@ function BrochureContent() {
           </h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="relative h-64 overflow-hidden rounded-xl bg-gray-200">
-              <Image
+              <img
                 src="/proyectos/san-juan-cuesta.jpg"
                 alt="San Juan de la Cuesta - Exterior"
-                fill
-                className="object-cover"
+                className="h-full w-full object-cover"
               />
             </div>
-            <div className="relative h-64 overflow-hidden rounded-xl bg-gray-200">
-              <Image
+            <div className="relative flex h-64 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-white p-8">
+              <img
                 src="/proyectos/logo-san-juan.png"
                 alt="Logo San Juan de la Cuesta"
-                fill
-                className="object-contain p-8"
+                className="max-h-full max-w-full object-contain"
               />
             </div>
           </div>

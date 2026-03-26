@@ -7,7 +7,6 @@ import { useCotizador } from "@/lib/store/cotizador";
 import { useTrackingParams } from "@/lib/hooks/useTrackingParams";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImagenOptimizada } from "@/components/ImagenOptimizada";
 import { Loader2, MapPin, Sparkles } from "lucide-react";
 
 function PresupuestosContent() {
@@ -124,11 +123,9 @@ function PresupuestosContent() {
             >
               <CardHeader className="relative overflow-hidden p-0">
                 <div className="relative h-56 overflow-hidden">
-                  <ImagenOptimizada
+                  <img
                     src={proyecto.imagen}
                     alt={proyecto.nombre}
-                    width={400}
-                    height={300}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
