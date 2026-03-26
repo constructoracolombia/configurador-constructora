@@ -210,12 +210,14 @@ export default function AdicionalesPage() {
 
       {/* Header San Juan de la Cuesta */}
       {esSanJuan && (
-        <div className="bg-gradient-to-br from-blue-600 to-blue-800 pt-16 text-white">
+        <div className="border-b-4 border-yellow-400 bg-gradient-to-br from-black via-gray-900 to-black pt-16 text-white">
           <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
             <div className="mb-8 text-center">
-              <h1 className="mb-2 text-4xl font-bold">Personaliza tu Apartamento</h1>
-              <div className="text-2xl font-semibold text-blue-100">
-                San Juan de la Cuesta
+              <h1 className="mb-2 text-4xl font-bold">
+                Personaliza tu <span className="text-yellow-400">Apartamento</span>
+              </h1>
+              <div className="text-2xl font-semibold">
+                <span className="text-yellow-400">San Juan de la Cuesta</span>
               </div>
             </div>
 
@@ -225,31 +227,37 @@ export default function AdicionalesPage() {
                 src="/proyectos/san-juan-cuesta.jpg"
                 alt="San Juan de la Cuesta"
                 className="h-full w-full object-cover"
+                onLoad={() => console.log("✅ Imagen cargada correctamente")}
                 onError={(e) => {
+                  console.error("❌ Error cargando imagen:", e.currentTarget.src);
                   e.currentTarget.src =
-                    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"%3E%3Crect fill="%234F46E5" width="1200" height="400"/%3E%3Ctext fill="white" font-size="32" font-family="Arial" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ESan Juan de la Cuesta%3C/text%3E%3C/svg%3E';
+                    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="400"%3E%3Crect fill="%23000000" width="1200" height="400"/%3E%3Crect fill="%23EAB308" x="0" y="390" width="1200" height="10"/%3E%3Ctext fill="%23EAB308" font-size="32" font-family="Arial" x="50%25" y="50%25" text-anchor="middle" dy=".3em" font-weight="bold"%3ESan Juan de la Cuesta%3C/text%3E%3C/svg%3E';
                 }}
               />
             </div>
 
             <div className="mb-6 text-center">
-              <div className="inline-block rounded-xl border border-white/20 bg-white/10 px-6 py-4 backdrop-blur-sm">
+              <div className="inline-block rounded-xl border-2 border-yellow-400/40 bg-gradient-to-r from-yellow-400/20 to-yellow-600/20 px-6 py-4 backdrop-blur-sm">
                 <p className="text-lg text-white">
-                  <span className="font-semibold">Constructora Colombia</span>,
+                  <span className="font-bold text-yellow-400">Constructora Colombia</span>,
                   {" "}tu aliado de confianza en{" "}
-                  <span className="font-semibold">San Juan de la Cuesta</span>{" "}
+                  <span className="font-semibold text-yellow-300">San Juan de la Cuesta</span>{" "}
                   para hacer realidad la remodelación de tus sueños
                 </p>
               </div>
             </div>
 
             <div className="mx-auto max-w-3xl text-center">
-              <p className="mb-2 text-xl text-blue-100">
-                Selecciona lo que deseas mejorar y calcula tu presupuesto de
-                remodelación
+              <p className="mb-2 text-xl text-gray-300">
+                Selecciona lo que deseas mejorar y calcula tu{" "}
+                <span className="font-semibold text-yellow-400">
+                  presupuesto de remodelación
+                </span>
               </p>
-              <p className="text-lg text-blue-200">
-                ⏱️ En solo 3 minutos obtendrás tu cotización personalizada
+              <p className="text-lg text-gray-400">
+                <span className="text-yellow-400">⏱️</span> En solo{" "}
+                <span className="font-bold text-yellow-400">3 minutos</span>{" "}
+                obtendrás tu cotización personalizada
               </p>
             </div>
           </div>
