@@ -7,14 +7,14 @@ export const proyectos = [
     nombre: "Ciudadela Verde",
     ubicacion: "Bucaramanga",
     precioIntermedioEspecial: true,
-    imagen: "/proyectos/ciudadela-verde.jpg.jpeg",
+    imagen: "/proyectos/ciudadela-verde.jpg",
     tipo: "vis_remodelacion",
   },
   {
     id: "san-juan-cuesta",
     nombre: "San Juan de la Cuesta",
     ubicacion: "Piedecuesta, Santander",
-    imagen: "/san-juan-cuesta.jpg",
+    imagen: "/proyectos/san-juan-cuesta.jpg",
     tipo: "acabados_premium",
   },
   {
