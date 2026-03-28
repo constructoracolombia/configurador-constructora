@@ -22,6 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
+import CalendarioAnual from "@/components/CalendarioAnual";
 
 type Lead = {
   id: string;
@@ -44,6 +45,7 @@ type Lead = {
   proximo_paso_fecha_limite?: string | null;
   proximo_paso_completado?: boolean | null;
   proximo_paso_completado_fecha?: string | null;
+  fecha_entrega_apartamento?: string | null;
 };
 
 type EtapaVisual = {
@@ -89,6 +91,7 @@ type EditarLeadForm = {
   proximo_paso: string | null;
   proximo_paso_fecha_limite: string | null;
   proximo_paso_completado: boolean;
+  fecha_entrega_apartamento: string;
 };
 
 type Kpis = {
@@ -214,6 +217,7 @@ export default function CentroOperacionesPage() {
   );
   const [leads, setLeads] = useState<Lead[]>([]);
   const [busqueda, setBusqueda] = useState("");
+  const [calendarioRefresh, setCalendarioRefresh] = useState(0);
 
   useEffect(() => {
     const auth = localStorage.getItem("admin_auth");
@@ -340,6 +344,7 @@ export default function CentroOperacionesPage() {
       });
 
       console.log("✅ Dashboard cargado correctamente");
+      setCalendarioRefresh((n) => n + 1);
     } catch (error: unknown) {
       console.error("❌ Error completo en cargarDatos:", error);
       const err = error as { message?: string; stack?: string };
@@ -469,6 +474,9 @@ export default function CentroOperacionesPage() {
       proximo_paso: lead.proximo_paso ?? null,
       proximo_paso_fecha_limite: lead.proximo_paso_fecha_limite ?? null,
       proximo_paso_completado: lead.proximo_paso_completado === true,
+      fecha_entrega_apartamento: lead.fecha_entrega_apartamento
+        ? String(lead.fecha_entrega_apartamento).slice(0, 10)
+        : "",
     });
     setMostrarModalEditar(true);
   };
@@ -619,6 +627,9 @@ export default function CentroOperacionesPage() {
         responsable: leadEditando.responsable,
         es_caliente: leadEditando.es_caliente === true,
         prioridad: leadEditando.prioridad,
+        fecha_entrega_apartamento: leadEditando.fecha_entrega_apartamento.trim()
+          ? leadEditando.fecha_entrega_apartamento.trim()
+          : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -1654,6 +1665,26 @@ export default function CentroOperacionesPage() {
                                     </div>
                                   )}
 
+                                  {lead.fecha_entrega_apartamento && (
+                                    <div className="mt-2 border-t border-gray-200 pt-2">
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <span>📅</span>
+                                        <div>
+                                          <div className="text-gray-500">Entrega apartamento</div>
+                                          <div className="font-semibold text-gray-900">
+                                            {new Date(
+                                              lead.fecha_entrega_apartamento + "T12:00:00"
+                                            ).toLocaleDateString("es-CO", {
+                                              day: "numeric",
+                                              month: "short",
+                                              year: "numeric",
+                                            })}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {lead.presupuesto_estimado && (
                                     <div className="mb-1 text-[11px] font-semibold text-gray-900">
                                       💰 {formatoPrecio(lead.presupuesto_estimado)}
@@ -1809,6 +1840,10 @@ export default function CentroOperacionesPage() {
             </DragDropContext>
           </CardContent>
         </Card>
+
+        <div className="mt-8">
+          <CalendarioAnual refreshKey={calendarioRefresh} />
+        </div>
       </div>
 
       {/* Modal de Nuevo Lead */}
@@ -2242,6 +2277,70 @@ export default function CentroOperacionesPage() {
                   className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">En pesos colombianos</p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  📅 Fecha de Entrega del Apartamento
+                </label>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fecha = new Date();
+                      fecha.setMonth(fecha.getMonth() + 3);
+                      setLeadEditando({
+                        ...leadEditando,
+                        fecha_entrega_apartamento: fecha.toISOString().split("T")[0],
+                      });
+                    }}
+                    className="rounded-lg bg-blue-100 px-3 py-1 text-xs text-blue-700 transition-colors hover:bg-blue-200"
+                  >
+                    +3 meses
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fecha = new Date();
+                      fecha.setMonth(fecha.getMonth() + 6);
+                      setLeadEditando({
+                        ...leadEditando,
+                        fecha_entrega_apartamento: fecha.toISOString().split("T")[0],
+                      });
+                    }}
+                    className="rounded-lg bg-purple-100 px-3 py-1 text-xs text-purple-700 transition-colors hover:bg-purple-200"
+                  >
+                    +6 meses
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fecha = new Date();
+                      fecha.setFullYear(fecha.getFullYear() + 1);
+                      setLeadEditando({
+                        ...leadEditando,
+                        fecha_entrega_apartamento: fecha.toISOString().split("T")[0],
+                      });
+                    }}
+                    className="rounded-lg bg-green-100 px-3 py-1 text-xs text-green-700 transition-colors hover:bg-green-200"
+                  >
+                    +1 año
+                  </button>
+                </div>
+                <input
+                  type="date"
+                  value={leadEditando.fecha_entrega_apartamento || ""}
+                  onChange={(e) =>
+                    setLeadEditando({
+                      ...leadEditando,
+                      fecha_entrega_apartamento: e.target.value,
+                    })
+                  }
+                  className="h-11 w-full rounded-lg border border-gray-300 bg-white px-4 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Fecha estimada de entrega del apartamento al cliente
+                </p>
               </div>
 
               <div>
