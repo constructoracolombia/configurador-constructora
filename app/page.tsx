@@ -23,6 +23,9 @@ import {
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import CalendarioAnual from "@/components/CalendarioAnual";
+import ProteccionDashboard, {
+  cerrarSesionDashboard,
+} from "@/components/ProteccionDashboard";
 
 type Lead = {
   id: string;
@@ -171,11 +174,8 @@ const crearFormularioVacio = (): NuevoLeadForm => ({
   responsable: "Jeisson",
 });
 
-export default function CentroOperacionesPage() {
+function CentroOperacionesDashboard() {
   const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [autenticado, setAutenticado] = useState(false);
-  const [mostrarLogin, setMostrarLogin] = useState(true);
   const [cargando, setCargando] = useState(false);
 
   // Estados para modal de nuevo lead
@@ -220,21 +220,9 @@ export default function CentroOperacionesPage() {
   const [calendarioRefresh, setCalendarioRefresh] = useState(0);
 
   useEffect(() => {
-    const auth = localStorage.getItem("admin_auth");
-    if (auth === "true") {
-      setAutenticado(true);
-      setMostrarLogin(false);
-    }
+    console.log("🔐 Usuario autenticado, cargando datos...");
+    void cargarDatos();
   }, []);
-
-  useEffect(() => {
-    if (autenticado) {
-      console.log("🔐 Usuario autenticado, cargando datos...");
-      void cargarDatos();
-    } else {
-      console.log("🚫 Usuario no autenticado");
-    }
-  }, [autenticado]);
 
   // Atajo: Ctrl/Cmd+K enfoca búsqueda, Esc limpia.
   useEffect(() => {
@@ -359,16 +347,6 @@ export default function CentroOperacionesPage() {
       );
     } finally {
       setCargando(false);
-    }
-  };
-
-  const handleLogin = () => {
-    if (password === "admin2026") {
-      localStorage.setItem("admin_auth", "true");
-      setAutenticado(true);
-      setMostrarLogin(false);
-    } else {
-      alert("Contraseña incorrecta");
     }
   };
 
@@ -899,41 +877,6 @@ export default function CentroOperacionesPage() {
     }
   };
 
-  if (mostrarLogin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardContent className="p-8">
-            <div className="mb-6 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600">
-                <Activity className="h-8 w-8 text-white" />
-              </div>
-              <h1 className="mb-2 text-2xl font-bold text-gray-900">
-                Centro de Operaciones
-              </h1>
-              <p className="text-sm text-gray-600">Constructora Colombia</p>
-            </div>
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              className="mb-4 h-12 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-            />
-            <Button
-              onClick={handleLogin}
-              className="h-12 w-full bg-blue-600 hover:bg-blue-700"
-            >
-              Acceder
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="border-b border-gray-200 bg-white">
@@ -966,11 +909,7 @@ export default function CentroOperacionesPage() {
                 {cargando ? "Actualizando..." : "Actualizar"}
               </Button>
               <Button
-                onClick={() => {
-                  localStorage.removeItem("admin_auth");
-                  setAutenticado(false);
-                  setMostrarLogin(true);
-                }}
+                onClick={() => cerrarSesionDashboard()}
                 variant="ghost"
                 className="text-gray-600"
               >
@@ -2605,5 +2544,13 @@ export default function CentroOperacionesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CentroOperacionesPage() {
+  return (
+    <ProteccionDashboard>
+      <CentroOperacionesDashboard />
+    </ProteccionDashboard>
   );
 }
