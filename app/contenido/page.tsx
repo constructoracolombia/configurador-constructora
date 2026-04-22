@@ -81,6 +81,8 @@ export default function ContenidoPage() {
   // ── Day modal ──
   const [modal, setModal] = useState<DayModal | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [calError, setCalError] = useState<string | null>(null);
 
   // ── Load daily from localStorage ──
   useEffect(() => {
@@ -110,6 +112,7 @@ export default function ContenidoPage() {
 
   // ── Load pauta for current month ──
   const loadPauta = useCallback(async (year: number, month: number) => {
+    setCalError(null);
     const { first, last } = monthRange(year, month);
     const { data, error } = await supabase
       .from("pauta_historial")
@@ -118,7 +121,10 @@ export default function ContenidoPage() {
       .lte("fecha", fmt(last))
       .eq("activa", true);
 
-    if (error) return;
+    if (error) {
+      setCalError(`Error cargando pauta: ${error.message} (código: ${error.code})`);
+      return;
+    }
 
     const map: Record<string, CampaignType[]> = {};
     for (const row of data ?? []) {
@@ -153,6 +159,7 @@ export default function ContenidoPage() {
   const saveModal = async () => {
     if (!modal) return;
     setSaving(true);
+    setSaveError(null);
 
     const upserts = CAMPAIGNS.map((c) => ({
       fecha: modal.fecha,
@@ -161,9 +168,15 @@ export default function ContenidoPage() {
       notas: c.id === "alcance" ? modal.notas : null,
     }));
 
-    await supabase
+    const { error } = await supabase
       .from("pauta_historial")
       .upsert(upserts, { onConflict: "fecha,tipo_campana" });
+
+    if (error) {
+      setSaveError(`${error.message} (código: ${error.code})`);
+      setSaving(false);
+      return;
+    }
 
     await loadPauta(calYear, calMonth);
     setSaving(false);
@@ -315,6 +328,12 @@ export default function ContenidoPage() {
             Pauta
           </h2>
 
+          {calError && (
+            <div style={{ background: "#EF444420", border: "1px solid #EF444460", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#FCA5A5", wordBreak: "break-all" }}>
+              ⚠️ {calError}
+            </div>
+          )}
+
           {/* Legend */}
           <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
             {CAMPAIGNS.map((c) => (
@@ -448,6 +467,13 @@ export default function ContenidoPage() {
                 outline: "none", fontFamily: "inherit", boxSizing: "border-box", marginBottom: 14,
               }}
             />
+
+            {/* Save error */}
+            {saveError && (
+              <div style={{ background: "#EF444420", border: "1px solid #EF444460", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#FCA5A5", wordBreak: "break-all" }}>
+                ⚠️ {saveError}
+              </div>
+            )}
 
             {/* Save */}
             <button
