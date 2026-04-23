@@ -12,6 +12,17 @@ import {
   Minus,
   X,
 } from "lucide-react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,6 +88,48 @@ export default function ContenidoPage() {
   const [calMonth, setCalMonth] = useState(now.getMonth());
   // Map of "YYYY-MM-DD" → active campaign ids
   const [pautaMap, setPautaMap] = useState<Record<string, CampaignType[]>>({});
+
+  // ── Chart ──
+  const [chartData, setChartData] = useState<{ labels: string[]; alcance: number[]; conversion_wp: number[]; remarketing: number[] }>({ labels: [], alcance: [], conversion_wp: [], remarketing: [] });
+
+  const loadChart = useCallback(async () => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 29);
+
+    const { data } = await supabase
+      .from("pauta_historial")
+      .select("fecha, tipo_campana, activa")
+      .gte("fecha", fmt(start))
+      .lte("fecha", fmt(end))
+      .eq("activa", true);
+
+    // Build ordered list of last 30 days
+    const days: string[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(fmt(d));
+    }
+
+    const byDay: Record<string, Set<CampaignType>> = {};
+    for (const row of data ?? []) {
+      if (!byDay[row.fecha]) byDay[row.fecha] = new Set();
+      byDay[row.fecha].add(row.tipo_campana as CampaignType);
+    }
+
+    setChartData({
+      labels: days.map((d) => {
+        const [, m, day] = d.split("-");
+        return `${day}/${m}`;
+      }),
+      alcance: days.map((d) => (byDay[d]?.has("alcance") ? 1 : 0)),
+      conversion_wp: days.map((d) => (byDay[d]?.has("conversion_wp") ? 1 : 0)),
+      remarketing: days.map((d) => (byDay[d]?.has("remarketing") ? 1 : 0)),
+    });
+  }, []);
+
+  useEffect(() => { loadChart(); }, [loadChart]);
 
   // ── Day modal ──
   const [modal, setModal] = useState<DayModal | null>(null);
@@ -178,7 +231,7 @@ export default function ContenidoPage() {
       return;
     }
 
-    await loadPauta(calYear, calMonth);
+    await Promise.all([loadPauta(calYear, calMonth), loadChart()]);
     setSaving(false);
     setModal(null);
   };
@@ -402,6 +455,94 @@ export default function ContenidoPage() {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: "#1E1E1E" }} />
+
+        {/* ── SECCIÓN 3: GRÁFICA 30 DÍAS ─────────────────────────────────── */}
+        <section>
+          <h2 style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 16px" }}>
+            Últimos 30 días
+          </h2>
+          <div style={{ background: "#111", border: "1px solid #1E1E1E", borderRadius: 12, padding: "16px 8px 8px" }}>
+            <Bar
+              data={{
+                labels: chartData.labels,
+                datasets: [
+                  {
+                    label: "Alcance",
+                    data: chartData.alcance,
+                    backgroundColor: "#F97316",
+                    stack: "pauta",
+                    borderRadius: 2,
+                  },
+                  {
+                    label: "Conversión WP",
+                    data: chartData.conversion_wp,
+                    backgroundColor: "#3B82F6",
+                    stack: "pauta",
+                    borderRadius: 2,
+                  },
+                  {
+                    label: "Remarketing",
+                    data: chartData.remarketing,
+                    backgroundColor: "#EF4444",
+                    stack: "pauta",
+                    borderRadius: 2,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                animation: { duration: 400 },
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: "bottom",
+                    labels: {
+                      color: "#B0B0B0",
+                      font: { size: 11 },
+                      boxWidth: 10,
+                      boxHeight: 10,
+                      padding: 16,
+                    },
+                  },
+                  tooltip: {
+                    backgroundColor: "#1A1A1A",
+                    borderColor: "#333",
+                    borderWidth: 1,
+                    titleColor: "#F5F5F5",
+                    bodyColor: "#B0B0B0",
+                    callbacks: {
+                      label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y ? "Activa" : "—"}`,
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    stacked: true,
+                    grid: { color: "#1E1E1E" },
+                    ticks: {
+                      color: "#555",
+                      font: { size: 9 },
+                      maxRotation: 0,
+                      maxTicksLimit: 10,
+                    },
+                  },
+                  y: {
+                    stacked: true,
+                    grid: { color: "#1E1E1E" },
+                    ticks: { color: "#555", font: { size: 10 }, stepSize: 1 },
+                    max: 3,
+                    title: { display: false },
+                  },
+                },
+              }}
+            />
           </div>
         </section>
       </div>
