@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
 import CalendarioAnual from "@/components/CalendarioAnual";
+import GraficaSeguimiento from "@/components/GraficaSeguimiento";
 import ProteccionDashboard, {
   cerrarSesionDashboard,
 } from "@/components/ProteccionDashboard";
@@ -1630,6 +1631,29 @@ function CentroOperacionesDashboard() {
                                     </div>
                                   )}
 
+                                  {(() => {
+                                    const base = (lead as any).ultima_actividad_fecha || lead.fecha_contacto;
+                                    if (!base) return null;
+                                    const dias = Math.floor(
+                                      (new Date().getTime() - new Date(base).getTime()) /
+                                        (1000 * 60 * 60 * 24)
+                                    );
+                                    const [colorBg, emoji] =
+                                      dias > 14
+                                        ? ['bg-red-100 text-red-700', '🚨']
+                                        : dias > 7
+                                          ? ['bg-orange-100 text-orange-700', '⚠️']
+                                          : dias > 3
+                                            ? ['bg-yellow-100 text-yellow-700', '⏰']
+                                            : ['bg-green-100 text-green-700', '✅'];
+                                    return (
+                                      <div className={`mb-1 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium ${colorBg}`}>
+                                        <span>{emoji}</span>
+                                        <span>Hace {dias}d</span>
+                                      </div>
+                                    );
+                                  })()}
+
                                   {lead.responsable && (
                                     <div className="mb-1 text-[10px] text-gray-500">
                                       👤 {lead.responsable}
@@ -1782,6 +1806,11 @@ function CentroOperacionesDashboard() {
 
         <div className="mt-8">
           <CalendarioAnual refreshKey={calendarioRefresh} />
+        </div>
+
+        {/* Gráfica de Seguimiento */}
+        <div className="mt-8">
+          <GraficaSeguimiento />
         </div>
       </div>
 
