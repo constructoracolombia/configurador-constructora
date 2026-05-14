@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
+interface EntradaHistorial {
+  fecha: string;
+  observacion: string;
+  usuario: string;
+  timestamp_registro: string;
+}
+
 interface LeadGrafica {
   id: string;
   nombre: string;
@@ -14,6 +21,7 @@ interface LeadGrafica {
   observaciones: string | null;
   es_caliente: boolean | null;
   presupuesto_estimado: number | null;
+  historial_seguimiento?: EntradaHistorial[];
 }
 
 export default function GraficaSeguimiento() {
@@ -44,7 +52,7 @@ export default function GraficaSeguimiento() {
     try {
       const { data, error } = await supabase
         .from('leads')
-        .select('id, nombre, etapa, telefono, nombre_proyecto, ultima_actividad_fecha, fecha_contacto, observaciones, es_caliente, presupuesto_estimado')
+        .select('id, nombre, etapa, telefono, nombre_proyecto, ultima_actividad_fecha, fecha_contacto, observaciones, es_caliente, presupuesto_estimado, historial_seguimiento')
         .is('deleted_at', null)
         .not('etapa', 'in', '("PERDIDO","DESCALIFICADO")')
         .order('ultima_actividad_fecha', { ascending: false, nullsFirst: false });
@@ -52,11 +60,11 @@ export default function GraficaSeguimiento() {
       if (error) throw error;
       setLeads(data || []);
     } catch {
-      // Fallback: si ultima_actividad_fecha no existe aún, cargar sin ese orden
+      // Fallback: si ultima_actividad_fecha no existe aún
       try {
         const { data } = await supabase
           .from('leads')
-          .select('id, nombre, etapa, telefono, nombre_proyecto, fecha_contacto, observaciones, es_caliente, presupuesto_estimado')
+          .select('id, nombre, etapa, telefono, nombre_proyecto, fecha_contacto, observaciones, es_caliente, presupuesto_estimado, historial_seguimiento')
           .is('deleted_at', null)
           .not('etapa', 'in', '("PERDIDO","DESCALIFICADO")')
           .order('fecha_contacto', { ascending: false, nullsFirst: false });
@@ -70,6 +78,10 @@ export default function GraficaSeguimiento() {
   };
 
   const getFechaActividad = (lead: LeadGrafica): string => {
+    if (lead.historial_seguimiento && lead.historial_seguimiento.length > 0) {
+      const fechas = lead.historial_seguimiento.map(item => new Date(item.fecha).getTime());
+      return new Date(Math.max(...fechas)).toISOString();
+    }
     return lead.ultima_actividad_fecha || lead.fecha_contacto || new Date().toISOString();
   };
 
@@ -325,16 +337,35 @@ export default function GraficaSeguimiento() {
             </div>
 
             <div>
-              <div className="mb-2 text-sm font-medium text-gray-600">Historial de Seguimiento</div>
-              <div className="max-h-60 overflow-y-auto rounded-xl bg-gray-50 p-4">
-                {leadSeleccionado.observaciones ? (
-                  <div className="whitespace-pre-wrap text-sm text-gray-700">
-                    {leadSeleccionado.observaciones}
-                  </div>
-                ) : (
-                  <div className="text-sm italic text-gray-400">No hay observaciones registradas</div>
-                )}
-              </div>
+              <div className="mb-3 text-sm font-medium text-gray-600">📋 Historial de Seguimiento</div>
+              {leadSeleccionado.historial_seguimiento && leadSeleccionado.historial_seguimiento.length > 0 ? (
+                <div className="max-h-80 space-y-3 overflow-y-auto">
+                  {[...leadSeleccionado.historial_seguimiento]
+                    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+                    .map((item, index) => (
+                      <div key={index} className="rounded-xl border-l-4 border-purple-400 bg-gray-50 p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="font-semibold text-gray-900">
+                            {new Date(item.fecha).toLocaleDateString('es-CO', {
+                              weekday: 'short',
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                          <div className="text-xs text-gray-500">por {item.usuario}</div>
+                        </div>
+                        <div className="whitespace-pre-wrap text-sm text-gray-700">{item.observacion}</div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-gray-50 p-6 text-center text-sm italic text-gray-400">
+                  No hay seguimientos registrados aún
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex gap-3">

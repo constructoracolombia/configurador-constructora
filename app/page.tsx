@@ -198,6 +198,14 @@ function CentroOperacionesDashboard() {
     fecha_limite: "",
   });
 
+  // Estados para modal de observaciones con fecha
+  const [mostrarModalObservaciones, setMostrarModalObservaciones] = useState(false);
+  const [leadParaObservacion, setLeadParaObservacion] = useState<any>(null);
+  const [nuevaObservacion, setNuevaObservacion] = useState('');
+  const [fechaObservacion, setFechaObservacion] = useState('');
+  const [horaObservacion, setHoraObservacion] = useState('');
+  const [guardandoObservacion, setGuardandoObservacion] = useState(false);
+
   const [kpis, setKpis] = useState<Kpis>({
     total_leads: 0,
     en_prospeccion: 0,
@@ -875,6 +883,72 @@ function CentroOperacionesDashboard() {
     } catch (error) {
       console.error("Error en drag & drop:", error);
       alert("❌ Error al mover el lead");
+    }
+  };
+
+  const abrirModalObservaciones = (lead: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLeadParaObservacion(lead);
+    setNuevaObservacion('');
+    const ahora = new Date();
+    setFechaObservacion(ahora.toISOString().split('T')[0]);
+    setHoraObservacion(ahora.toTimeString().slice(0, 5));
+    setMostrarModalObservaciones(true);
+  };
+
+  const guardarObservacion = async () => {
+    if (!leadParaObservacion || !nuevaObservacion.trim() || !fechaObservacion || !horaObservacion) {
+      alert('Por favor completa todos los campos');
+      return;
+    }
+    setGuardandoObservacion(true);
+    try {
+      const fechaTimestamp = new Date(`${fechaObservacion}T${horaObservacion}:00`).toISOString();
+
+      const { data: leadActual } = await supabase
+        .from('leads')
+        .select('historial_seguimiento, observaciones')
+        .eq('id', leadParaObservacion.id)
+        .single();
+
+      const historialActual = leadActual?.historial_seguimiento || [];
+      const nuevaEntrada = {
+        fecha: fechaTimestamp,
+        observacion: nuevaObservacion.trim(),
+        usuario: 'Admin',
+        timestamp_registro: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('leads')
+        .update({
+          historial_seguimiento: [...historialActual, nuevaEntrada],
+          ultima_actividad_fecha: fechaTimestamp,
+          observaciones:
+            (leadActual?.observaciones || '') +
+            `\n\n[${new Date(fechaTimestamp).toLocaleString('es-CO')}]\n${nuevaObservacion.trim()}`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', leadParaObservacion.id);
+
+      if (error) throw error;
+
+      await supabase.from('lead_actividades').insert({
+        lead_id: leadParaObservacion.id,
+        tipo: 'OBSERVACION',
+        descripcion: `Seguimiento registrado: ${nuevaObservacion.substring(0, 100)}`,
+        resultado: fechaTimestamp,
+        usuario: 'Admin',
+      });
+
+      alert('✅ Observación guardada correctamente');
+      setMostrarModalObservaciones(false);
+      await cargarDatos();
+    } catch (error: any) {
+      console.error('Error guardando observación:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setGuardandoObservacion(false);
     }
   };
 
@@ -1683,6 +1757,14 @@ function CentroOperacionesDashboard() {
                                       {lead.observaciones}
                                     </div>
                                   )}
+
+                                  <button
+                                    onClick={(e) => abrirModalObservaciones(lead, e)}
+                                    className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-purple-50 px-3 py-1.5 text-[10px] font-medium text-purple-700 transition-colors hover:bg-purple-100"
+                                  >
+                                    <span>📝</span>
+                                    Registrar Seguimiento
+                                  </button>
 
                                   {lead.proximo_paso && (
                                     <div className="mt-2 border-t border-gray-200 pt-2">
@@ -2568,6 +2650,143 @@ function CentroOperacionesDashboard() {
               >
                 Guardar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Observaciones con Fecha */}
+      {mostrarModalObservaciones && leadParaObservacion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6">
+            <h3 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-900">
+              <span className="text-2xl">📝</span>
+              Registrar Seguimiento
+            </h3>
+
+            <div className="space-y-4">
+              {/* Info del lead */}
+              <div className="rounded-xl bg-gray-50 p-4">
+                <div className="font-semibold text-gray-900">{leadParaObservacion.nombre}</div>
+                <div className="mt-1 text-sm text-gray-600">📱 {leadParaObservacion.telefono}</div>
+                <div className="text-sm text-gray-600">
+                  📍 {leadParaObservacion.nombre_proyecto || 'Sin proyecto'}
+                </div>
+              </div>
+
+              {/* Fecha y hora */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    📅 Fecha del Seguimiento
+                  </label>
+                  <input
+                    type="date"
+                    value={fechaObservacion}
+                    onChange={(e) => setFechaObservacion(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">🕐 Hora</label>
+                  <input
+                    type="time"
+                    value={horaObservacion}
+                    onChange={(e) => setHoraObservacion(e.target.value)}
+                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Atajos rápidos */}
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: '✅ Ahora', days: 0, hour: null },
+                  { label: '📅 Ayer', days: 1, hour: '10:00' },
+                  { label: '📆 Hace 3 días', days: 3, hour: '10:00' },
+                  { label: '📅 Hace 1 semana', days: 7, hour: '10:00' },
+                ].map(({ label, days, hour }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - days);
+                      setFechaObservacion(d.toISOString().split('T')[0]);
+                      setHoraObservacion(hour ?? d.toTimeString().slice(0, 5));
+                    }}
+                    className="rounded-lg bg-gray-100 px-3 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-200"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Observación */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  📋 Descripción del Seguimiento
+                </label>
+                <textarea
+                  value={nuevaObservacion}
+                  onChange={(e) => setNuevaObservacion(e.target.value)}
+                  placeholder="Ej: Llamada realizada. Cliente interesado en visita al proyecto. Agendar para próxima semana."
+                  rows={5}
+                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                <div className="mt-1 text-xs text-gray-500">{nuevaObservacion.length} caracteres</div>
+              </div>
+
+              {/* Historial previo */}
+              {leadParaObservacion.historial_seguimiento &&
+                Array.isArray(leadParaObservacion.historial_seguimiento) &&
+                leadParaObservacion.historial_seguimiento.length > 0 && (
+                  <div>
+                    <div className="mb-2 text-sm font-medium text-gray-700">📜 Últimos Seguimientos</div>
+                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl bg-gray-50 p-4">
+                      {[...leadParaObservacion.historial_seguimiento]
+                        .reverse()
+                        .slice(0, 3)
+                        .map((item: any, index: number) => (
+                          <div key={index} className="border-l-2 border-purple-300 py-1 pl-3 text-xs">
+                            <div className="font-medium text-gray-900">
+                              {new Date(item.fecha).toLocaleDateString('es-CO', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                            <div className="mt-1 text-gray-600">{item.observacion}</div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Botones */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setMostrarModalObservaciones(false)}
+                  disabled={guardandoObservacion}
+                  className="h-11 flex-1 rounded-lg bg-gray-200 font-medium transition-colors hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => void guardarObservacion()}
+                  disabled={
+                    guardandoObservacion ||
+                    !nuevaObservacion.trim() ||
+                    !fechaObservacion ||
+                    !horaObservacion
+                  }
+                  className="h-11 flex-1 rounded-lg bg-purple-600 font-medium text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {guardandoObservacion ? 'Guardando...' : '💾 Guardar Seguimiento'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
