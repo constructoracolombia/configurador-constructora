@@ -54,6 +54,60 @@ const agruparPorCategoria = (items: CatalogoItem[]) => {
   return orden.map((cat) => ({ categoria: cat, items: mapa[cat] }));
 };
 
+// ─── conjuntos y planes ──────────────────────────────────────────────────────
+
+const CONJUNTOS = [
+  "Ciudadela Verde",
+  "Beltramonto",
+  "Fiore",
+  "Azafrán",
+  "Parque Oriente",
+  "Montebello",
+  "Alto Tramonti",
+  "Morada del Viento",
+  "Fontana de la Sierra",
+  "San Juan de la Cuesta",
+  "Otro",
+];
+
+const ITEMS_PLAN_BASICO = [
+  "Estuco muros + techo",
+  "Pintura 3 manos muros y techo",
+  "Mortero de nivelación del piso impermeabilizado",
+  "Enchape piso cerámica + guardaescobas",
+  "Drywall cocina y baños",
+  "Enchape baño completo",
+  "Combo Básico: Sanitario, lavamanos, grifería",
+  "Nicho iluminado",
+  "Enchape salpicadero",
+  "Enchape zona húmeda",
+  "Luminarias LED",
+  "Aseo final",
+];
+
+const ITEMS_PLAN_INTERMEDIO = [
+  "Estuco muros + techo",
+  "Pintura 3 manos muros y techo",
+  "Mortero de nivelación del piso impermeabilizado",
+  "Enchape piso cerámica + guardaescobas",
+  "Drywall cocina y baños",
+  "Enchape baño completo",
+  "Combo Básico: Sanitario, lavamanos, grifería",
+  "Nicho iluminado",
+  "División de baño, vidrio de seguridad 8 mm",
+  "Demolición enchape existente",
+  "Enchape salpicadero",
+  "Mesón granito negro o quartzone blanco",
+  "Barra granito negro o quartzone blanco con soporte",
+  "Enchape zona húmeda",
+  "Puerta RH",
+  "Mueble cocina superior e inferior una tonalidad RH",
+  "Closet principal RH",
+  "Closet secundario RH",
+  "Luminarias LED",
+  "Aseo final",
+];
+
 // ─── componente principal ────────────────────────────────────────────────────
 
 export default function PresupuestoManual() {
@@ -77,6 +131,8 @@ export default function PresupuestoManual() {
   const [leadId, setLeadId] = useState<string | null>(null);
   const [busquedaLead, setBusquedaLead] = useState("");
   const [mostrarDropdownLead, setMostrarDropdownLead] = useState(false);
+  const [conjunto, setConjunto] = useState("");
+  const [planBase, setPlanBase] = useState("");
 
   // carga catálogos y leads activos al montar
   useEffect(() => {
@@ -115,8 +171,46 @@ export default function PresupuestoManual() {
         .eq("catalogo_id", catalogoId)
         .eq("activo", true)
         .order("categoria");
-      setItems(data || []);
-      setSeleccionados({});
+
+      const listaPlan =
+        planBase === "Plan Básico"
+          ? ITEMS_PLAN_BASICO
+          : planBase === "Plan Intermedio Plus"
+            ? ITEMS_PLAN_INTERMEDIO
+            : [];
+
+      const catalogoItems: CatalogoItem[] = data || [];
+
+      // preseleccionar ítems del plan que existen en el catálogo
+      const preseleccion: Record<string, number> = {};
+      catalogoItems.forEach((item) => {
+        const nombreNorm = item.nombre?.toLowerCase().trim();
+        const enPlan = listaPlan.some(
+          (n) => n.toLowerCase().trim() === nombreNorm
+        );
+        if (enPlan) preseleccion[item.id] = 1;
+      });
+
+      // ítems del plan que NO están en el catálogo → extras con precio 0
+      const nombresEnCatalogo = new Set(
+        catalogoItems.map((i) => i.nombre?.toLowerCase().trim())
+      );
+      const extras: CatalogoItem[] = listaPlan
+        .filter((n) => !nombresEnCatalogo.has(n.toLowerCase().trim()))
+        .map((n, idx) => ({
+          id: `extra-${idx}`,
+          codigo: null,
+          categoria: "⚠ Sin precio en catálogo",
+          nombre: n,
+          descripcion: null,
+          valor_venta: 0,
+        }));
+      extras.forEach((e) => {
+        preseleccion[e.id] = 1;
+      });
+
+      setItems([...catalogoItems, ...extras]);
+      setSeleccionados(preseleccion);
       setPaso(2);
     } finally {
       setLoading(false);
@@ -151,103 +245,161 @@ export default function PresupuestoManual() {
   const iva = aplicaIva ? subtotal * 0.19 : 0;
   const totalFinal = subtotal + iva;
 
-  // ── PDF ────────────────────────────────────────────────────────────────────
+  // ── PDF profesional ────────────────────────────────────────────────────────
   const descargarPDF = async () => {
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
 
-    const doc = new jsPDF();
-    const margen = 14;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
 
-    // encabezado
+    // ── HEADER negro ──────────────────────────────────────────────
+    doc.setFillColor(20, 20, 20);
+    doc.rect(0, 0, pageW, 38, "F");
+
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("CONSTRUCTORA COLOMBIA", margen, 18);
+    doc.text("CONSTRUCTORA COLOMBIA REMODELA", 14, 14);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("NIT: 901.234.567-8", margen, 24);
-    doc.setFontSize(12);
+    doc.text("SU ALIADO EN REMODELACIÓN", 14, 20);
+
+    doc.setFontSize(8);
+    doc.text(`Nro: ${numeroCot}`, pageW - 14, 14, { align: "right" });
+    doc.text(`Fecha: ${fecha}`, pageW - 14, 19, { align: "right" });
+    if (planBase) doc.text(`Plan: ${planBase}`, pageW - 14, 24, { align: "right" });
+
+    // ── DATOS CLIENTE ─────────────────────────────────────────────
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(14, 42, pageW - 28, 24, 2, 2, "F");
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("Presupuesto de Remodelación", margen, 32);
-    doc.setFontSize(9);
+    doc.text("Cliente:", 18, 49);
+    doc.text("Conjunto:", 18, 55);
+    doc.text("Ciudad:", 18, 61);
     doc.setFont("helvetica", "normal");
-    doc.text(`No. ${numeroCot}`, margen, 38);
     doc.text(
-      `Fecha: ${new Date(fecha + "T12:00:00").toLocaleDateString("es-CO", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })}`,
-      margen,
-      43
+      cliente.nombre + (cliente.telefono ? `  ·  ${cliente.telefono}` : ""),
+      35, 49
+    );
+    doc.text(cliente.proyecto || conjunto, 35, 55);
+    doc.text("Bucaramanga", 35, 61);
+
+    // ── TÍTULO TABLA ──────────────────────────────────────────────
+    doc.setFillColor(20, 20, 20);
+    doc.rect(14, 70, pageW - 28, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text(
+      `Constructora Colombia Remodela — ${cliente.proyecto || conjunto}`,
+      pageW / 2, 75, { align: "center" }
     );
 
-    // datos cliente
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("Cliente:", margen, 52);
-    doc.setFont("helvetica", "normal");
-    doc.text(cliente.nombre, margen + 18, 52);
-    doc.setFont("helvetica", "bold");
-    doc.text("Teléfono:", margen, 58);
-    doc.setFont("helvetica", "normal");
-    doc.text(cliente.telefono, margen + 22, 58);
-    doc.setFont("helvetica", "bold");
-    doc.text("Proyecto:", margen, 64);
-    doc.setFont("helvetica", "normal");
-    doc.text(cliente.proyecto, margen + 22, 64);
+    // ── TABLA DE ÍTEMS ────────────────────────────────────────────
+    const itemsSelArr = items.filter((i) => seleccionados[i.id]);
+    const tableBody = itemsSelArr.map((item) => [
+      item.codigo || "—",
+      item.nombre + (item.descripcion ? `\n${item.descripcion}` : ""),
+      String(seleccionados[item.id] || 1),
+      item.valor_venta > 0
+        ? "$ " + item.valor_venta.toLocaleString("es-CO")
+        : "A convenir",
+      item.valor_venta > 0
+        ? "$ " + (item.valor_venta * (seleccionados[item.id] || 1)).toLocaleString("es-CO")
+        : "A convenir",
+    ]);
 
-    // tabla
     autoTable(doc, {
-      startY: 72,
-      head: [["Cód.", "Descripción", "Cant.", "Vlr. Unitario", "Total"]],
-      body: itemsSeleccionados.map((i) => [
-        i.codigo || "",
-        i.nombre,
-        String(seleccionados[i.id] || 1),
-        cop(i.valor_venta),
-        cop(i.valor_venta * (seleccionados[i.id] || 1)),
-      ]),
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [16, 78, 139], textColor: 255, fontStyle: "bold" },
-      columnStyles: {
-        0: { cellWidth: 20 },
-        2: { halign: "center", cellWidth: 14 },
-        3: { halign: "right", cellWidth: 32 },
-        4: { halign: "right", cellWidth: 32 },
+      startY: 78,
+      head: [["Cód.", "Ítem / Descripción", "Cant.", "Vlr. Unitario", "Total"]],
+      body: tableBody,
+      theme: "grid",
+      headStyles: {
+        fillColor: [40, 40, 40],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 8,
       },
+      bodyStyles: { fontSize: 7.5, textColor: [30, 30, 30] },
+      columnStyles: {
+        0: { cellWidth: 14, halign: "center" },
+        1: { cellWidth: "auto" },
+        2: { cellWidth: 14, halign: "center" },
+        3: { cellWidth: 28, halign: "right" },
+        4: { cellWidth: 28, halign: "right" },
+      },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      margin: { left: 14, right: 14 },
     });
 
-    const finalY = (doc as any).lastAutoTable?.finalY ?? 72;
+    // ── TOTALES ───────────────────────────────────────────────────
+    const finalY = (doc as any).lastAutoTable.finalY + 4;
+    const colDerX = pageW - 14;
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    doc.setFont("helvetica", "normal");
+    doc.text("Subtotal:", colDerX - 50, finalY + 5, { align: "left" });
+    doc.text("$ " + subtotal.toLocaleString("es-CO"), colDerX, finalY + 5, { align: "right" });
 
-    // totales
-    let y = finalY + 8;
-    doc.setFontSize(9);
-    doc.text(`Subtotal: ${cop(subtotal)}`, 140, y, { align: "right" });
+    let totalY: number;
     if (aplicaIva) {
-      y += 6;
-      doc.text(`IVA 19%: ${cop(iva)}`, 140, y, { align: "right" });
-    }
-    y += 6;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(`TOTAL: ${cop(totalFinal)}`, 140, y, { align: "right" });
-
-    // notas
-    if (notas.trim()) {
-      y += 10;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      const lineas = doc.splitTextToSize(`${notas.trim()}\n\nValidez: 30 días.`, 175);
-      doc.text(lineas, margen, y);
+      const ivaVal = Math.round(subtotal * 0.19);
+      doc.text("IVA 19%:", colDerX - 50, finalY + 11, { align: "left" });
+      doc.text("$ " + ivaVal.toLocaleString("es-CO"), colDerX, finalY + 11, { align: "right" });
+      totalY = finalY + 19;
     } else {
-      y += 10;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.text("Validez: 30 días.", margen, y);
+      totalY = finalY + 13;
     }
 
-    doc.save(`presupuesto-${numeroCot}.pdf`);
+    // caja TOTAL
+    doc.setDrawColor(20, 20, 20);
+    doc.setLineWidth(0.5);
+    doc.line(colDerX - 55, totalY - 3, colDerX, totalY - 3);
+    doc.setFillColor(20, 20, 20);
+    doc.rect(colDerX - 55, totalY - 2, 55, 9, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("TOTAL", colDerX - 50, totalY + 4);
+    doc.text("$ " + totalFinal.toLocaleString("es-CO"), colDerX - 2, totalY + 4, { align: "right" });
+
+    // bonus
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "italic");
+    doc.text("★ Tendedero abatible en zona húmeda — BONUS GRATIS", 14, totalY + 4);
+
+    // ── NOTAS ─────────────────────────────────────────────────────
+    if (notas.trim()) {
+      const notasY = totalY + 16;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(30, 30, 30);
+      doc.text("Notas y condiciones:", 14, notasY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      const notasLines = doc.splitTextToSize(notas, pageW - 28);
+      doc.text(notasLines, 14, notasY + 5);
+    }
+
+    // ── PIE DE PÁGINA ─────────────────────────────────────────────
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont("helvetica", "italic");
+    doc.text(
+      "Este presupuesto tiene una validez de 30 días.",
+      pageW / 2, pageH - 12, { align: "center" }
+    );
+    doc.text(
+      "Constructora Colombia Remodela · Bucaramanga, Colombia",
+      pageW / 2, pageH - 8, { align: "center" }
+    );
+
+    doc.save(`Presupuesto_${(cliente.nombre || "cliente").replace(/\s+/g, "_")}_${numeroCot}.pdf`);
   };
 
   // ── guardar en BD ──────────────────────────────────────────────────────────
@@ -519,6 +671,51 @@ export default function PresupuestoManual() {
                 </div>
               </div>
 
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Conjunto residencial *
+                  </label>
+                  <select
+                    value={conjunto}
+                    onChange={(e) => {
+                      setConjunto(e.target.value);
+                      if (!cliente.proyecto.trim()) {
+                        setCliente((p) => ({ ...p, proyecto: e.target.value }));
+                      }
+                    }}
+                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">Selecciona un conjunto…</option>
+                    {CONJUNTOS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Plan base (opcional)
+                  </label>
+                  <select
+                    value={planBase}
+                    onChange={(e) => setPlanBase(e.target.value)}
+                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">(ninguno)</option>
+                    <option value="Plan Básico">Plan Básico</option>
+                    <option value="Plan Intermedio Plus">Plan Intermedio Plus</option>
+                  </select>
+                  {planBase && (
+                    <p className="mt-1 text-xs text-emerald-600">
+                      Se preseleccionarán los ítems del {planBase}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Catálogo de precios *
@@ -599,10 +796,15 @@ export default function PresupuestoManual() {
                               {item.descripcion && (
                                 <p className="mt-0.5 text-xs text-gray-500">{item.descripcion}</p>
                               )}
+                              {item.id.startsWith("extra-") && (
+                                <span className="mt-1 inline-block rounded bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">
+                                  Sin precio — actualizar en catálogo
+                                </span>
+                              )}
                             </div>
                             <div className="flex shrink-0 items-center gap-3">
                               <span className="text-sm font-semibold text-gray-900">
-                                {cop(item.valor_venta)}
+                                {item.valor_venta > 0 ? cop(item.valor_venta) : "A convenir"}
                               </span>
                               {sel && (
                                 <input
