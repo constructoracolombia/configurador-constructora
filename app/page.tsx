@@ -14,8 +14,8 @@ import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
 import {
   Calculator,
   Users,
+  FileSpreadsheet,
   BarChart3,
-  TrendingUp,
   Target,
   ArrowRight,
   Activity,
@@ -1116,7 +1116,7 @@ function CentroOperacionesDashboard() {
           </Card>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card
             className="group cursor-pointer border-0 shadow-sm transition-shadow hover:shadow-md"
             onClick={() => router.push("/presupuestos")}
@@ -1163,45 +1163,18 @@ function CentroOperacionesDashboard() {
 
           <Card
             className="group cursor-pointer border-0 shadow-sm transition-shadow hover:shadow-md"
-            onClick={() => router.push("/admin")}
+            onClick={() => router.push("/presupuesto-manual")}
           >
             <CardContent className="p-6">
               <div className="mb-4 flex items-start justify-between">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
-                  <BarChart3 className="h-7 w-7 text-white" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                  <FileSpreadsheet className="h-7 w-7 text-white" />
                 </div>
-                <ArrowRight className="h-5 w-5 text-gray-400 transition-colors group-hover:text-green-600" />
+                <ArrowRight className="h-5 w-5 text-gray-400 transition-colors group-hover:text-emerald-600" />
               </div>
-              <h3 className="mb-2 text-lg font-bold text-gray-900">Analytics</h3>
-              <p className="mb-4 text-sm text-gray-600">
-                Métricas, reportes y análisis detallado
-              </p>
-              <div className="text-xs text-gray-500">
-                Dashboard de cotizaciones
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="group cursor-pointer border-0 shadow-sm transition-shadow hover:shadow-md"
-            onClick={() => router.push("/pautas")}
-          >
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
-                  <TrendingUp className="h-7 w-7 text-white" />
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400 transition-colors group-hover:text-purple-600" />
-              </div>
-              <h3 className="mb-2 text-lg font-bold text-gray-900">
-                Análisis de Pautas
-              </h3>
-              <p className="mb-4 text-sm text-gray-600">
-                Rendimiento de campañas Meta Ads y Google
-              </p>
-              <div className="text-xs text-gray-500">
-                ROI, conversión y métricas
-              </div>
+              <h3 className="mb-2 text-lg font-bold text-gray-900">Presupuesto Manual</h3>
+              <p className="mb-4 text-sm text-gray-600">Arma presupuestos desde el catálogo de precios</p>
+              <div className="text-xs text-gray-500">Selección de ítems + PDF profesional</div>
             </CardContent>
           </Card>
         </div>
