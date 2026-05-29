@@ -73,16 +73,29 @@ export default function PresupuestoManual() {
   const [loading, setLoading] = useState(false);
   const [numeroCot] = useState(() => numeroCotizacion(new Date().toISOString().split("T")[0]));
   const [toast, setToast] = useState<string | null>(null);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [busquedaLead, setBusquedaLead] = useState("");
+  const [mostrarDropdownLead, setMostrarDropdownLead] = useState(false);
 
-  // carga catálogos al montar
+  // carga catálogos y leads activos al montar
   useEffect(() => {
     const cargar = async () => {
-      const { data } = await supabase
-        .from("catalogos_precios")
-        .select("id, nombre")
-        .eq("activo", true)
-        .order("nombre");
-      setCatalogos(data || []);
+      const [{ data: catData }, { data: leadsData }] = await Promise.all([
+        supabase
+          .from("catalogos_precios")
+          .select("id, nombre")
+          .eq("activo", true)
+          .order("nombre"),
+        supabase
+          .from("leads")
+          .select("id, nombre, telefono, nombre_proyecto, etapa, tipo_proyecto")
+          .not("etapa", "in", '("PERDIDO","DESCALIFICADO")')
+          .order("updated_at", { ascending: false })
+          .limit(200),
+      ]);
+      setCatalogos(catData || []);
+      setLeads(leadsData || []);
     };
     void cargar();
   }, []);
@@ -241,6 +254,51 @@ export default function PresupuestoManual() {
   const guardarCotizacion = async () => {
     setGuardando(true);
     try {
+      let toastMsg: string;
+
+      if (leadId) {
+        // Caso A — lead existente: solo añadir nota en lead_actividades
+        await supabase.from("lead_actividades").insert({
+          lead_id: leadId,
+          tipo: "NOTA",
+          descripcion: `Presupuesto manual generado — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`,
+          usuario: "Comercial",
+        });
+        toastMsg = "✅ Cotización guardada y nota añadida al lead en el CRM";
+      } else {
+        // Caso B — sin lead: crear lead nuevo en Prospección
+        const { data: nuevoLead } = await supabase
+          .from("leads")
+          .insert({
+            nombre: cliente.nombre,
+            telefono: cliente.telefono,
+            email: "",
+            fecha_contacto: fecha,
+            origen: "OTRO",
+            tipo_proyecto: "VIS",
+            nombre_proyecto: cliente.proyecto,
+            presupuesto_estimado: totalFinal,
+            observaciones: "ppto manual",
+            etapa: "PROSPECCION",
+            probabilidad: 10,
+            fuente: "OTRO",
+            responsable: "Jeisson",
+          })
+          .select("id")
+          .single();
+
+        if (nuevoLead) {
+          await supabase.from("lead_actividades").insert({
+            lead_id: nuevoLead.id,
+            tipo: "NOTA",
+            descripcion: `Lead creado desde Presupuesto Manual — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`,
+            usuario: "Comercial",
+          });
+        }
+        toastMsg = "✅ Cotización guardada y lead creado en Prospección del CRM";
+      }
+
+      // insertar cotización en ambos casos
       const { error } = await supabase.from("cotizaciones").insert({
         cliente_nombre: cliente.nombre,
         cliente_telefono: cliente.telefono,
@@ -256,7 +314,8 @@ export default function PresupuestoManual() {
         estado_crm: "NUEVO",
       });
       if (error) throw error;
-      mostrarToast("✅ Cotización guardada exitosamente");
+
+      mostrarToast(toastMsg);
     } catch (err: any) {
       mostrarToast(`❌ Error: ${err.message}`);
     } finally {
@@ -332,6 +391,87 @@ export default function PresupuestoManual() {
           <Card className="border-0 shadow-sm">
             <CardContent className="space-y-5 p-8">
               <h2 className="text-lg font-bold text-gray-900">Datos del cliente</h2>
+
+              {/* ── buscador de lead existente ─────────────────────────── */}
+              <div className="relative">
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Buscar lead existente (opcional)
+                </label>
+                <Input
+                  value={busquedaLead}
+                  onChange={(e) => {
+                    setBusquedaLead(e.target.value);
+                    setLeadId(null);
+                    setMostrarDropdownLead(e.target.value.length >= 2);
+                  }}
+                  onFocus={() => {
+                    if (busquedaLead.length >= 2) setMostrarDropdownLead(true);
+                  }}
+                  onBlur={() => setTimeout(() => setMostrarDropdownLead(false), 150)}
+                  placeholder="Nombre o teléfono del lead…"
+                />
+
+                {mostrarDropdownLead && (() => {
+                  const t = busquedaLead.toLowerCase();
+                  const resultados = leads
+                    .filter(
+                      (l) =>
+                        l.nombre?.toLowerCase().includes(t) ||
+                        (l.telefono || "").replace(/\s/g, "").includes(t.replace(/\s/g, ""))
+                    )
+                    .slice(0, 6);
+                  return resultados.length > 0 ? (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                      {resultados.map((lead) => (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          onMouseDown={() => {
+                            setLeadId(lead.id);
+                            setCliente({
+                              nombre: lead.nombre,
+                              telefono: lead.telefono || "",
+                              proyecto: lead.nombre_proyecto || cliente.proyecto,
+                            });
+                            setBusquedaLead(lead.nombre + " — " + (lead.telefono || ""));
+                            setMostrarDropdownLead(false);
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-gray-900">
+                              {lead.nombre}
+                            </p>
+                            <p className="text-xs text-gray-500">{lead.telefono || "Sin teléfono"}</p>
+                          </div>
+                          <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                            {lead.etapa?.replace(/_/g, " ")}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg">
+                      <p className="text-sm text-gray-500">Sin resultados — llena los datos manualmente</p>
+                    </div>
+                  );
+                })()}
+
+                {/* badge de estado CRM */}
+                <div className="mt-2">
+                  {leadId ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Lead vinculado — se actualizará en el flujo comercial
+                    </span>
+                  ) : cliente.nombre.trim() && cliente.telefono.trim() ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                      <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                      Se creará un lead nuevo en Prospección
+                    </span>
+                  ) : null}
+                </div>
+              </div>
 
               <div className="grid gap-5 md:grid-cols-2">
                 <div>
