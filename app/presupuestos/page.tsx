@@ -1,12 +1,131 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { proyectos } from "@/lib/data/catalogo";
 import { useCotizador } from "@/lib/store/cotizador";
 import { useTrackingParams } from "@/lib/hooks/useTrackingParams";
+import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, MapPin, Sparkles } from "lucide-react";
+
+// ─── tipos CRM ───────────────────────────────────────────────────────────────
+
+type CotizacionCrm = {
+  id: string;
+  cliente_nombre: string;
+  total: number;
+  estado_crm: string;
+  proyecto_nombre: string | null;
+  created_at: string;
+};
+
+const ETAPAS_CRM = [
+  { key: "NUEVO", label: "Nuevos", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
+  { key: "CORREO_ENVIADO", label: "Correo enviado", color: "bg-violet-500/20 text-violet-300 border-violet-500/30" },
+  { key: "CITA_AGENDADA", label: "Cita agendada", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
+  { key: "EN_SEGUIMIENTO", label: "En seguimiento", color: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
+  { key: "CONTRATO_FIRMADO", label: "Ganados", color: "bg-green-500/20 text-green-300 border-green-500/30" },
+] as const;
+
+const copCrm = (n: number) => "$ " + Math.round(n).toLocaleString("es-CO");
+
+function CrmKanbanMini() {
+  const router = useRouter();
+  const [cotizaciones, setCotizaciones] = useState<CotizacionCrm[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const cargar = async () => {
+      const { data } = await supabase
+        .from("cotizaciones")
+        .select("id, cliente_nombre, total, estado_crm, proyecto_nombre, created_at")
+        .not("estado_crm", "eq", "PERDIDO")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      setCotizaciones(data || []);
+      setCargando(false);
+    };
+    void cargar();
+  }, []);
+
+  if (cargando) {
+    return (
+      <div className="grid grid-cols-5 gap-3">
+        {ETAPAS_CRM.map((e) => (
+          <div
+            key={e.key}
+            className="h-32 animate-pulse rounded-lg border border-brand-border bg-brand-card/50"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  const porEtapa = (key: string) => cotizaciones.filter((c) => c.estado_crm === key);
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        {ETAPAS_CRM.map((etapa) => {
+          const grupo = porEtapa(etapa.key);
+          const visibles = grupo.slice(0, 3);
+          const resto = grupo.length - 3;
+          return (
+            <div
+              key={etapa.key}
+              className="rounded-lg border border-brand-border bg-brand-card/50 p-3"
+            >
+              <div className="mb-2 flex items-center justify-between gap-1">
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${etapa.color}`}
+                >
+                  {etapa.label}
+                </span>
+                <span className="text-xs font-bold text-brand-text">{grupo.length}</span>
+              </div>
+
+              {visibles.map((cot) => (
+                <div
+                  key={cot.id}
+                  className="mt-1 rounded bg-brand-dark p-2"
+                >
+                  <p className="truncate text-xs font-bold text-brand-text">
+                    {cot.cliente_nombre}
+                  </p>
+                  {cot.proyecto_nombre && (
+                    <p className="truncate text-[10px] text-brand-textSecondary">
+                      {cot.proyecto_nombre}
+                    </p>
+                  )}
+                  <p className="mt-0.5 text-[10px] font-semibold text-brand-primary">
+                    {copCrm(cot.total || 0)}
+                  </p>
+                </div>
+              ))}
+
+              {resto > 0 && (
+                <p className="mt-1 text-center text-[10px] text-brand-textSecondary">
+                  ...y {resto} más
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={() => router.push("/crm")}
+          className="text-sm font-medium text-brand-primary hover:underline"
+        >
+          Ver CRM completo →
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PresupuestosContent() {
   const trackingParams = useTrackingParams();
@@ -102,6 +221,18 @@ function PresupuestosContent() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pb-4 pt-10">
+        <div className="mb-6 text-center">
+          <h2 className="mb-2 text-2xl font-bold text-brand-text">
+            Pipeline Comercial
+          </h2>
+          <p className="text-brand-textSecondary text-sm">
+            Seguimiento de leads por etapa
+          </p>
+        </div>
+        <CrmKanbanMini />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16">

@@ -1116,7 +1116,7 @@ function CentroOperacionesDashboard() {
           </Card>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
           <Card
             className="group cursor-pointer border-0 shadow-sm transition-shadow hover:shadow-md"
             onClick={() => router.push("/presupuestos")}
@@ -1136,27 +1136,6 @@ function CentroOperacionesDashboard() {
               </p>
               <div className="text-xs text-gray-500">
                 Configurador web de proyectos
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="group cursor-pointer border-0 shadow-sm transition-shadow hover:shadow-md"
-            onClick={() => router.push("/crm")}
-          >
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
-                  <Users className="h-7 w-7 text-white" />
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400 transition-colors group-hover:text-purple-600" />
-              </div>
-              <h3 className="mb-2 text-lg font-bold text-gray-900">CRM Kanban</h3>
-              <p className="mb-4 text-sm text-gray-600">
-                Gestiona el pipeline de ventas visualmente
-              </p>
-              <div className="text-xs text-gray-500">
-                Drag & drop de leads por etapa
               </div>
             </CardContent>
           </Card>
