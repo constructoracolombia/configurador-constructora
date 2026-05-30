@@ -20,7 +20,7 @@ type CatalogoItem = {
 };
 type Cliente = { nombre: string; telefono: string; proyecto: string };
 type PlanSeccion = { seccion: string; items: string[] };
-type EstadoItemPlan = { aplica: boolean; cantidad: number };
+type EstadoItemPlan = { aplica: boolean; cantidad: number; descuento: number };
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -206,7 +206,7 @@ export default function PresupuestoManual() {
     if (!planBase) { setItemsPlanEstado({}); return; }
     const secciones = planBase === "Plan Básico" ? PLAN_BASICO_SECCIONES : PLAN_INTERMEDIO_SECCIONES;
     const estado: Record<string, EstadoItemPlan> = {};
-    secciones.forEach((s) => s.items.forEach((item) => { estado[item] = { aplica: true, cantidad: 1 }; }));
+    secciones.forEach((s) => s.items.forEach((item) => { estado[item] = { aplica: true, cantidad: 1, descuento: 0 }; }));
     setItemsPlanEstado(estado);
   }, [planBase]);
 
@@ -218,7 +218,7 @@ export default function PresupuestoManual() {
   const toggleItemPlan = (nombre: string) => {
     setItemsPlanEstado((prev) => ({
       ...prev,
-      [nombre]: { ...(prev[nombre] ?? { aplica: true, cantidad: 1 }), aplica: !prev[nombre]?.aplica },
+      [nombre]: { ...(prev[nombre] ?? { aplica: true, cantidad: 1, descuento: 0 }), aplica: !prev[nombre]?.aplica },
     }));
   };
 
@@ -226,7 +226,15 @@ export default function PresupuestoManual() {
     const n = Number(val);
     if (n >= 1) setItemsPlanEstado((prev) => ({
       ...prev,
-      [nombre]: { ...(prev[nombre] ?? { aplica: true, cantidad: 1 }), cantidad: n },
+      [nombre]: { ...(prev[nombre] ?? { aplica: true, cantidad: 1, descuento: 0 }), cantidad: n },
+    }));
+  };
+
+  const setDescuentoPlan = (nombre: string, val: string) => {
+    const n = Number(val);
+    setItemsPlanEstado((prev) => ({
+      ...prev,
+      [nombre]: { ...(prev[nombre] ?? { aplica: false, cantidad: 1, descuento: 0 }), descuento: n },
     }));
   };
 
@@ -273,7 +281,11 @@ export default function PresupuestoManual() {
   const itemsSeleccionados = items.filter((i) => seleccionados[i.id] !== undefined);
   const itemsPlanSet = new Set(itemsPlanIds);
   const itemsAdicionales = itemsSeleccionados.filter((i) => !itemsPlanSet.has(i.id));
-  const planItemsRemovidos = itemsPlanIds.filter((id) => !seleccionados[id]).length;
+
+  const ajusteTotal = Object.values(itemsPlanEstado)
+    .filter((e) => !e.aplica)
+    .reduce((sum, e) => sum + (e.descuento || 0), 0);
+  const precioEfectivo = (precioBase || 0) + ajusteTotal;
 
   const subtotalAdicionales = itemsAdicionales.reduce(
     (s, i) => s + Math.round(i.valor_venta * 1.20) * (seleccionados[i.id] || 1), 0
@@ -281,9 +293,12 @@ export default function PresupuestoManual() {
   const subtotalSinPlan = itemsSeleccionados.reduce(
     (s, i) => s + Math.round(i.valor_venta * 1.20) * (seleccionados[i.id] || 1), 0
   );
-  const baseTotal = precioBase !== null ? precioBase + subtotalAdicionales : subtotalSinPlan;
+  const baseTotal = precioBase !== null ? precioEfectivo + subtotalAdicionales : subtotalSinPlan;
   const iva = aplicaIva ? Math.round(baseTotal * 0.19) : 0;
   const totalFinal = baseTotal + iva;
+
+  const hayDescuentos = Object.values(itemsPlanEstado).some((e) => !e.aplica);
+  const diasEntrega = planBase === "Plan Básico" ? 39 : 59;
 
   const secciones = planBase === "Plan Básico" ? PLAN_BASICO_SECCIONES
     : planBase === "Plan Intermedio Plus" ? PLAN_INTERMEDIO_SECCIONES : [];
@@ -351,32 +366,39 @@ export default function PresupuestoManual() {
           const estado = itemsPlanEstado[itemNombre];
           const aplica = estado?.aplica ?? true;
           planBody.push([
-            {
-              content: itemNombre,
-              styles: { textColor: aplica ? [30, 30, 30] : [150, 150, 150], fontStyle: aplica ? "normal" : "italic" },
-            },
-            { content: aplica ? "SÍ" : "NO", styles: { halign: "center" as const, textColor: aplica ? [21, 128, 61] : [107, 114, 128] } },
+            { content: itemNombre, styles: { textColor: aplica ? [30, 30, 30] : [150, 150, 150], fontStyle: aplica ? "normal" : "italic" } },
+            { content: aplica ? "SÍ" : "NO", styles: { halign: "center" as const, textColor: aplica ? [21, 128, 61] : [180, 50, 50] } },
             { content: aplica ? String(estado?.cantidad ?? 1) : "—", styles: { halign: "center" as const } },
           ]);
         });
       });
 
-      // bonus
-      planBody.push([
-        { content: "★ Tendedero abatible en zona húmeda — BONUS GRATIS", styles: { fontStyle: "italic", textColor: [21, 128, 61] } },
-        { content: "SÍ", styles: { halign: "center" as const, textColor: [21, 128, 61] } },
-        { content: "1", styles: { halign: "center" as const } },
-      ]);
-      // total plan
+      // filas de descuento por ítems removidos
+      Object.entries(itemsPlanEstado)
+        .filter(([_, e]) => !e.aplica && e.descuento !== 0)
+        .forEach(([nombre, e]) => {
+          planBody.push([
+            { content: `— Sin ${nombre}`, styles: { textColor: [180, 50, 50], fontStyle: "italic" } },
+            { content: "NO", styles: { halign: "center" as const, textColor: [180, 50, 50] } },
+            { content: cop(e.descuento), styles: { halign: "right" as const, textColor: [180, 50, 50], fontStyle: "bold" } },
+          ]);
+        });
+
+      // total plan con precioEfectivo
+      const totalPlanLabel = ajusteTotal < 0
+        ? `$ ${precioBase.toLocaleString("es-CO")} → $ ${precioEfectivo.toLocaleString("es-CO")}`
+        : `$ ${precioEfectivo.toLocaleString("es-CO")}`;
       planBody.push([
         { content: `TOTAL ${planBase}`, colSpan: 2, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 } },
-        { content: `$ ${precioBase.toLocaleString("es-CO")}`, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", halign: "right" as const, fontSize: 9 } },
+        { content: totalPlanLabel, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", halign: "right" as const, fontSize: 9 } },
       ]);
 
       autoTable(doc, {
         startY: 78,
         head: [["Ítem", "¿Aplica?", "Cantidad / Área"]],
         body: planBody,
+        foot: [["★ Tendedero abatible en zona húmeda — BONUS GRATIS", "SÍ", "1"]],
+        footStyles: { fillColor: [255, 255, 255], textColor: [15, 100, 50], fontStyle: "italic", fontSize: 7.5 },
         theme: "grid",
         headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
         bodyStyles: { fontSize: 7.5, textColor: [30, 30, 30] },
@@ -454,11 +476,13 @@ export default function PresupuestoManual() {
     let curY = finalY + 5;
     if (precioBase !== null) {
       doc.text("Plan base:", colDerX - 50, curY, { align: "left" });
-      doc.text(cop(precioBase), colDerX, curY, { align: "right" });
+      doc.text(cop(precioEfectivo), colDerX, curY, { align: "right" });
       curY += 6;
-      doc.text("Adicionales:", colDerX - 50, curY, { align: "left" });
-      doc.text(cop(subtotalAdicionales), colDerX, curY, { align: "right" });
-      curY += 6;
+      if (subtotalAdicionales > 0) {
+        doc.text("Adicionales:", colDerX - 50, curY, { align: "left" });
+        doc.text(cop(subtotalAdicionales), colDerX, curY, { align: "right" });
+        curY += 6;
+      }
     } else {
       doc.text("Subtotal:", colDerX - 50, curY, { align: "left" });
       doc.text(cop(subtotalSinPlan), colDerX, curY, { align: "right" });
@@ -485,13 +509,8 @@ export default function PresupuestoManual() {
     doc.text("TOTAL", colDerX - 50, totalY + 4);
     doc.text(cop(totalFinal), colDerX - 2, totalY + 4, { align: "right" });
 
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "italic");
-    doc.text("★ Tendedero abatible en zona húmeda — BONUS GRATIS", 14, totalY + 4);
-
     if (notas.trim()) {
-      const notasY = totalY + 16;
+      const notasY = totalY + 14;
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8);
       doc.setTextColor(30, 30, 30);
@@ -503,7 +522,7 @@ export default function PresupuestoManual() {
 
     // ── tabla bonus ───────────────────────────────────────────────
     autoTable(doc, {
-      startY: totalY + 20,
+      startY: totalY + 18,
       head: [["BONUS GRATIS — Te llevas todos estos Bonus con tu remodelación", ""]],
       body: BONUS_ITEMS.map((b) => [b, "GRATIS"]),
       theme: "grid",
@@ -516,11 +535,17 @@ export default function PresupuestoManual() {
       margin: { left: 14, right: 14 },
     });
 
+    // condiciones con días dinámicos
+    const condicionesPDF = [
+      `* Tiempo de entrega de ${diasEntrega} días hábiles.`,
+      CONDICIONES[1],
+      CONDICIONES[2],
+    ];
     const condY = (doc as any).lastAutoTable.finalY + 6;
     doc.setFontSize(7.5);
     doc.setTextColor(60, 60, 60);
     doc.setFont("helvetica", "normal");
-    CONDICIONES.forEach((c, i) => { doc.text(c, 14, condY + i * 5); });
+    condicionesPDF.forEach((c, i) => { doc.text(c, 14, condY + i * 5); });
 
     doc.setTextColor(15, 100, 50);
     doc.text("Instagram: @constructoracol.remodela", 14, condY + 18);
@@ -533,6 +558,11 @@ export default function PresupuestoManual() {
       "Más que una constructora, un aliado para llevar a la realidad el hogar o negocio de tus sueños",
       pageW / 2, condY + 32, { align: "center" }
     );
+
+    doc.setTextColor(37, 211, 102);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("WhatsApp: +57 317 5639674", pageW / 2, condY + 40, { align: "center" });
 
     doc.setFontSize(7);
     doc.setTextColor(120, 120, 120);
@@ -549,12 +579,19 @@ export default function PresupuestoManual() {
     try {
       let toastMsg: string;
       if (leadId) {
-        await supabase.from("lead_actividades").insert({
-          lead_id: leadId, tipo: "NOTA",
-          descripcion: `Presupuesto manual generado — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`,
-          usuario: "Comercial",
-        });
-        toastMsg = "✅ Cotización guardada y nota añadida al lead en el CRM";
+        await Promise.all([
+          supabase.from("lead_actividades").insert({
+            lead_id: leadId, tipo: "NOTA",
+            descripcion: `Presupuesto manual generado — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`,
+            usuario: "Comercial",
+          }),
+          supabase.from("leads").update({
+            presupuesto_estimado: totalFinal,
+            nombre_proyecto: cliente.proyecto || conjunto,
+            updated_at: new Date().toISOString(),
+          }).eq("id", leadId),
+        ]);
+        toastMsg = "✅ Cotización guardada y lead actualizado en el CRM";
       } else {
         const { data: nuevoLead } = await supabase.from("leads").insert({
           nombre: cliente.nombre, telefono: cliente.telefono, email: "",
@@ -782,13 +819,14 @@ export default function PresupuestoManual() {
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{planBase} — {conjunto}</div>
                   <div style={{ color: "#86efac", fontSize: 12 }}>Precio base del plan incluido</div>
                 </div>
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 20 }}>{cop(precioBase)}</div>
-              </div>
-            )}
-
-            {planItemsRemovidos > 0 && (
-              <div className="mb-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-xs text-yellow-800">
-                {planItemsRemovidos} ítem{planItemsRemovidos > 1 ? "s" : ""} del plan removido{planItemsRemovidos > 1 ? "s" : ""} — el precio base no varía
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 20 }}>
+                  {ajusteTotal < 0 ? (
+                    <span>
+                      <span style={{ textDecoration: "line-through", opacity: 0.55, fontSize: 14, marginRight: 6 }}>{cop(precioBase)}</span>
+                      {cop(precioEfectivo)}
+                    </span>
+                  ) : cop(precioBase)}
+                </div>
               </div>
             )}
 
@@ -804,13 +842,14 @@ export default function PresupuestoManual() {
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Ítem</th>
                       <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">¿Aplica?</th>
                       <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Cant.</th>
+                      {hayDescuentos && <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Descuento ($)</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {secciones.map(({ seccion, items: planItems }) => (
                       <>
                         <tr key={`sec-${seccion}`}>
-                          <td colSpan={3} className="bg-gray-100 px-4 py-1 text-[11px] font-bold text-gray-700">
+                          <td colSpan={hayDescuentos ? 4 : 3} className="bg-gray-100 px-4 py-1 text-[11px] font-bold text-gray-700">
                             {seccion}
                           </td>
                         </tr>
@@ -826,21 +865,40 @@ export default function PresupuestoManual() {
                                 <button
                                   type="button"
                                   onClick={() => toggleItemPlan(itemNombre)}
-                                  className={`rounded px-2 py-0.5 text-xs font-bold transition-colors ${aplica ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                                  className={`rounded px-2 py-0.5 text-xs font-bold transition-colors ${aplica ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-600 hover:bg-red-200"}`}
                                 >
                                   {aplica ? "SÍ" : "NO"}
                                 </button>
                               </td>
                               <td className="px-3 py-1.5 text-center">
-                                <input
-                                  type="number"
-                                  min={1}
-                                  value={estado?.cantidad ?? 1}
-                                  onChange={(e) => setCantidadPlan(itemNombre, e.target.value)}
-                                  className="h-7 w-12 rounded border border-gray-300 text-center text-xs"
-                                  style={{ color: "#111827", backgroundColor: "#fff" }}
-                                />
+                                {aplica ? (
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={estado?.cantidad ?? 1}
+                                    onChange={(e) => setCantidadPlan(itemNombre, e.target.value)}
+                                    className="h-7 w-12 rounded border border-gray-300 text-center text-xs"
+                                    style={{ color: "#111827", backgroundColor: "#fff" }}
+                                  />
+                                ) : <span className="text-gray-400">—</span>}
                               </td>
+                              {hayDescuentos && (
+                                <td className="px-3 py-1.5 text-right">
+                                  {!aplica ? (
+                                    <div className="flex items-center justify-end gap-1">
+                                      <span className="text-xs text-gray-500">$</span>
+                                      <input
+                                        type="number"
+                                        value={estado?.descuento ?? 0}
+                                        onChange={(e) => setDescuentoPlan(itemNombre, e.target.value)}
+                                        placeholder="-1200000"
+                                        className="h-7 w-28 rounded border border-red-300 px-2 text-right text-xs"
+                                        style={{ color: "#dc2626", backgroundColor: "#fff5f5" }}
+                                      />
+                                    </div>
+                                  ) : null}
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
@@ -856,14 +914,20 @@ export default function PresupuestoManual() {
                         <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">SÍ</span>
                       </td>
                       <td className="px-3 py-1.5 text-center text-xs text-gray-700">1</td>
+                      {hayDescuentos && <td />}
                     </tr>
                     {/* Total plan */}
                     <tr className="bg-gray-900">
-                      <td colSpan={3} className="px-4 py-2">
+                      <td colSpan={hayDescuentos ? 4 : 3} className="px-4 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-white">TOTAL {planBase}</span>
                           <span className="text-sm font-bold text-white">
-                            {precioBase !== null ? cop(precioBase) : "—"}
+                            {ajusteTotal < 0 ? (
+                              <span>
+                                <span style={{ textDecoration: "line-through", opacity: 0.55, fontSize: 12, marginRight: 6 }}>{cop(precioBase!)}</span>
+                                {cop(precioEfectivo)}
+                              </span>
+                            ) : cop(precioEfectivo)}
                           </span>
                         </div>
                       </td>
@@ -961,12 +1025,14 @@ export default function PresupuestoManual() {
                           <>
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600">Plan base</span>
-                              <span className="font-semibold text-gray-900">{cop(precioBase)}</span>
+                              <span className="font-semibold text-gray-900">{cop(precioEfectivo)}</span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Adicionales</span>
-                              <span className="font-semibold text-gray-900">{cop(subtotalAdicionales)}</span>
-                            </div>
+                            {subtotalAdicionales > 0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Adicionales</span>
+                                <span className="font-semibold text-gray-900">{cop(subtotalAdicionales)}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between border-t border-gray-200 pt-2 text-sm">
                               <span className="font-bold text-gray-900">TOTAL</span>
                               <span className="font-bold text-emerald-700">{cop(totalFinal)}</span>
@@ -1065,12 +1131,32 @@ export default function PresupuestoManual() {
                           </td>
                           <td className="px-3 py-1.5 text-center text-gray-700">1</td>
                         </tr>
+                        {/* Filas de descuento por ítems removidos */}
+                        {Object.entries(itemsPlanEstado)
+                          .filter(([_, e]) => !e.aplica && e.descuento !== 0)
+                          .map(([nombre, e]) => (
+                            <tr key={`desc-${nombre}`} className="border-b border-red-100 bg-red-50">
+                              <td className="px-4 py-1.5 text-xs italic text-red-600" colSpan={2}>
+                                — Sin {nombre}
+                              </td>
+                              <td className="px-3 py-1.5 text-right text-xs font-bold text-red-600">
+                                {cop(e.descuento)}
+                              </td>
+                            </tr>
+                          ))}
                         {/* Total plan */}
                         <tr className="bg-gray-900">
                           <td colSpan={3} className="px-4 py-2.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-bold text-white">TOTAL {planBase}</span>
-                              <span className="text-sm font-bold text-white">{cop(precioBase)}</span>
+                              <div className="text-right">
+                                {ajusteTotal < 0 && (
+                                  <div style={{ color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontSize: 11 }}>
+                                    {cop(precioBase!)}
+                                  </div>
+                                )}
+                                <span className="text-sm font-bold text-white">{cop(precioEfectivo)}</span>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -1139,12 +1225,14 @@ export default function PresupuestoManual() {
                       <>
                         <div className="flex w-72 justify-between text-sm">
                           <span className="text-gray-600">Plan base</span>
-                          <span className="font-semibold text-gray-900">{cop(precioBase)}</span>
+                          <span className="font-semibold text-gray-900">{cop(precioEfectivo)}</span>
                         </div>
-                        <div className="flex w-72 justify-between text-sm">
-                          <span className="text-gray-600">Adicionales</span>
-                          <span className="font-semibold text-gray-900">{cop(subtotalAdicionales)}</span>
-                        </div>
+                        {subtotalAdicionales > 0 && (
+                          <div className="flex w-72 justify-between text-sm">
+                            <span className="text-gray-600">Adicionales</span>
+                            <span className="font-semibold text-gray-900">{cop(subtotalAdicionales)}</span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="flex w-72 justify-between text-sm">
@@ -1199,7 +1287,9 @@ export default function PresupuestoManual() {
                     </tbody>
                   </table>
                   <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,0.2)", paddingTop: 12, fontSize: 11, color: "#d1d5db" }}>
-                    {CONDICIONES.map((c) => <p key={c} style={{ marginBottom: 4 }}>{c}</p>)}
+                    {[`* Tiempo de entrega de ${diasEntrega} días hábiles.`, CONDICIONES[1], CONDICIONES[2]].map((c) => (
+                      <p key={c} style={{ marginBottom: 4 }}>{c}</p>
+                    ))}
                   </div>
                   <div style={{ marginTop: 12, fontSize: 11 }}>
                     <p style={{ color: "#d1d5db" }}>
@@ -1219,6 +1309,25 @@ export default function PresupuestoManual() {
                     "Más que una constructora, un aliado para llevar a la realidad el hogar o negocio de tus sueños"
                   </div>
                 </div>
+
+                {/* Botón WhatsApp */}
+                <a
+                  href={`https://wa.me/573175639674?text=${encodeURIComponent(`Hola, me interesa este presupuesto (${numeroCot}), quiero avanzar`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    gap: 10, backgroundColor: "#25D366", color: "white",
+                    padding: "14px 24px", borderRadius: 12, textDecoration: "none",
+                    fontWeight: 500, fontSize: 15, marginTop: 20,
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.535 5.847L.057 23.882l6.198-1.625A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.366l-.36-.214-3.68.965.981-3.595-.234-.369A9.818 9.818 0 1112 21.818z"/>
+                  </svg>
+                  Contactar por WhatsApp — Quiero avanzar
+                </a>
               </CardContent>
             </Card>
 
@@ -1229,7 +1338,7 @@ export default function PresupuestoManual() {
               <Button onClick={guardarCotizacion} disabled={guardando} className="bg-emerald-600 hover:bg-emerald-700">
                 {guardando ? "Guardando…" : "Guardar cotización"}
               </Button>
-              <Button variant="ghost" onClick={() => router.push("/crm")} className="text-gray-600">Ir al CRM →</Button>
+              <Button variant="ghost" onClick={() => router.push("/")} className="text-gray-600">Ver en Flujo Comercial →</Button>
             </div>
           </div>
         )}
