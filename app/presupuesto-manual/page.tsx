@@ -203,11 +203,16 @@ export default function PresupuestoManual() {
 
   // inicializa estado de ítems del plan cuando cambia planBase
   useEffect(() => {
-    if (!planBase) { setItemsPlanEstado({}); return; }
-    const secciones = planBase === "Plan Básico" ? PLAN_BASICO_SECCIONES : PLAN_INTERMEDIO_SECCIONES;
-    const estado: Record<string, EstadoItemPlan> = {};
-    secciones.forEach((s) => s.items.forEach((item) => { estado[item] = { aplica: true, cantidad: 1, descuento: 0 }; }));
-    setItemsPlanEstado(estado);
+    const listaItems = planBase === "Plan Básico"
+      ? ITEMS_PLAN_BASICO
+      : planBase === "Plan Intermedio Plus"
+      ? ITEMS_PLAN_INTERMEDIO
+      : [];
+    const estadoInicial: Record<string, EstadoItemPlan> = {};
+    listaItems.forEach((nombre) => {
+      estadoInicial[nombre] = { aplica: true, cantidad: 1, descuento: 0 };
+    });
+    setItemsPlanEstado(estadoInicial);
   }, [planBase]);
 
   const mostrarToast = (msg: string) => {
@@ -218,7 +223,11 @@ export default function PresupuestoManual() {
   const toggleItemPlan = (nombre: string) => {
     setItemsPlanEstado((prev) => ({
       ...prev,
-      [nombre]: { ...(prev[nombre] ?? { aplica: true, cantidad: 1, descuento: 0 }), aplica: !prev[nombre]?.aplica },
+      [nombre]: {
+        ...(prev[nombre] ?? { aplica: true, cantidad: 1, descuento: 0 }),
+        aplica: !prev[nombre]?.aplica,
+        descuento: 0,
+      },
     }));
   };
 
@@ -304,7 +313,7 @@ export default function PresupuestoManual() {
     : planBase === "Plan Intermedio Plus" ? PLAN_INTERMEDIO_SECCIONES : [];
 
   // ── PDF ────────────────────────────────────────────────────────────────────
-  const descargarPDF = async () => {
+  const generarPDFDoc = async () => {
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
 
@@ -570,6 +579,11 @@ export default function PresupuestoManual() {
     doc.text("Este presupuesto tiene una validez de 30 días.", pageW / 2, pageH - 12, { align: "center" });
     doc.text("Constructora Colombia Remodela · Bucaramanga, Colombia", pageW / 2, pageH - 8, { align: "center" });
 
+    return doc;
+  };
+
+  const descargarPDF = async () => {
+    const doc = await generarPDFDoc();
     doc.save(`Presupuesto_${(cliente.nombre || "cliente").replace(/\s+/g, "_")}_${numeroCot}.pdf`);
   };
 
@@ -577,12 +591,41 @@ export default function PresupuestoManual() {
   const guardarCotizacion = async () => {
     setGuardando(true);
     try {
+      // 1. Generar PDF una sola vez
+      const pdfDoc = await generarPDFDoc();
+      const pdfBlob = pdfDoc.output("blob") as Blob;
+      const pdfFileName = `presupuesto_${numeroCot}.pdf`;
+
+      // 2. Subir PDF a Supabase Storage
+      let pdfUrl = "";
+      try {
+        await supabase.storage
+          .from("presupuestos")
+          .upload(`manuales/${pdfFileName}`, pdfBlob, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
+        const { data: urlData } = supabase.storage
+          .from("presupuestos")
+          .getPublicUrl(`manuales/${pdfFileName}`);
+        pdfUrl = urlData?.publicUrl || "";
+      } catch {
+        // storage opcional — no bloquea el guardado
+      }
+
+      // 3. Descargar PDF localmente
+      pdfDoc.save(`Presupuesto_${(cliente.nombre || "cliente").replace(/\s+/g, "_")}_${numeroCot}.pdf`);
+
       let toastMsg: string;
+      const descActividad = pdfUrl
+        ? `📄 Presupuesto manual generado — ${numeroCot}\nTotal: $ ${totalFinal.toLocaleString("es-CO")}\nVer PDF: ${pdfUrl}`
+        : `Presupuesto manual generado — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`;
+
       if (leadId) {
         await Promise.all([
           supabase.from("lead_actividades").insert({
             lead_id: leadId, tipo: "NOTA",
-            descripcion: `Presupuesto manual generado — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`,
+            descripcion: descActividad,
             usuario: "Comercial",
           }),
           supabase.from("leads").update({
@@ -603,12 +646,13 @@ export default function PresupuestoManual() {
         if (nuevoLead) {
           await supabase.from("lead_actividades").insert({
             lead_id: nuevoLead.id, tipo: "NOTA",
-            descripcion: `Lead creado desde Presupuesto Manual — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`,
+            descripcion: descActividad,
             usuario: "Comercial",
           });
         }
         toastMsg = "✅ Cotización guardada y lead creado en Prospección del CRM";
       }
+
       const { error } = await supabase.from("cotizaciones").insert({
         cliente_nombre: cliente.nombre, cliente_telefono: cliente.telefono, cliente_email: "",
         proyecto_id: catalogoId, proyecto_nombre: cliente.proyecto,
@@ -616,6 +660,7 @@ export default function PresupuestoManual() {
         precio_plan: precioBase ?? baseTotal, total: totalFinal,
         adicionales: JSON.stringify(itemsAdicionales),
         numero_cotizacion: numeroCot, estado_crm: "NUEVO",
+        ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
       });
       if (error) throw error;
       mostrarToast(toastMsg);
@@ -885,16 +930,23 @@ export default function PresupuestoManual() {
                               {hayDescuentos && (
                                 <td className="px-3 py-1.5 text-right">
                                   {!aplica ? (
-                                    <div className="flex items-center justify-end gap-1">
-                                      <span className="text-xs text-gray-500">$</span>
-                                      <input
-                                        type="number"
-                                        value={estado?.descuento ?? 0}
-                                        onChange={(e) => setDescuentoPlan(itemNombre, e.target.value)}
-                                        placeholder="-1200000"
-                                        className="h-7 w-28 rounded border border-red-300 px-2 text-right text-xs"
-                                        style={{ color: "#dc2626", backgroundColor: "#fff5f5" }}
-                                      />
+                                    <div className="flex flex-col items-end gap-1">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-500">$</span>
+                                        <input
+                                          type="number"
+                                          value={estado?.descuento ?? 0}
+                                          onChange={(e) => setDescuentoPlan(itemNombre, e.target.value)}
+                                          placeholder="ej: -1200000"
+                                          className="h-7 w-28 rounded border border-red-300 px-2 text-right text-xs"
+                                          style={{ color: "#dc2626", backgroundColor: "#fff5f5" }}
+                                        />
+                                      </div>
+                                      {(estado?.descuento ?? 0) !== 0 && (
+                                        <span className="text-[10px] font-semibold text-red-500">
+                                          Descuento: $ {Math.abs(estado?.descuento ?? 0).toLocaleString("es-CO")}
+                                        </span>
+                                      )}
                                     </div>
                                   ) : null}
                                 </td>
@@ -921,15 +973,20 @@ export default function PresupuestoManual() {
                       <td colSpan={hayDescuentos ? 4 : 3} className="px-4 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-white">TOTAL {planBase}</span>
-                          <span className="text-sm font-bold text-white">
-                            {ajusteTotal < 0 ? (
-                              <span>
-                                <span style={{ textDecoration: "line-through", opacity: 0.55, fontSize: 12, marginRight: 6 }}>{cop(precioBase!)}</span>
-                                {cop(precioEfectivo)}
-                              </span>
-                            ) : cop(precioEfectivo)}
-                          </span>
+                          <div className="text-right">
+                            {ajusteTotal < 0 && (
+                              <div style={{ color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontSize: 11 }}>
+                                {cop(precioBase!)}
+                              </div>
+                            )}
+                            <span className="text-sm font-bold text-white">{cop(precioEfectivo)}</span>
+                          </div>
                         </div>
+                        {ajusteTotal < 0 && (
+                          <div className="mt-1 text-right text-[10px] font-semibold text-red-400">
+                            Ajuste: - $ {Math.abs(ajusteTotal).toLocaleString("es-CO")}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   </tbody>
