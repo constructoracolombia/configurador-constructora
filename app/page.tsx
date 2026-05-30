@@ -1158,6 +1158,15 @@ function CentroOperacionesDashboard() {
           </Card>
         </div>
 
+        <div className="mb-4 text-right">
+          <a
+            href="/admin/exportar-leads"
+            className="text-sm text-gray-400 hover:text-gray-600"
+          >
+            Exportar audiencia Meta Ads →
+          </a>
+        </div>
+
         {/* Buscador de Leads */}
         <Card className="mb-4 border-0 shadow-sm">
           <CardContent className="p-4">
