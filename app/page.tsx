@@ -109,6 +109,21 @@ type Kpis = {
   pipeline_total: number;
 };
 
+function renderDescripcion(texto: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const partes = texto.split(urlRegex);
+  return partes.map((parte, i) =>
+    urlRegex.test(parte) ? (
+      <a key={i} href={parte} target="_blank" rel="noopener noreferrer"
+        style={{ color: "#2563eb", textDecoration: "underline" }}>
+        📎 Ver presupuesto PDF
+      </a>
+    ) : (
+      <span key={i}>{parte}</span>
+    )
+  );
+}
+
 /** Alinea valores de etapa en BD con las claves del Kanban (6 columnas). */
 const normalizarEtapa = (etapa: string) => {
   const valor = (etapa || "").toUpperCase();
@@ -1714,8 +1729,8 @@ function CentroOperacionesDashboard() {
                                   )}
 
                                   {lead.observaciones && (
-                                    <div className="mt-2 line-clamp-2 border-l-2 border-gray-300 bg-gray-50 p-2 text-[10px] italic text-gray-500">
-                                      {lead.observaciones}
+                                    <div className="mt-2 border-l-2 border-gray-300 bg-gray-50 p-2 text-[10px] italic text-gray-500">
+                                      {renderDescripcion(lead.observaciones)}
                                     </div>
                                   )}
 

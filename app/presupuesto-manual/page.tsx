@@ -609,44 +609,55 @@ export default function PresupuestoManual() {
     try {
       // 1. Generar PDF una sola vez
       const pdfDoc = await generarPDFDoc();
-      const pdfBlob = pdfDoc.output("blob") as Blob;
-      const pdfFileName = `presupuesto_${numeroCot}.pdf`;
+      const pdfArrayBuffer = pdfDoc.output("arraybuffer");
+      const pdfBlob = new Blob([pdfArrayBuffer], { type: "application/pdf" });
+      const fileName = `manuales/${numeroCot}.pdf`;
 
       // 2. Subir PDF a Supabase Storage
       let pdfUrl = "";
       try {
-        await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("presupuestos")
-          .upload(`manuales/${pdfFileName}`, pdfBlob, {
+          .upload(fileName, pdfBlob, {
             contentType: "application/pdf",
             upsert: true,
+            cacheControl: "3600",
           });
-        const { data: urlData } = supabase.storage
-          .from("presupuestos")
-          .getPublicUrl(`manuales/${pdfFileName}`);
-        pdfUrl = urlData?.publicUrl || "";
-      } catch {
-        // storage opcional — no bloquea el guardado
+        if (uploadError) {
+          console.error("Error subiendo PDF:", uploadError);
+        } else {
+          const { data: urlData } = supabase.storage
+            .from("presupuestos")
+            .getPublicUrl(fileName);
+          pdfUrl = urlData?.publicUrl || "";
+        }
+      } catch (e) {
+        console.error("Error storage:", e);
       }
 
       // 3. Descargar PDF localmente
       pdfDoc.save(`Presupuesto_${(cliente.nombre || "cliente").replace(/\s+/g, "_")}_${numeroCot}.pdf`);
 
+      const mensajeActividad = [
+        `📄 Presupuesto manual: ${numeroCot}`,
+        `💰 Total: $ ${totalFinal.toLocaleString("es-CO")}`,
+        `📋 Plan: ${planBase || "Sin plan"} — ${conjunto || cliente.proyecto}`,
+        pdfUrl ? `🔗 Ver PDF: ${pdfUrl}` : "(PDF no disponible)",
+      ].join("\n");
+
       let toastMsg: string;
-      const descActividad = pdfUrl
-        ? `📄 Presupuesto manual generado — ${numeroCot}\nTotal: $ ${totalFinal.toLocaleString("es-CO")}\nVer PDF: ${pdfUrl}`
-        : `Presupuesto manual generado — ${cliente.proyecto} — Total: $${totalFinal.toLocaleString("es-CO")} — Nro: ${numeroCot}`;
 
       if (leadId) {
         await Promise.all([
           supabase.from("lead_actividades").insert({
-            lead_id: leadId, tipo: "NOTA",
-            descripcion: descActividad,
+            lead_id: leadId, tipo: "DOCUMENTO",
+            descripcion: mensajeActividad,
             usuario: "Comercial",
           }),
           supabase.from("leads").update({
             presupuesto_estimado: totalFinal,
             nombre_proyecto: cliente.proyecto || conjunto,
+            observaciones: mensajeActividad,
             updated_at: new Date().toISOString(),
           }).eq("id", leadId),
         ]);
@@ -656,13 +667,13 @@ export default function PresupuestoManual() {
           nombre: cliente.nombre, telefono: cliente.telefono, email: "",
           fecha_contacto: fecha, origen: "OTRO", tipo_proyecto: "VIS",
           nombre_proyecto: cliente.proyecto, presupuesto_estimado: totalFinal,
-          observaciones: "ppto manual", etapa: "PROSPECCION",
+          observaciones: mensajeActividad, etapa: "PROSPECCION",
           probabilidad: 10, fuente: "OTRO", responsable: "Jeisson",
         }).select("id").single();
         if (nuevoLead) {
           await supabase.from("lead_actividades").insert({
-            lead_id: nuevoLead.id, tipo: "NOTA",
-            descripcion: descActividad,
+            lead_id: nuevoLead.id, tipo: "DOCUMENTO",
+            descripcion: mensajeActividad,
             usuario: "Comercial",
           });
         }
