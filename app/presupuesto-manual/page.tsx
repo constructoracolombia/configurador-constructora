@@ -129,6 +129,23 @@ const ITEMS_PLAN_INTERMEDIO = [
   "Closet principal RH", "Closet secundario RH", "Luminarias LED", "Aseo final",
 ];
 
+// ─── bonus y condiciones ─────────────────────────────────────────────────────
+
+const BONUS_ITEMS = [
+  "Ducha elegante cuadrada métalica + mezclador monocontrol baño principal",
+  "Asesoría arquitectónica en selección de enchape y carpintería.",
+  "Recorrido virtual 360° del apartamento una vez remodelado.",
+  "Trabajo supervisado por profesionales (Ing. civiles y arquitectos).",
+  "Atención al cliente, tranquilidad y cero sobrecostos.",
+  "Garantía de calidad materiales y mano de obra.",
+];
+
+const CONDICIONES = [
+  "* Tiempo de entrega de 39 días hábiles.",
+  "* Te enviamos avances semanales de tu apartamento por Whatsapp.",
+  "* Se realiza esta cotización con precio de enchape de 40 mil pesos el metro cuadrado.",
+];
+
 // ─── componente principal ────────────────────────────────────────────────────
 
 export default function PresupuestoManual() {
@@ -228,24 +245,11 @@ export default function PresupuestoManual() {
         : planBase === "Plan Intermedio Plus" ? ITEMS_PLAN_INTERMEDIO : [];
 
       const catalogoItems: CatalogoItem[] = data || [];
-      const preseleccion: Record<string, number> = {};
-      catalogoItems.forEach((item) => {
-        const enPlan = listaPlan.some((n) => n.toLowerCase().trim() === item.nombre?.toLowerCase().trim());
-        if (enPlan) preseleccion[item.id] = 1;
-      });
 
-      const nombresEnCatalogo = new Set(catalogoItems.map((i) => i.nombre?.toLowerCase().trim()));
-      const extras: CatalogoItem[] = listaPlan
-        .filter((n) => !nombresEnCatalogo.has(n.toLowerCase().trim()))
-        .map((n, idx) => ({
-          id: `extra-${idx}`, codigo: null,
-          categoria: "⚠ Sin precio en catálogo", nombre: n, descripcion: null, valor_venta: 0,
-        }));
-      extras.forEach((e) => { preseleccion[e.id] = 1; });
-
-      setItemsPlanIds(Object.keys(preseleccion));
-      setItems([...catalogoItems, ...extras]);
-      setSeleccionados(preseleccion);
+      // los ítems del plan se gestionan por itemsPlanEstado — no se preseleccionan en el catálogo
+      setItemsPlanIds([]);
+      setItems(catalogoItems);
+      setSeleccionados({});
       setPaso(2);
     } finally {
       setLoading(false);
@@ -497,6 +501,39 @@ export default function PresupuestoManual() {
       doc.text(doc.splitTextToSize(notas, pageW - 28), 14, notasY + 5);
     }
 
+    // ── tabla bonus ───────────────────────────────────────────────
+    autoTable(doc, {
+      startY: totalY + 20,
+      head: [["BONUS GRATIS — Te llevas todos estos Bonus con tu remodelación", ""]],
+      body: BONUS_ITEMS.map((b) => [b, "GRATIS"]),
+      theme: "grid",
+      headStyles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8, halign: "center" as const },
+      bodyStyles: { fontSize: 7.5 },
+      columnStyles: {
+        0: { cellWidth: "auto" as const },
+        1: { cellWidth: 25, halign: "center" as const, fontStyle: "bold", textColor: [30, 120, 60] },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const condY = (doc as any).lastAutoTable.finalY + 6;
+    doc.setFontSize(7.5);
+    doc.setTextColor(60, 60, 60);
+    doc.setFont("helvetica", "normal");
+    CONDICIONES.forEach((c, i) => { doc.text(c, 14, condY + i * 5); });
+
+    doc.setTextColor(15, 100, 50);
+    doc.text("Instagram: @constructoracol.remodela", 14, condY + 18);
+    doc.text("Web: constructoracolombia.com/remodelaciones", 14, condY + 23);
+
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(8);
+    doc.text(
+      "Más que una constructora, un aliado para llevar a la realidad el hogar o negocio de tus sueños",
+      pageW / 2, condY + 32, { align: "center" }
+    );
+
     doc.setFontSize(7);
     doc.setTextColor(120, 120, 120);
     doc.setFont("helvetica", "italic");
@@ -553,7 +590,15 @@ export default function PresupuestoManual() {
   };
 
   const paso1Completo = cliente.nombre.trim() && cliente.telefono.trim() && cliente.proyecto.trim() && fecha && catalogoId;
+  const itemsPlanNombres = (planBase === "Plan Básico"
+    ? ITEMS_PLAN_BASICO
+    : planBase === "Plan Intermedio Plus"
+    ? ITEMS_PLAN_INTERMEDIO
+    : []
+  ).map((n) => n.toLowerCase().trim());
+
   const itemsFiltrados = items.filter((i) => {
+    if (itemsPlanNombres.includes(i.nombre?.toLowerCase().trim() ?? "")) return false;
     if (!busqueda.trim()) return true;
     const t = busqueda.toLowerCase();
     return i.nombre.toLowerCase().includes(t) || (i.descripcion || "").toLowerCase().includes(t);
@@ -1136,6 +1181,43 @@ export default function PresupuestoManual() {
                     placeholder="Validez de la cotización, forma de pago, exclusiones, etc."
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
+                </div>
+
+                {/* Sección bonus */}
+                <div style={{ background: "#111", borderRadius: 8, padding: 16, marginTop: 20 }}>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>
+                    BONUS GRATIS — Te llevas todos estos Bonus con tu remodelación
+                  </div>
+                  <table style={{ width: "100%", fontSize: 12 }}>
+                    <tbody>
+                      {BONUS_ITEMS.map((b) => (
+                        <tr key={b}>
+                          <td style={{ color: "#fff", paddingTop: 4, paddingBottom: 4 }}>{b}</td>
+                          <td style={{ textAlign: "right", color: "#86efac", fontWeight: 700 }}>GRATIS</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,0.2)", paddingTop: 12, fontSize: 11, color: "#d1d5db" }}>
+                    {CONDICIONES.map((c) => <p key={c} style={{ marginBottom: 4 }}>{c}</p>)}
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 11 }}>
+                    <p style={{ color: "#d1d5db" }}>
+                      Instagram:{" "}
+                      <a href="https://www.instagram.com/constructoracol.remodela" style={{ color: "#86efac" }}>
+                        @constructoracol.remodela
+                      </a>
+                    </p>
+                    <p style={{ color: "#d1d5db" }}>
+                      Página web:{" "}
+                      <a href="https://www.constructoracolombia.com/remodelaciones" style={{ color: "#86efac" }}>
+                        constructoracolombia.com/remodelaciones
+                      </a>
+                    </p>
+                  </div>
+                  <div style={{ marginTop: 16, textAlign: "center", fontStyle: "italic", fontSize: 12, color: "#9ca3af" }}>
+                    "Más que una constructora, un aliado para llevar a la realidad el hogar o negocio de tus sueños"
+                  </div>
                 </div>
               </CardContent>
             </Card>
