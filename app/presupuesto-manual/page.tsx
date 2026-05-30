@@ -384,11 +384,13 @@ export default function PresupuestoManual() {
     if (precioBase !== null && planBase) {
       const planBody: any[][] = [];
       secciones.forEach(({ seccion, items: planItems }) => {
+        const visibles = planItems.filter((n) => !itemsOcultos.has(n));
+        if (visibles.length === 0) return;
         planBody.push([{
           content: seccion, colSpan: 3,
           styles: { fillColor: [220, 220, 220], fontStyle: "bold", textColor: [50, 50, 50], fontSize: 7.5 },
         }]);
-        planItems.forEach((itemNombre) => {
+        visibles.forEach((itemNombre) => {
           const estado = itemsPlanEstado[itemNombre];
           const aplica = estado?.aplica ?? true;
           planBody.push([
@@ -399,9 +401,9 @@ export default function PresupuestoManual() {
         });
       });
 
-      // filas de descuento por ítems removidos
+      // filas de descuento por ítems removidos (excluye ocultos)
       Object.entries(itemsPlanEstado)
-        .filter(([_, e]) => !e.aplica && e.descuento !== 0)
+        .filter(([nombre, e]) => !e.aplica && e.descuento !== 0 && !itemsOcultos.has(nombre))
         .forEach(([nombre, e]) => {
           planBody.push([
             { content: `— Sin ${nombre}`, styles: { textColor: [180, 50, 50], fontStyle: "italic" } },
@@ -410,13 +412,10 @@ export default function PresupuestoManual() {
           ]);
         });
 
-      // total plan con precioEfectivo
-      const totalPlanLabel = ajusteTotal < 0
-        ? `$ ${precioBase.toLocaleString("es-CO")} → $ ${precioEfectivo.toLocaleString("es-CO")}`
-        : `$ ${precioEfectivo.toLocaleString("es-CO")}`;
+      // total plan — siempre usa precioEfectivo (manual o calculado)
       planBody.push([
         { content: `TOTAL ${planBase}`, colSpan: 2, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 } },
-        { content: totalPlanLabel, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", halign: "right" as const, fontSize: 9 } },
+        { content: `$ ${precioEfectivo.toLocaleString("es-CO")}`, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", halign: "right" as const, fontSize: 9 } },
       ]);
 
       autoTable(doc, {
@@ -1214,30 +1213,34 @@ export default function PresupuestoManual() {
                         </tr>
                       </thead>
                       <tbody>
-                        {secciones.map(({ seccion, items: planItems }) => (
-                          <>
-                            <tr key={`r3-sec-${seccion}`}>
-                              <td colSpan={3} className="bg-gray-100 px-4 py-1 text-[11px] font-bold text-gray-700">{seccion}</td>
-                            </tr>
-                            {planItems.map((itemNombre) => {
-                              const estado = itemsPlanEstado[itemNombre];
-                              const aplica = estado?.aplica ?? true;
-                              return (
-                                <tr key={`r3-${seccion}-${itemNombre}`} className="border-b border-gray-100">
-                                  <td className="px-4 py-1.5 text-gray-900">{itemNombre}</td>
-                                  <td className="px-3 py-1.5 text-center">
-                                    <span className={`rounded px-2 py-0.5 text-xs font-bold ${aplica ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                                      {aplica ? "SÍ" : "NO"}
-                                    </span>
-                                  </td>
-                                  <td className="px-3 py-1.5 text-center text-gray-700">
-                                    {aplica ? (estado?.cantidad ?? 1) : "—"}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </>
-                        ))}
+                        {secciones.map(({ seccion, items: planItems }) => {
+                          const visibles = planItems.filter((n) => !itemsOcultos.has(n));
+                          if (visibles.length === 0) return null;
+                          return (
+                            <>
+                              <tr key={`r3-sec-${seccion}`}>
+                                <td colSpan={3} className="bg-gray-100 px-4 py-1 text-[11px] font-bold text-gray-700">{seccion}</td>
+                              </tr>
+                              {visibles.map((itemNombre) => {
+                                const estado = itemsPlanEstado[itemNombre];
+                                const aplica = estado?.aplica ?? true;
+                                return (
+                                  <tr key={`r3-${seccion}-${itemNombre}`} className="border-b border-gray-100">
+                                    <td className="px-4 py-1.5 text-gray-900">{itemNombre}</td>
+                                    <td className="px-3 py-1.5 text-center">
+                                      <span className={`rounded px-2 py-0.5 text-xs font-bold ${aplica ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                                        {aplica ? "SÍ" : "NO"}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-1.5 text-center text-gray-700">
+                                      {aplica ? (estado?.cantidad ?? 1) : "—"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </>
+                          );
+                        })}
                         {/* Bonus */}
                         <tr className="border-b border-gray-100">
                           <td className="px-4 py-1.5 text-gray-900">
