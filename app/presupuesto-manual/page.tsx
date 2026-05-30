@@ -174,6 +174,8 @@ export default function PresupuestoManual() {
   const [precioBase, setPrecioBase] = useState<number | null>(null);
   const [itemsPlanIds, setItemsPlanIds] = useState<string[]>([]);
   const [itemsPlanEstado, setItemsPlanEstado] = useState<Record<string, EstadoItemPlan>>({});
+  const [itemsOcultos, setItemsOcultos] = useState<Set<string>>(new Set());
+  const [precioManual, setPrecioManual] = useState<number | null>(null);
 
   // carga catálogos y leads al montar
   useEffect(() => {
@@ -213,7 +215,11 @@ export default function PresupuestoManual() {
       estadoInicial[nombre] = { aplica: true, cantidad: 1, descuento: 0 };
     });
     setItemsPlanEstado(estadoInicial);
+    setItemsOcultos(new Set());
   }, [planBase]);
+
+  // resetea precio manual al cambiar plan o conjunto
+  useEffect(() => { setPrecioManual(null); }, [planBase, conjunto]);
 
   const mostrarToast = (msg: string) => {
     setToast(msg);
@@ -245,6 +251,15 @@ export default function PresupuestoManual() {
       ...prev,
       [nombre]: { ...(prev[nombre] ?? { aplica: false, cantidad: 1, descuento: 0 }), descuento: n },
     }));
+  };
+
+  const toggleOcultarItem = (nombre: string) => {
+    setItemsOcultos((prev) => {
+      const next = new Set(prev);
+      if (next.has(nombre)) next.delete(nombre);
+      else next.add(nombre);
+      return next;
+    });
   };
 
   // paso 1 → 2: cargar ítems del catálogo
@@ -294,7 +309,9 @@ export default function PresupuestoManual() {
   const ajusteTotal = Object.values(itemsPlanEstado)
     .filter((e) => !e.aplica)
     .reduce((sum, e) => sum + (e.descuento || 0), 0);
-  const precioEfectivo = (precioBase || 0) + ajusteTotal;
+  const precioEfectivo = precioManual !== null
+    ? precioManual
+    : (precioBase || 0) + ajusteTotal;
 
   const subtotalAdicionales = itemsAdicionales.reduce(
     (s, i) => s + Math.round(i.valor_venta * 1.20) * (seleccionados[i.id] || 1), 0
@@ -863,9 +880,14 @@ export default function PresupuestoManual() {
                 <div>
                   <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{planBase} — {conjunto}</div>
                   <div style={{ color: "#86efac", fontSize: 12 }}>Precio base del plan incluido</div>
+                  {precioManual !== null && precioManual !== precioBase && (
+                    <div style={{ color: "#86efac", fontSize: 11, marginTop: 2 }}>Precio ajustado manualmente</div>
+                  )}
                 </div>
                 <div style={{ color: "#fff", fontWeight: 700, fontSize: 20 }}>
-                  {ajusteTotal < 0 ? (
+                  {precioManual !== null ? (
+                    cop(precioManual)
+                  ) : ajusteTotal < 0 ? (
                     <span>
                       <span style={{ textDecoration: "line-through", opacity: 0.55, fontSize: 14, marginRight: 6 }}>{cop(precioBase)}</span>
                       {cop(precioEfectivo)}
@@ -884,6 +906,7 @@ export default function PresupuestoManual() {
                 <table className="w-full" style={{ fontSize: 13 }}>
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="py-2 pl-2 pr-0" style={{ width: 24 }} />
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Ítem</th>
                       <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">¿Aplica?</th>
                       <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Cant.</th>
@@ -894,15 +917,35 @@ export default function PresupuestoManual() {
                     {secciones.map(({ seccion, items: planItems }) => (
                       <>
                         <tr key={`sec-${seccion}`}>
-                          <td colSpan={hayDescuentos ? 4 : 3} className="bg-gray-100 px-4 py-1 text-[11px] font-bold text-gray-700">
+                          <td colSpan={hayDescuentos ? 5 : 4} className="bg-gray-100 px-4 py-1 text-[11px] font-bold text-gray-700">
                             {seccion}
                           </td>
                         </tr>
                         {planItems.map((itemNombre) => {
                           const estado = itemsPlanEstado[itemNombre];
                           const aplica = estado?.aplica ?? true;
+                          const oculto = itemsOcultos.has(itemNombre);
                           return (
-                            <tr key={`${seccion}-${itemNombre}`} className="border-b border-gray-100">
+                            <tr
+                              key={`${seccion}-${itemNombre}`}
+                              className="border-b border-gray-100"
+                              style={{ opacity: oculto ? 0.3 : 1, transition: "opacity 0.15s" }}
+                            >
+                              <td className={`py-1.5 pl-2 pr-0 text-center`} style={{ width: 24 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOcultarItem(itemNombre)}
+                                  title={oculto ? "Mostrar en presupuesto" : "Ocultar del presupuesto"}
+                                  style={{
+                                    fontSize: 13, lineHeight: 1, background: "none", border: "none",
+                                    cursor: "pointer", color: oculto ? "#dc2626" : "#9ca3af",
+                                    textDecoration: oculto ? "line-through" : "none",
+                                    padding: "2px 4px",
+                                  }}
+                                >
+                                  👁
+                                </button>
+                              </td>
                               <td className={`px-4 py-1.5 ${!aplica ? "text-gray-400 line-through" : "text-gray-900"}`}>
                                 {itemNombre}
                               </td>
@@ -958,6 +1001,7 @@ export default function PresupuestoManual() {
                     ))}
                     {/* Bonus */}
                     <tr className="border-b border-gray-100">
+                      <td />
                       <td className="px-4 py-1.5 text-gray-900">
                         Tendedero abatible en zona húmeda
                         <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">BONUS GRATIS</span>
@@ -970,19 +1014,36 @@ export default function PresupuestoManual() {
                     </tr>
                     {/* Total plan */}
                     <tr className="bg-gray-900">
-                      <td colSpan={hayDescuentos ? 4 : 3} className="px-4 py-2">
+                      <td colSpan={hayDescuentos ? 5 : 4} className="px-4 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-white">TOTAL {planBase}</span>
-                          <div className="text-right">
-                            {ajusteTotal < 0 && (
-                              <div style={{ color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontSize: 11 }}>
+                          <div className="flex items-center gap-2">
+                            {precioManual === null && ajusteTotal < 0 && (
+                              <span style={{ color: "rgba(255,255,255,0.45)", textDecoration: "line-through", fontSize: 11 }}>
                                 {cop(precioBase!)}
-                              </div>
+                              </span>
                             )}
-                            <span className="text-sm font-bold text-white">{cop(precioEfectivo)}</span>
+                            <input
+                              type="text"
+                              value={precioEfectivo.toLocaleString("es-CO")}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/\./g, "").replace(/[^0-9-]/g, "");
+                                const num = parseInt(raw, 10);
+                                if (!isNaN(num)) setPrecioManual(num);
+                              }}
+                              style={{
+                                background: "transparent", border: "none",
+                                borderBottom: "1px solid rgba(255,255,255,0.4)",
+                                color: "white", fontWeight: "bold", fontSize: 15,
+                                textAlign: "right", width: 160, outline: "none",
+                              }}
+                            />
                           </div>
                         </div>
-                        {ajusteTotal < 0 && (
+                        {precioManual !== null && precioManual !== precioBase && (
+                          <div className="mt-0.5 text-right text-[10px] text-emerald-400">editado manualmente</div>
+                        )}
+                        {precioManual === null && ajusteTotal < 0 && (
                           <div className="mt-1 text-right text-[10px] font-semibold text-red-400">
                             Ajuste: - $ {Math.abs(ajusteTotal).toLocaleString("es-CO")}
                           </div>
