@@ -273,9 +273,6 @@ export default function PresupuestoManual() {
         .eq("activo", true)
         .order("categoria");
 
-      const listaPlan = planBase === "Plan Básico" ? ITEMS_PLAN_BASICO
-        : planBase === "Plan Intermedio Plus" ? ITEMS_PLAN_INTERMEDIO : [];
-
       const catalogoItems: CatalogoItem[] = data || [];
 
       // los ítems del plan se gestionan por itemsPlanEstado — no se preseleccionan en el catálogo
@@ -335,265 +332,236 @@ export default function PresupuestoManual() {
     const autoTable = (await import("jspdf-autotable")).default;
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const rNegro = 15; const gNegro = 15; const bNegro = 15;
+    const rVerde = 34; const gVerde = 139; const bVerde = 57;
+    const rGrisClaro = 245; const gGrisClaro = 245; const bGrisClaro = 243;
+    const rGrisTexto = 100; const gGrisTexto = 100; const bGrisTexto = 100;
+    // ── HEADER negro ──────────────────────────────────────────────────────────
+    doc.setFillColor(rNegro, gNegro, bNegro);
+    doc.rect(0, 0, W, 44, "F");
 
-    // Header negro
-    doc.setFillColor(20, 20, 20);
-    doc.rect(0, 0, pageW, 38, "F");
+    // Logo C en círculo verde
+    doc.setFillColor(rVerde, gVerde, bVerde);
+    doc.circle(18, 22, 9, "F");
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("CONSTRUCTORA COLOMBIA REMODELA", 14, 14);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("SU ALIADO EN REMODELACIÓN", 14, 20);
-    doc.setFontSize(8);
-    doc.text(`Nro: ${numeroCot}`, pageW - 14, 14, { align: "right" });
-    doc.text(`Fecha: ${fecha}`, pageW - 14, 19, { align: "right" });
-    if (planBase) doc.text(`Plan: ${planBase}`, pageW - 14, 24, { align: "right" });
+    doc.setFontSize(14);
+    doc.text("C", 18, 26, { align: "center" });
 
-    // Datos cliente
-    doc.setFillColor(245, 245, 245);
-    doc.roundedRect(14, 42, pageW - 28, 24, 2, 2, "F");
-    doc.setTextColor(30, 30, 30);
-    doc.setFontSize(8);
+    doc.setFontSize(15);
     doc.setFont("helvetica", "bold");
-    doc.text("Cliente:", 18, 49);
-    doc.text("Conjunto:", 18, 55);
-    doc.text("Ciudad:", 18, 61);
-    doc.setFont("helvetica", "normal");
-    doc.text(cliente.nombre + (cliente.telefono ? `  ·  ${cliente.telefono}` : ""), 35, 49);
-    doc.text(cliente.proyecto || conjunto, 35, 55);
-    doc.text("Bucaramanga", 35, 61);
-
-    // Título tabla
-    doc.setFillColor(20, 20, 20);
-    doc.rect(14, 70, pageW - 28, 7, "F");
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text(
-      `Constructora Colombia Remodela — ${cliente.proyecto || conjunto}`,
-      pageW / 2, 75, { align: "center" }
-    );
+    doc.text("CONSTRUCTORA COLOMBIA REMODELA", 30, 18);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(180, 180, 180);
+    doc.text("Su aliado en remodelación · Bucaramanga, Colombia", 30, 25);
 
-    let currentTableEndY = 78;
-
-    // ── tabla del plan ────────────────────────────────────────────
-    if (precioBase !== null && planBase) {
-      const planBody: any[][] = [];
-      secciones.forEach(({ seccion, items: planItems }) => {
-        const visibles = planItems.filter((n) => !itemsOcultos.has(n));
-        if (visibles.length === 0) return;
-        planBody.push([{
-          content: seccion, colSpan: 3,
-          styles: { fillColor: [220, 220, 220], fontStyle: "bold", textColor: [50, 50, 50], fontSize: 7.5 },
-        }]);
-        visibles.forEach((itemNombre) => {
-          const estado = itemsPlanEstado[itemNombre];
-          const aplica = estado?.aplica ?? true;
-          planBody.push([
-            { content: itemNombre, styles: { textColor: aplica ? [30, 30, 30] : [150, 150, 150], fontStyle: aplica ? "normal" : "italic" } },
-            { content: aplica ? "SÍ" : "NO", styles: { halign: "center" as const, textColor: aplica ? [21, 128, 61] : [180, 50, 50] } },
-            { content: aplica ? String(estado?.cantidad ?? 1) : "—", styles: { halign: "center" as const } },
-          ]);
-        });
-      });
-
-      // filas de descuento por ítems removidos (excluye ocultos)
-      Object.entries(itemsPlanEstado)
-        .filter(([nombre, e]) => !e.aplica && e.descuento !== 0 && !itemsOcultos.has(nombre))
-        .forEach(([nombre, e]) => {
-          planBody.push([
-            { content: `— Sin ${nombre}`, styles: { textColor: [180, 50, 50], fontStyle: "italic" } },
-            { content: "NO", styles: { halign: "center" as const, textColor: [180, 50, 50] } },
-            { content: cop(e.descuento), styles: { halign: "right" as const, textColor: [180, 50, 50], fontStyle: "bold" } },
-          ]);
-        });
-
-      // total plan — siempre usa precioEfectivo (manual o calculado)
-      planBody.push([
-        { content: `TOTAL ${planBase}`, colSpan: 2, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 } },
-        { content: `$ ${precioEfectivo.toLocaleString("es-CO")}`, styles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", halign: "right" as const, fontSize: 9 } },
-      ]);
-
-      autoTable(doc, {
-        startY: 78,
-        head: [["Ítem", "¿Aplica?", "Cantidad / Área"]],
-        body: planBody,
-        foot: [["★ Tendedero abatible en zona húmeda — BONUS GRATIS", "SÍ", "1"]],
-        footStyles: { fillColor: [255, 255, 255], textColor: [15, 100, 50], fontStyle: "italic", fontSize: 7.5 },
-        theme: "grid",
-        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-        bodyStyles: { fontSize: 7.5, textColor: [30, 30, 30] },
-        columnStyles: {
-          0: { cellWidth: "auto" as const },
-          1: { cellWidth: 20, halign: "center" as const },
-          2: { cellWidth: 25, halign: "center" as const },
-        },
-        margin: { left: 14, right: 14 },
-      });
-      currentTableEndY = (doc as any).lastAutoTable.finalY;
+    doc.setFontSize(8);
+    doc.setTextColor(180, 180, 180);
+    doc.text(`Nro. ${numeroCot}`, W - 12, 16, { align: "right" });
+    doc.text(new Date().toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" }), W - 12, 22, { align: "right" });
+    if (planBase) {
+      doc.setTextColor(rVerde, gVerde, bVerde);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text(planBase.toUpperCase(), W - 12, 28, { align: "right" });
     }
 
-    // ── tabla adicionales ─────────────────────────────────────────
-    const itemsParaPDF = precioBase !== null
-      ? itemsSeleccionados.filter((i) => !itemsPlanSet.has(i.id))
-      : itemsSeleccionados;
+    // ── DATOS CLIENTE ─────────────────────────────────────────────────────────
+    doc.setFillColor(rGrisClaro, gGrisClaro, bGrisClaro);
+    doc.roundedRect(12, 50, W - 24, 22, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(rGrisTexto, gGrisTexto, bGrisTexto);
+    doc.text("CLIENTE", 18, 58);
+    doc.text("CONJUNTO", 75, 58);
+    doc.text("CIUDAD", 145, 58);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(rNegro, gNegro, bNegro);
+    doc.setFontSize(9);
+    doc.text(`${cliente.nombre}  ·  ${cliente.telefono}`, 18, 65);
+    doc.text(cliente.proyecto || conjunto, 75, 65);
+    doc.text("Bucaramanga", 145, 65);
 
-    if (itemsParaPDF.length > 0) {
-      const adicStartY = currentTableEndY + 6;
+    // ── TÍTULO TABLA ──────────────────────────────────────────────
+    doc.setFillColor(rNegro, gNegro, bNegro);
+    doc.rect(12, 78, W - 24, 8, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(`Constructora Colombia Remodela — ${cliente.proyecto || conjunto}`, W / 2, 83.5, { align: "center" });
 
-      if (precioBase !== null) {
-        doc.setFillColor(60, 60, 60);
-        doc.rect(14, adicStartY, pageW - 28, 7, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.text("ADICIONALES", 18, adicStartY + 5);
-      }
-
-      const adicBody: any[][] = itemsParaPDF.map((item) => {
-        const precioUtil = Math.round(item.valor_venta * 1.20);
-        const cant = seleccionados[item.id] || 1;
-        return [
-          item.codigo || "—",
-          item.nombre + (item.descripcion ? `\n${item.descripcion}` : ""),
-          String(cant),
-          item.valor_venta > 0 ? cop(precioUtil) : "A convenir",
-          item.valor_venta > 0 ? cop(precioUtil * cant) : "A convenir",
-        ];
+    // ── TABLA DEL PLAN ────────────────────────────────────────────
+    const seccionesActivas = planBase === "Plan Básico" ? PLAN_BASICO_SECCIONES : PLAN_INTERMEDIO_SECCIONES;
+    const bodyPlan: any[][] = [];
+    seccionesActivas.forEach((sec) => {
+      const itemsVisibles = sec.items.filter((n) => !itemsOcultos.has(n));
+      if (itemsVisibles.length === 0) return;
+      bodyPlan.push([{
+        content: sec.seccion, colSpan: 2,
+        styles: { fillColor: [230, 230, 228], textColor: [rNegro, gNegro, bNegro], fontStyle: "bold", fontSize: 7.5 },
+      }]);
+      itemsVisibles.forEach((nombre) => {
+        const estado = itemsPlanEstado[nombre];
+        bodyPlan.push([nombre, String(estado?.cantidad || 1)]);
       });
-      // subtotal adicionales
-      adicBody.push([
-        { content: "Subtotal adicionales", colSpan: 4, styles: { fontStyle: "bold", halign: "right" as const, fillColor: [245, 245, 245] } },
-        { content: cop(precioBase !== null ? subtotalAdicionales : subtotalSinPlan), styles: { fontStyle: "bold", halign: "right" as const, fillColor: [245, 245, 245] } },
-      ]);
+    });
 
+    autoTable(doc, {
+      startY: 87,
+      head: [["Ítem", "Cant."]],
+      body: bodyPlan,
+      foot: [[
+        { content: "✦  Tendedero abatible en zona húmeda — BONUS GRATIS", styles: { textColor: [rVerde, gVerde, bVerde], fontStyle: "italic" } },
+        { content: "1", styles: { textColor: [rVerde, gVerde, bVerde] } },
+      ]],
+      theme: "grid",
+      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+      footStyles: { fillColor: [255, 255, 255], fontSize: 7.5, lineWidth: 0.1 },
+      bodyStyles: { fontSize: 8, textColor: [rNegro, gNegro, bNegro] },
+      columnStyles: { 0: { cellWidth: "auto" as const }, 1: { cellWidth: 18, halign: "center" as const } },
+      alternateRowStyles: { fillColor: [250, 250, 249] },
+      margin: { left: 12, right: 12 },
+    });
+
+    let currentY: number = (doc as any).lastAutoTable.finalY + 2;
+
+    // Fila TOTAL plan
+    doc.setFillColor(rNegro, gNegro, bNegro);
+    doc.rect(12, currentY, W - 24, 9, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(`TOTAL ${planBase}`, 16, currentY + 6);
+    doc.text(`$ ${precioEfectivo.toLocaleString("es-CO")}`, W - 14, currentY + 6, { align: "right" });
+    currentY += 14;
+
+    // ── ADICIONALES ───────────────────────────────────────────────
+    const adicsList = items.filter((i) => seleccionados[i.id] && !itemsOcultos.has(i.nombre));
+    if (adicsList.length > 0) {
       autoTable(doc, {
-        startY: precioBase !== null ? adicStartY + 7 : currentTableEndY,
-        head: [["Cód.", "Ítem / Descripción", "Cant.", "Vlr. Unit. (+20%)", "Total"]],
-        body: adicBody,
+        startY: currentY,
+        head: [["Cód.", "Ítem", "Cant.", "Vlr. Unitario", "Total"]],
+        body: adicsList.map((item) => {
+          const cant = seleccionados[item.id] || 1;
+          const precioConUtil = Math.round(item.valor_venta * 1.2);
+          return [
+            item.codigo || "—",
+            item.nombre,
+            String(cant),
+            `$ ${precioConUtil.toLocaleString("es-CO")}`,
+            `$ ${(precioConUtil * cant).toLocaleString("es-CO")}`,
+          ];
+        }),
         theme: "grid",
-        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-        bodyStyles: { fontSize: 7.5, textColor: [30, 30, 30] },
+        headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+        bodyStyles: { fontSize: 7.5, textColor: [rNegro, gNegro, bNegro] },
         columnStyles: {
           0: { cellWidth: 14, halign: "center" as const },
           1: { cellWidth: "auto" as const },
-          2: { cellWidth: 12, halign: "center" as const },
-          3: { cellWidth: 28, halign: "right" as const },
-          4: { cellWidth: 28, halign: "right" as const },
+          2: { cellWidth: 14, halign: "center" as const },
+          3: { cellWidth: 30, halign: "right" as const },
+          4: { cellWidth: 30, halign: "right" as const },
         },
-        alternateRowStyles: { fillColor: [250, 250, 250] },
-        margin: { left: 14, right: 14 },
+        alternateRowStyles: { fillColor: [250, 250, 249] },
+        margin: { left: 12, right: 12 },
       });
-      currentTableEndY = (doc as any).lastAutoTable.finalY;
+      currentY = (doc as any).lastAutoTable.finalY + 3;
     }
 
-    // ── totales ───────────────────────────────────────────────────
-    const finalY = currentTableEndY + 4;
-    const colDerX = pageW - 14;
+    // ── TOTALES ───────────────────────────────────────────────────
+    const subtotalAdic = adicsList.reduce((sum, item) => {
+      const cant = seleccionados[item.id] || 1;
+      return sum + Math.round(item.valor_venta * 1.2) * cant;
+    }, 0);
+
+    const lineX = W - 12;
     doc.setFontSize(8);
-    doc.setTextColor(60, 60, 60);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(rGrisTexto, gGrisTexto, bGrisTexto);
 
-    let curY = finalY + 5;
-    if (precioBase !== null) {
-      doc.text("Plan base:", colDerX - 50, curY, { align: "left" });
-      doc.text(cop(precioEfectivo), colDerX, curY, { align: "right" });
-      curY += 6;
-      if (subtotalAdicionales > 0) {
-        doc.text("Adicionales:", colDerX - 50, curY, { align: "left" });
-        doc.text(cop(subtotalAdicionales), colDerX, curY, { align: "right" });
-        curY += 6;
-      }
-    } else {
-      doc.text("Subtotal:", colDerX - 50, curY, { align: "left" });
-      doc.text(cop(subtotalSinPlan), colDerX, curY, { align: "right" });
-      curY += 6;
+    if (planBase) {
+      doc.text("Plan base:", lineX - 45, currentY + 5);
+      doc.text(`$ ${precioEfectivo.toLocaleString("es-CO")}`, lineX, currentY + 5, { align: "right" });
+      currentY += 6;
+    }
+    if (subtotalAdic > 0) {
+      doc.text("Adicionales:", lineX - 45, currentY + 5);
+      doc.text(`$ ${subtotalAdic.toLocaleString("es-CO")}`, lineX, currentY + 5, { align: "right" });
+      currentY += 6;
     }
 
-    let totalY: number;
-    if (aplicaIva) {
-      doc.text("IVA 19%:", colDerX - 50, curY, { align: "left" });
-      doc.text(cop(iva), colDerX, curY, { align: "right" });
-      totalY = curY + 8;
-    } else {
-      totalY = curY + 2;
-    }
+    doc.setDrawColor(rNegro, gNegro, bNegro);
+    doc.setLineWidth(0.4);
+    doc.line(lineX - 55, currentY + 2, lineX, currentY + 2);
+    currentY += 5;
 
-    doc.setDrawColor(20, 20, 20);
-    doc.setLineWidth(0.5);
-    doc.line(colDerX - 55, totalY - 3, colDerX, totalY - 3);
-    doc.setFillColor(20, 20, 20);
-    doc.rect(colDerX - 55, totalY - 2, 55, 9, "F");
+    doc.setFillColor(rNegro, gNegro, bNegro);
+    doc.roundedRect(lineX - 60, currentY, 60, 11, 2, 2, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text("TOTAL", colDerX - 50, totalY + 4);
-    doc.text(cop(totalFinal), colDerX - 2, totalY + 4, { align: "right" });
+    doc.setFontSize(10);
+    doc.text("TOTAL", lineX - 55, currentY + 7.5);
+    doc.text(`$ ${totalFinal.toLocaleString("es-CO")}`, lineX - 3, currentY + 7.5, { align: "right" });
+    currentY += 18;
 
-    if (notas.trim()) {
-      const notasY = totalY + 14;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(30, 30, 30);
-      doc.text("Notas y condiciones:", 14, notasY);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
-      doc.text(doc.splitTextToSize(notas, pageW - 28), 14, notasY + 5);
-    }
-
-    // ── tabla bonus ───────────────────────────────────────────────
+    // ── BONUS GRATIS ──────────────────────────────────────────────
     autoTable(doc, {
-      startY: totalY + 18,
-      head: [["BONUS GRATIS — Te llevas todos estos Bonus con tu remodelación", ""]],
+      startY: currentY,
+      head: [[{ content: "✦  BONUS GRATIS — Te llevas todos estos beneficios con tu remodelación", colSpan: 2 }]],
       body: BONUS_ITEMS.map((b) => [b, "GRATIS"]),
       theme: "grid",
-      headStyles: { fillColor: [20, 20, 20], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8, halign: "center" as const },
-      bodyStyles: { fontSize: 7.5 },
+      headStyles: { fillColor: [rNegro, gNegro, bNegro], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8, halign: "center" as const },
+      bodyStyles: { fontSize: 7.5, textColor: [rNegro, gNegro, bNegro] },
       columnStyles: {
         0: { cellWidth: "auto" as const },
-        1: { cellWidth: 25, halign: "center" as const, fontStyle: "bold", textColor: [30, 120, 60] },
+        1: { cellWidth: 22, halign: "center" as const, fontStyle: "bold", textColor: [rVerde, gVerde, bVerde] },
       },
-      margin: { left: 14, right: 14 },
+      alternateRowStyles: { fillColor: [250, 250, 249] },
+      margin: { left: 12, right: 12 },
     });
 
-    // condiciones con días dinámicos
-    const condicionesPDF = [
-      `* Tiempo de entrega de ${diasEntrega} días hábiles.`,
-      CONDICIONES[1],
-      CONDICIONES[2],
-    ];
-    const condY = (doc as any).lastAutoTable.finalY + 6;
-    doc.setFontSize(7.5);
-    doc.setTextColor(60, 60, 60);
-    doc.setFont("helvetica", "normal");
-    condicionesPDF.forEach((c, i) => { doc.text(c, 14, condY + i * 5); });
+    currentY = (doc as any).lastAutoTable.finalY + 8;
 
-    doc.setTextColor(15, 100, 50);
-    doc.text("Instagram: @constructoracol.remodela", 14, condY + 18);
-    doc.text("Web: constructoracolombia.com/remodelaciones", 14, condY + 23);
+    // ── CONDICIONES ───────────────────────────────────────────────
+    const diasEntregaPDF = planBase === "Plan Básico" ? 39 : 59;
+    const condsPDF = [
+      `• Tiempo de entrega: ${diasEntregaPDF} días hábiles.`,
+      "• Te enviamos avances semanales de tu apartamento por WhatsApp.",
+      "• Precio de enchape calculado a $ 40.000/m².",
+    ];
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(rGrisTexto, gGrisTexto, bGrisTexto);
+    condsPDF.forEach((c, i) => { doc.text(c, 14, currentY + i * 5); });
+    currentY += condsPDF.length * 5 + 4;
+
+    doc.setTextColor(rVerde, gVerde, bVerde);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.text("Instagram: @constructoracol.remodela", 14, currentY);
+    doc.text("Web: constructoracolombia.com/remodelaciones", 14, currentY + 5);
+    currentY += 12;
 
     doc.setFont("helvetica", "italic");
-    doc.setTextColor(80, 80, 80);
-    doc.setFontSize(8);
+    doc.setFontSize(9);
+    doc.setTextColor(rGrisTexto, gGrisTexto, bGrisTexto);
     doc.text(
       "Más que una constructora, un aliado para llevar a la realidad el hogar o negocio de tus sueños",
-      pageW / 2, condY + 32, { align: "center" }
+      W / 2, currentY, { align: "center", maxWidth: W - 28 }
     );
 
-    doc.setTextColor(37, 211, 102);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("WhatsApp: +57 317 5639674", pageW / 2, condY + 40, { align: "center" });
-
+    // ── PIE DE PÁGINA ─────────────────────────────────────────────
+    doc.setFillColor(rGrisClaro, gGrisClaro, bGrisClaro);
+    doc.rect(0, H - 14, W, 14, "F");
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
-    doc.setFont("helvetica", "italic");
-    doc.text("Este presupuesto tiene una validez de 30 días.", pageW / 2, pageH - 12, { align: "center" });
-    doc.text("Constructora Colombia Remodela · Bucaramanga, Colombia", pageW / 2, pageH - 8, { align: "center" });
+    doc.setTextColor(rGrisTexto, gGrisTexto, bGrisTexto);
+    doc.text("Este presupuesto tiene validez de 30 días desde la fecha de emisión.", W / 2, H - 8, { align: "center" });
+    doc.text(`WhatsApp: +57 317 5639674  ·  ${numeroCot}`, W / 2, H - 4, { align: "center" });
 
     return doc;
   };
@@ -1444,19 +1412,21 @@ export default function PresupuestoManual() {
 
                 {/* Botón WhatsApp */}
                 <a
-                  href={`https://wa.me/573175639674?text=${encodeURIComponent(`Hola, me interesa este presupuesto (${numeroCot}), quiero avanzar`)}`}
+                  href={`https://wa.me/573175639674?text=${encodeURIComponent(`Hola, me interesa el presupuesto ${numeroCot} por $ ${totalFinal.toLocaleString("es-CO")}. Quiero avanzar.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    gap: 10, backgroundColor: "#25D366", color: "white",
-                    padding: "14px 24px", borderRadius: 12, textDecoration: "none",
-                    fontWeight: 500, fontSize: 15, marginTop: 20,
+                    gap: 12, backgroundColor: "#25D366", color: "white",
+                    padding: "16px 32px", borderRadius: 14, textDecoration: "none",
+                    fontWeight: 600, fontSize: 16, marginTop: 24, letterSpacing: "0.01em",
+                    boxShadow: "0 4px 14px rgba(37,211,102,0.35)", transition: "opacity 0.2s",
                   }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = "0.92"; }}
+                  onMouseOut={(e) => { (e.currentTarget as HTMLAnchorElement).style.opacity = "1"; }}
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.535 5.847L.057 23.882l6.198-1.625A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.366l-.36-.214-3.68.965.981-3.595-.234-.369A9.818 9.818 0 1112 21.818z"/>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.978-1.306A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.898 13.87c-.207.583-1.215 1.114-1.656 1.15-.44.038-.854.207-2.876-.598-2.432-.983-3.99-3.47-4.11-3.63-.12-.16-.976-1.298-.976-2.476 0-1.178.617-1.757.835-1.994.22-.237.478-.297.638-.297l.459.009c.148.006.346-.056.541.413.2.48.68 1.658.74 1.778.06.12.1.26.02.418-.08.158-.12.257-.238.396-.12.14-.252.312-.36.42-.12.116-.245.242-.105.474.14.233.62.965 1.329 1.563.913.786 1.683 1.03 1.917 1.144.233.115.368.096.503-.058.136-.154.583-.68.738-.913.154-.234.308-.194.518-.116.21.077 1.333.628 1.562.743.228.115.38.173.437.27.057.096.057.554-.15 1.137z"/>
                   </svg>
                   Contactar por WhatsApp — Quiero avanzar
                 </a>
