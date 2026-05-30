@@ -342,33 +342,19 @@ export default function PresupuestoManual() {
     doc.setFillColor(rNegro, gNegro, bNegro);
     doc.rect(0, 0, W, 44, "F");
 
-    // Logo C en círculo verde
-    doc.setFillColor(rVerde, gVerde, bVerde);
-    doc.circle(18, 22, 9, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("C", 18, 26, { align: "center" });
-
     doc.setFontSize(15);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("CONSTRUCTORA COLOMBIA REMODELA", 30, 18);
+    doc.text("CONSTRUCTORA COLOMBIA REMODELA", 14, 18);
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(180, 180, 180);
-    doc.text("Su aliado en remodelación · Bucaramanga, Colombia", 30, 25);
+    doc.text("Su aliado en remodelación · Bucaramanga, Colombia", 14, 25);
 
     doc.setFontSize(8);
     doc.setTextColor(180, 180, 180);
     doc.text(`Nro. ${numeroCot}`, W - 12, 16, { align: "right" });
     doc.text(new Date().toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" }), W - 12, 22, { align: "right" });
-    if (planBase) {
-      doc.setTextColor(rVerde, gVerde, bVerde);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.text(planBase.toUpperCase(), W - 12, 28, { align: "right" });
-    }
 
     // ── DATOS CLIENTE ─────────────────────────────────────────────────────────
     doc.setFillColor(rGrisClaro, gGrisClaro, bGrisClaro);
@@ -398,7 +384,9 @@ export default function PresupuestoManual() {
     const seccionesActivas = planBase === "Plan Básico" ? PLAN_BASICO_SECCIONES : PLAN_INTERMEDIO_SECCIONES;
     const bodyPlan: any[][] = [];
     seccionesActivas.forEach((sec) => {
-      const itemsVisibles = sec.items.filter((n) => !itemsOcultos.has(n));
+      const itemsVisibles = sec.items.filter(
+        (n) => !itemsOcultos.has(n) && n !== "Tendedero abatible en zona húmeda"
+      );
       if (itemsVisibles.length === 0) return;
       bodyPlan.push([{
         content: sec.seccion, colSpan: 2,
@@ -415,12 +403,18 @@ export default function PresupuestoManual() {
       head: [["Ítem", "Cant."]],
       body: bodyPlan,
       foot: [[
-        { content: "✦  Tendedero abatible en zona húmeda — BONUS GRATIS", styles: { textColor: [rVerde, gVerde, bVerde], fontStyle: "italic" } },
-        { content: "1", styles: { textColor: [rVerde, gVerde, bVerde] } },
+        {
+          content: "✦  Tendedero abatible en zona húmeda — BONUS GRATIS",
+          styles: { textColor: [rVerde, gVerde, bVerde], fontStyle: "italic", fontSize: 7.5 },
+        },
+        {
+          content: "1",
+          styles: { textColor: [rVerde, gVerde, bVerde], fontStyle: "bold", halign: "center" as const, fontSize: 8 },
+        },
       ]],
       theme: "grid",
       headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-      footStyles: { fillColor: [255, 255, 255], fontSize: 7.5, lineWidth: 0.1 },
+      footStyles: { fillColor: [255, 255, 255], lineWidth: 0.1, lineColor: [220, 220, 220] },
       bodyStyles: { fontSize: 8, textColor: [rNegro, gNegro, bNegro] },
       columnStyles: { 0: { cellWidth: "auto" as const }, 1: { cellWidth: 18, halign: "center" as const } },
       alternateRowStyles: { fillColor: [250, 250, 249] },
@@ -1427,6 +1421,7 @@ export default function PresupuestoManual() {
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.978-1.306A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.898 13.87c-.207.583-1.215 1.114-1.656 1.15-.44.038-.854.207-2.876-.598-2.432-.983-3.99-3.47-4.11-3.63-.12-.16-.976-1.298-.976-2.476 0-1.178.617-1.757.835-1.994.22-.237.478-.297.638-.297l.459.009c.148.006.346-.056.541.413.2.48.68 1.658.74 1.778.06.12.1.26.02.418-.08.158-.12.257-.238.396-.12.14-.252.312-.36.42-.12.116-.245.242-.105.474.14.233.62.965 1.329 1.563.913.786 1.683 1.03 1.917 1.144.233.115.368.096.503-.058.136-.154.583-.68.738-.913.154-.234.308-.194.518-.116.21.077 1.333.628 1.562.743.228.115.38.173.437.27.057.096.057.554-.15 1.137z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.535 5.847L.057 23.882l6.198-1.625A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.366l-.36-.214-3.68.965.981-3.595-.234-.369A9.818 9.818 0 1112 21.818z"/>
                   </svg>
                   Contactar por WhatsApp — Quiero avanzar
                 </a>
