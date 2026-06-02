@@ -2653,7 +2653,7 @@ function CentroOperacionesDashboard() {
               {/* Fecha y hora */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                  <label className="mb-2 block text-sm font-bold text-gray-900">
                     📅 Fecha del Seguimiento
                   </label>
                   <input
@@ -2661,16 +2661,16 @@ function CentroOperacionesDashboard() {
                     value={fechaObservacion}
                     onChange={(e) => setFechaObservacion(e.target.value)}
                     max={new Date().toISOString().split('T')[0]}
-                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="h-11 w-full rounded-lg border-2 border-gray-300 bg-white px-4 font-medium text-gray-900 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">🕐 Hora</label>
+                  <label className="mb-2 block text-sm font-bold text-gray-900">🕐 Hora</label>
                   <input
                     type="time"
                     value={horaObservacion}
                     onChange={(e) => setHoraObservacion(e.target.value)}
-                    className="h-11 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="h-11 w-full rounded-lg border-2 border-gray-300 bg-white px-4 font-medium text-gray-900 placeholder:text-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               </div>
@@ -2701,7 +2701,7 @@ function CentroOperacionesDashboard() {
 
               {/* Observación */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
+                <label className="mb-2 block text-sm font-bold text-gray-900">
                   📋 Descripción del Seguimiento
                 </label>
                 <textarea
@@ -2709,7 +2709,7 @@ function CentroOperacionesDashboard() {
                   onChange={(e) => setNuevaObservacion(e.target.value)}
                   placeholder="Ej: Llamada realizada. Cliente interesado en visita al proyecto. Agendar para próxima semana."
                   rows={5}
-                  className="w-full resize-none rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full resize-none rounded-lg border-2 border-gray-300 bg-white px-4 py-3 font-medium text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
                 <div className="mt-1 text-xs text-gray-500">{nuevaObservacion.length} caracteres</div>
               </div>
