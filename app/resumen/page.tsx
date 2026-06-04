@@ -71,6 +71,9 @@ export default function ResumenPage() {
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [emailEnviado, setEmailEnviado] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [itemsEditados, setItemsEditados] = useState<Record<string, string>>({});
+  const [itemEnEdicion, setItemEnEdicion] = useState<string | null>(null);
+  const [nuevoNombre, setNuevoNombre] = useState('');
 
   const proyectoData = findProyecto(proyecto);
   const planData =
@@ -109,6 +112,41 @@ export default function ResumenPage() {
     }
   }, [planBase, proyecto, clienteNombre, clienteEmail, router]);
 
+  useEffect(() => {
+    const editados = localStorage.getItem('items_editados');
+    if (editados) setItemsEditados(JSON.parse(editados));
+  }, []);
+
+  const getNombreItem = (itemId: string, nombreOriginal: string): string =>
+    itemsEditados[itemId] || nombreOriginal;
+
+  const iniciarEdicion = (itemId: string, nombreActual: string) => {
+    setItemEnEdicion(itemId);
+    setNuevoNombre(nombreActual);
+  };
+
+  const guardarNombreEditado = (itemId: string) => {
+    if (nuevoNombre.trim()) {
+      const nuevosEditados = { ...itemsEditados, [itemId]: nuevoNombre.trim() };
+      setItemsEditados(nuevosEditados);
+      localStorage.setItem('items_editados', JSON.stringify(nuevosEditados));
+    }
+    setItemEnEdicion(null);
+    setNuevoNombre('');
+  };
+
+  const cancelarEdicion = () => {
+    setItemEnEdicion(null);
+    setNuevoNombre('');
+  };
+
+  const resetearNombres = () => {
+    if (confirm('¿Estás seguro de que quieres restaurar todos los nombres originales?')) {
+      setItemsEditados({});
+      localStorage.removeItem('items_editados');
+    }
+  };
+
   const guardarCotizacionEnDB = async (
     numeroCotizacion: string,
     pdfUrl: string
@@ -143,7 +181,7 @@ export default function ResumenPage() {
         posicion_kanban: 0,
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
-          const nombre = getNombreAdicional(a, planBase);
+          const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
           const precio = getPrecioAdicional(a, planBase);
           return {
             nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
@@ -296,7 +334,7 @@ export default function ResumenPage() {
         },
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
-          const nombre = getNombreAdicional(a, planBase);
+          const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
           const precio = getPrecioAdicional(a, planBase);
           return {
             nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
@@ -378,7 +416,7 @@ export default function ResumenPage() {
         },
         adicionales: adicionales.map((a) => {
           const qty = a.cantidad ?? 1;
-          const nombre = getNombreAdicional(a, planBase);
+          const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
           const precio = getPrecioAdicional(a, planBase);
           return {
             nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
@@ -700,31 +738,76 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
             {adicionales.length > 0 && (
               <Card className="border-brand-border bg-brand-card">
                 <CardHeader>
-                  <CardTitle className="text-brand-text">
-                    Adicionales Seleccionados
+                  <CardTitle className="flex items-center justify-between text-brand-text">
+                    <span>Adicionales Seleccionados</span>
+                    {Object.keys(itemsEditados).length > 0 && (
+                      <button
+                        onClick={resetearNombres}
+                        className="text-xs font-normal text-blue-400 underline hover:text-blue-300"
+                      >
+                        Restaurar nombres originales
+                      </button>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  <p className="mb-3 text-xs text-brand-textSecondary">
+                    💡 Haz click en cualquier nombre para personalizarlo en el presupuesto.
+                  </p>
                   <div className="space-y-3">
                     {adicionales.map((adicional, index) => {
                       const qty = adicional.cantidad ?? 1;
-                      const nombreMostrar = getNombreAdicional(adicional, planBase);
+                      const nombreBase = getNombreAdicional(adicional, planBase);
+                      const nombreMostrar = getNombreItem(adicional.id, nombreBase);
                       const precioMostrar = getPrecioAdicional(adicional, planBase);
                       const lineTotal = precioMostrar * qty;
+                      const enEdicion = itemEnEdicion === adicional.id;
                       return (
                         <div
                           key={index}
                           className="flex items-center justify-between border-b border-brand-border py-2 last:border-0"
                         >
-                          <span className="text-brand-textSecondary">
-                            {nombreMostrar}
-                            {qty > 1 && (
-                              <span className="ml-1 text-brand-primary">
-                                ×{qty}
-                              </span>
+                          <div className="flex-1 pr-4">
+                            {enEdicion ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={nuevoNombre}
+                                  onChange={(e) => setNuevoNombre(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') guardarNombreEditado(adicional.id);
+                                    if (e.key === 'Escape') cancelarEdicion();
+                                  }}
+                                  autoFocus
+                                  className="h-8 flex-1 rounded border-2 border-blue-500 bg-white px-2 text-sm text-gray-900 focus:outline-none"
+                                />
+                                <button
+                                  onClick={() => guardarNombreEditado(adicional.id)}
+                                  className="h-8 rounded bg-green-600 px-3 text-xs font-medium text-white hover:bg-green-700"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={cancelarEdicion}
+                                  className="h-8 rounded bg-gray-500 px-3 text-xs font-medium text-white hover:bg-gray-600"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => iniciarEdicion(adicional.id, nombreMostrar)}
+                                className="group flex items-center gap-1 text-left text-brand-textSecondary hover:text-brand-primary"
+                              >
+                                <span>{nombreMostrar}</span>
+                                {qty > 1 && (
+                                  <span className="text-brand-primary">×{qty}</span>
+                                )}
+                                <span className="opacity-0 transition-opacity group-hover:opacity-100">✏️</span>
+                              </button>
                             )}
-                          </span>
-                          <span className="font-semibold text-brand-primary">
+                          </div>
+                          <span className="shrink-0 font-semibold text-brand-primary">
                             {formatoPrecio(lineTotal)}
                           </span>
                         </div>
