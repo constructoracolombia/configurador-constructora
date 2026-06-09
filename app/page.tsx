@@ -711,7 +711,6 @@ function CentroOperacionesDashboard() {
         lead_id: lead.id,
         tipo: "NOTA",
         descripcion: `Lead archivado: ${lead.nombre} - ${lead.telefono}`,
-        resultado: "Eliminado desde el dashboard",
         usuario: "Admin",
       });
 
@@ -762,7 +761,6 @@ function CentroOperacionesDashboard() {
         lead_id: lead.id,
         tipo: "CAMBIO_ETAPA",
         descripcion: "Lead marcado como No Cerrado",
-        resultado: "Archivado en No Cerrados",
         usuario: "Admin",
       });
 
@@ -887,7 +885,6 @@ function CentroOperacionesDashboard() {
         lead_id: leadId,
         tipo: "CAMBIO_ETAPA",
         descripcion: `Lead movido de ${etapaAnterior} a ${etapaNueva}`,
-        resultado: "Cambio de etapa manual",
         usuario: "Admin",
       });
 
@@ -950,9 +947,8 @@ function CentroOperacionesDashboard() {
 
       await supabase.from('lead_actividades').insert({
         lead_id: leadParaObservacion.id,
-        tipo: 'OBSERVACION',
+        tipo: 'NOTA',
         descripcion: `Seguimiento registrado: ${nuevaObservacion.substring(0, 100)}`,
-        resultado: fechaTimestamp,
         usuario: 'Admin',
       });
 

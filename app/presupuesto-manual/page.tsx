@@ -668,7 +668,7 @@ export default function PresupuestoManual() {
       if (leadId) {
         await Promise.all([
           supabase.from("lead_actividades").insert({
-            lead_id: leadId, tipo: "DOCUMENTO",
+            lead_id: leadId, tipo: "NOTA",
             descripcion: mensajeActividad,
             usuario: "Comercial",
           }),
@@ -690,7 +690,7 @@ export default function PresupuestoManual() {
         }).select("id").single();
         if (nuevoLead) {
           await supabase.from("lead_actividades").insert({
-            lead_id: nuevoLead.id, tipo: "DOCUMENTO",
+            lead_id: nuevoLead.id, tipo: "NOTA",
             descripcion: mensajeActividad,
             usuario: "Comercial",
           });
