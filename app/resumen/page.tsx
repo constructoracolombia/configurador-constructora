@@ -312,6 +312,15 @@ export default function ResumenPage() {
     try {
       const numeroCotizacion = `COT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999) + 1).padStart(4, "0")}`;
 
+      console.log("📊 ADICIONALES AL CREAR PDFDATA:", {
+        cantidad: adicionales.length,
+        items: adicionales.map(a => ({
+          id: a.id,
+          nombre: getNombreAdicional(a, planBase),
+          cantidad: a.cantidad
+        }))
+      });
+
       const pdfData = {
         numeroConsecutivo: numeroCotizacion,
         fecha: new Date().toLocaleDateString("es-CO", {
