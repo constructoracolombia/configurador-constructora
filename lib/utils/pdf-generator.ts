@@ -177,110 +177,6 @@ function renderActividadesEnGrid(doc: jsPDF, actividades: string[], margin: numb
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ADICIONALES EN GRID 3 COLUMNAS (SIN PRECIOS - REVOLUCIONARIO)
-// ═══════════════════════════════════════════════════════════════
-
-function renderAdicionalesEnGrid(
-  doc: jsPDF,
-  adicionales: Array<{ nombre: string; precio: number; cantidad?: number }>,
-  margin: number,
-  contentWidth: number,
-  startY: number
-): number {
-  const columnas = 3;
-  const columnWidth = contentWidth / columnas;
-  const itemHeight = 6;
-  const fontSize = 9;
-
-  let x = margin;
-  let y = startY;
-  let itemsEnColumna = 0;
-  const maxItemsPorColumna = Math.ceil(adicionales.length / columnas);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(fontSize);
-
-  adicionales.forEach((adicional, index) => {
-    // Check dorado
-    doc.setTextColor(...COLORS.gold);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("✓", x, y);
-
-    // Nombre adicional (SIN PRECIO)
-    doc.setTextColor(...COLORS.textSecondary);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(fontSize);
-
-    const nombreCompleto = adicional.nombre + (adicional.cantidad && adicional.cantidad > 1 ? ` (×${adicional.cantidad})` : "");
-
-    const maxTextWidth = columnWidth - 8;
-    const textoTruncado = doc.splitTextToSize(nombreCompleto, maxTextWidth)[0];
-    doc.text(textoTruncado, x + 5, y);
-
-    itemsEnColumna++;
-
-    // Mover a siguiente posición
-    if (itemsEnColumna >= maxItemsPorColumna && index < adicionales.length - 1) {
-      // Nueva columna
-      x += columnWidth;
-      y = startY;
-      itemsEnColumna = 0;
-    } else {
-      // Siguiente fila
-      y += itemHeight;
-    }
-  });
-
-  // Retornar Y máximo
-  return startY + maxItemsPorColumna * itemHeight + 5;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// INVERSIÓN TOTAL COMPACTO Y PREMIUM
-// ═══════════════════════════════════════════════════════════════
-
-function renderInversionTotalCompacto(
-  doc: jsPDF,
-  total: number,
-  tiempoEntrega: number,
-  margin: number,
-  contentWidth: number,
-  startY: number,
-  pageWidth: number
-): number {
-  const boxHeight = 38;
-
-  // Fondo gris sutil
-  doc.setFillColor(...COLORS.backgroundLight);
-  doc.rect(margin, startY, contentWidth, boxHeight, "F");
-
-  // Borde dorado premium 1.5px
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(0.55);
-  doc.rect(margin, startY, contentWidth, boxHeight);
-
-  // Título
-  doc.setTextColor(...COLORS.gold);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("INVERSIÓN TOTAL", pageWidth / 2, startY + 11, { align: "center" });
-
-  // Precio
-  doc.setTextColor(...COLORS.darkNavy);
-  doc.setFontSize(22);
-  doc.text(formatPrice(total), pageWidth / 2, startY + 24, { align: "center" });
-
-  // Tiempo entrega
-  doc.setFontSize(8);
-  doc.setTextColor(...COLORS.textTertiary);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Entrega en ${tiempoEntrega} días hábiles`, pageWidth / 2, startY + 32, { align: "center" });
-
-  return startY + boxHeight;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // FOOTER
 // ═══════════════════════════════════════════════════════════════
 
@@ -417,48 +313,32 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   currentY = renderActividadesEnGrid(doc, actividades, margin, contentWidth, currentY);
 
   // ════════════════════════════════════════════════════════════
-  // SECCIÓN 2: UPGRADES Y ADICIONALES (Grid 3 columnas SIN precios)
+  // SECCIÓN 2: INVERSIÓN TOTAL
   // ════════════════════════════════════════════════════════════
 
-  const adicionalesParaMostrar = filtrarAdicionales(data.adicionales);
+  currentY += 10;
 
-  if (adicionalesParaMostrar.length > 0) {
-    currentY += 8;
+  const boxHeight = 30;
+  doc.setFillColor(...COLORS.backgroundLight);
+  doc.rect(margin, currentY, contentWidth, boxHeight, "F");
 
-    // Título elegante
-    doc.setTextColor(...COLORS.textPrimary);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("UPGRADES Y ADICIONALES SELECCIONADOS", margin, currentY);
-    currentY += 8;
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.8);
+  doc.rect(margin, currentY, contentWidth, boxHeight);
 
-    // Renderizar adicionales en grid (SIN PRECIOS - ahorra 60% espacio)
-    currentY = renderAdicionalesEnGrid(doc, adicionalesParaMostrar, margin, contentWidth, currentY);
-  }
+  doc.setTextColor(...COLORS.gold);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("INVERSIÓN TOTAL", margin + 10, currentY + 8);
 
-  // ════════════════════════════════════════════════════════════
-  // SECCIÓN 3: INVERSIÓN TOTAL (Ancla visual con borde dorado)
-  // ════════════════════════════════════════════════════════════
+  doc.setTextColor(...COLORS.darkNavy);
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatPrice(totalReal), pageWidth - margin - 10, currentY + 20, { align: "right" });
 
-  currentY += 8;
+  currentY += boxHeight;
 
-  const alturaInversionTotal = 42; // 38mm + márgenes
-
-  // PROTECCIÓN: Verificar si cabe completo
-  if (currentY + alturaInversionTotal > maxY) {
-    // No cabe, mover a página 2
-    renderFooter(doc, margin, pageWidth, pageHeight);
-
-    doc.addPage();
-    pageNumber++;
-    currentY = renderMiniHeader(doc, margin, pageWidth);
-    currentY += 10;
-  }
-
-  // INVERSIÓN TOTAL (siempre completo, nunca cortado)
-  currentY = renderInversionTotalCompacto(doc, totalReal, data.plan.tiempoEntrega, margin, contentWidth, currentY, pageWidth);
-
-  // Footer Página 1 (si aún estamos en página 1)
+  // Footer Página 1
   if (pageNumber === 1) {
     renderFooter(doc, margin, pageWidth, pageHeight);
   }

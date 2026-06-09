@@ -525,19 +525,8 @@ export default function PresupuestoManual() {
       startY: 87,
       head: [["Ítem", "Cant."]],
       body: bodyPlan,
-      foot: [[
-        {
-          content: "✦  Tendedero abatible en zona húmeda — BONUS GRATIS",
-          styles: { textColor: [rVerde, gVerde, bVerde], fontStyle: "italic", fontSize: 7.5 },
-        },
-        {
-          content: "1",
-          styles: { textColor: [rVerde, gVerde, bVerde], fontStyle: "bold", halign: "center" as const, fontSize: 8 },
-        },
-      ]],
       theme: "grid",
       headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-      footStyles: { fillColor: [255, 255, 255], lineWidth: 0.1, lineColor: [220, 220, 220] },
       bodyStyles: { fontSize: 8, textColor: [rNegro, gNegro, bNegro] },
       columnStyles: { 0: { cellWidth: "auto" as const }, 1: { cellWidth: 18, halign: "center" as const } },
       alternateRowStyles: { fillColor: [250, 250, 249] },
