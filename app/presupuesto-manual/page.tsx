@@ -176,6 +176,14 @@ export default function PresupuestoManual() {
   const [itemsPlanEstado, setItemsPlanEstado] = useState<Record<string, EstadoItemPlan>>({});
   const [itemsOcultos, setItemsOcultos] = useState<Set<string>>(new Set());
   const [precioManual, setPrecioManual] = useState<number | null>(null);
+  const [itemsManuales, setItemsManuales] = useState<Array<{
+    id: string;
+    nombre: string;
+    precio: number;
+    cantidad: number;
+  }>>([]);
+  const [formularioManual, setFormularioManual] = useState({ nombre: '', precio: '', cantidad: '1' });
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   // carga catálogos y leads al montar
   useEffect(() => {
@@ -262,6 +270,33 @@ export default function PresupuestoManual() {
     });
   };
 
+  // cargar items manuales del localStorage al montar
+  useEffect(() => {
+    const guardados = localStorage.getItem('items_manuales_presupuesto');
+    if (guardados) setItemsManuales(JSON.parse(guardados));
+  }, []);
+
+  const agregarItemManual = () => {
+    if (!formularioManual.nombre.trim() || !formularioManual.precio) return;
+    const nuevoItem = {
+      id: `manual_${Date.now()}`,
+      nombre: formularioManual.nombre.trim(),
+      precio: parseFloat(formularioManual.precio),
+      cantidad: parseInt(formularioManual.cantidad) || 1,
+    };
+    const nuevosItems = [...itemsManuales, nuevoItem];
+    setItemsManuales(nuevosItems);
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(nuevosItems));
+    setFormularioManual({ nombre: '', precio: '', cantidad: '1' });
+    setMostrarFormulario(false);
+  };
+
+  const eliminarItemManual = (id: string) => {
+    const nuevosItems = itemsManuales.filter((item) => item.id !== id);
+    setItemsManuales(nuevosItems);
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(nuevosItems));
+  };
+
   // paso 1 → 2: cargar ítems del catálogo
   const continuar = async () => {
     setLoading(true);
@@ -318,7 +353,8 @@ export default function PresupuestoManual() {
   );
   const baseTotal = precioBase !== null ? precioEfectivo + subtotalAdicionales : subtotalSinPlan;
   const iva = aplicaIva ? Math.round(baseTotal * 0.19) : 0;
-  const totalFinal = baseTotal + iva;
+  const subtotalManuales = itemsManuales.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+  const totalFinal = baseTotal + iva + subtotalManuales;
 
   const hayDescuentos = Object.values(itemsPlanEstado).some((e) => !e.aplica);
   const diasEntrega = planBase === "Plan Básico" ? 39 : 59;
@@ -466,6 +502,32 @@ export default function PresupuestoManual() {
       currentY = (doc as any).lastAutoTable.finalY + 3;
     }
 
+    // ── ITEMS MANUALES ────────────────────────────────────────
+    if (itemsManuales.length > 0) {
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Ítem Personalizado", "Cant.", "Vlr. Unitario", "Total"]],
+        body: itemsManuales.map((item) => [
+          item.nombre,
+          String(item.cantidad),
+          `$ ${item.precio.toLocaleString("es-CO")}`,
+          `$ ${(item.precio * item.cantidad).toLocaleString("es-CO")}`,
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+        bodyStyles: { fontSize: 7.5, textColor: [rNegro, gNegro, bNegro] },
+        columnStyles: {
+          0: { cellWidth: "auto" as const },
+          1: { cellWidth: 14, halign: "center" as const },
+          2: { cellWidth: 30, halign: "right" as const },
+          3: { cellWidth: 30, halign: "right" as const },
+        },
+        alternateRowStyles: { fillColor: [250, 250, 249] },
+        margin: { left: 12, right: 12 },
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 3;
+    }
+
     // ── TOTALES ───────────────────────────────────────────────────
     const subtotalAdic = adicsList.reduce((sum, item) => {
       const cant = seleccionados[item.id] || 1;
@@ -485,6 +547,11 @@ export default function PresupuestoManual() {
     if (subtotalAdic > 0) {
       doc.text("Adicionales:", lineX - 45, currentY + 5);
       doc.text(`$ ${subtotalAdic.toLocaleString("es-CO")}`, lineX, currentY + 5, { align: "right" });
+      currentY += 6;
+    }
+    if (subtotalManuales > 0) {
+      doc.text("Personalizados:", lineX - 45, currentY + 5);
+      doc.text(`$ ${subtotalManuales.toLocaleString("es-CO")}`, lineX, currentY + 5, { align: "right" });
       currentY += 6;
     }
 
@@ -1123,6 +1190,12 @@ export default function PresupuestoManual() {
                                 <span className="font-semibold text-gray-900">{cop(subtotalAdicionales)}</span>
                               </div>
                             )}
+                            {subtotalManuales > 0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Personalizados</span>
+                                <span className="font-semibold text-gray-900">{cop(subtotalManuales)}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between border-t border-gray-200 pt-2 text-sm">
                               <span className="font-bold text-gray-900">TOTAL</span>
                               <span className="font-bold text-emerald-700">{cop(totalFinal)}</span>
@@ -1149,6 +1222,110 @@ export default function PresupuestoManual() {
                   </Card>
                 </div>
               </div>
+            </div>
+
+            {/* ITEMS MANUALES */}
+            <div className="mt-6 border-t-2 border-gray-200 pt-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900">Items Adicionales Personalizados</h3>
+                {!mostrarFormulario && (
+                  <button
+                    onClick={() => setMostrarFormulario(true)}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  >
+                    + Agregar Item Manual
+                  </button>
+                )}
+              </div>
+
+              {mostrarFormulario && (
+                <div className="mb-4 rounded-lg border border-blue-300 bg-white p-4">
+                  <h4 className="mb-3 font-bold text-gray-900">Nuevo Item Personalizado</h4>
+                  <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Nombre del Item</label>
+                      <input
+                        type="text"
+                        value={formularioManual.nombre}
+                        onChange={(e) => setFormularioManual({ ...formularioManual, nombre: e.target.value })}
+                        placeholder="Ej: Obra extra, Cambios, etc."
+                        className="h-10 w-full rounded-lg border-2 border-gray-300 px-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Precio Unitario</label>
+                      <input
+                        type="number"
+                        value={formularioManual.precio}
+                        onChange={(e) => setFormularioManual({ ...formularioManual, precio: e.target.value })}
+                        placeholder="Ej: 500000"
+                        className="h-10 w-full rounded-lg border-2 border-gray-300 px-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Cantidad</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={formularioManual.cantidad}
+                        onChange={(e) => setFormularioManual({ ...formularioManual, cantidad: e.target.value })}
+                        className="h-10 w-full rounded-lg border-2 border-gray-300 px-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={agregarItemManual}
+                      className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                    >
+                      Agregar Item
+                    </button>
+                    <button
+                      onClick={() => { setMostrarFormulario(false); setFormularioManual({ nombre: '', precio: '', cantidad: '1' }); }}
+                      className="flex-1 rounded-lg bg-gray-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-500"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {itemsManuales.length > 0 && (
+                <div className="overflow-x-auto rounded-lg border border-blue-200 bg-blue-50">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-blue-300 bg-blue-100">
+                        <th className="px-3 py-2 text-left font-bold">Item</th>
+                        <th className="px-3 py-2 text-center font-bold">Cant.</th>
+                        <th className="px-3 py-2 text-right font-bold">Precio Unit.</th>
+                        <th className="px-3 py-2 text-right font-bold">Total</th>
+                        <th className="px-3 py-2 text-center font-bold">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itemsManuales.map((item) => (
+                        <tr key={item.id} className="border-b border-blue-100 hover:bg-blue-50">
+                          <td className="px-3 py-2 font-medium text-gray-900">{item.nombre}</td>
+                          <td className="px-3 py-2 text-center">{item.cantidad}</td>
+                          <td className="px-3 py-2 text-right">$ {item.precio.toLocaleString('es-CO')}</td>
+                          <td className="px-3 py-2 text-right font-bold">$ {(item.precio * item.cantidad).toLocaleString('es-CO')}</td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              onClick={() => eliminarItemManual(item.id)}
+                              className="rounded bg-red-500 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-red-600"
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="px-3 py-2 text-right text-sm text-gray-700">
+                    Subtotal personalizados: <span className="font-bold text-blue-600">$ {subtotalManuales.toLocaleString('es-CO')}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
