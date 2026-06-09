@@ -335,20 +335,12 @@ export default function ResumenPage() {
           incluye: esSanJuan ? [] : [...planData.incluye],
           bonus: esSanJuan ? bonusSanJuan : [...planData.bonus],
         },
-        adicionales: adicionales.map((a) => {
-          const qty = a.cantidad ?? 1;
-          const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
-          const precio = getPrecioAdicional(a, planBase);
-          return {
-            nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
-            precio: precio * qty,
-          };
-        }),
-        itemsManuales: itemsManuales.map((m) => ({
-          nombre: m.nombre,
-          precio: m.precio,
-          cantidad: m.cantidad,
+        adicionales: adicionales.map((a) => ({
+          nombre: getNombreItem(a.id, getNombreAdicional(a, planBase)),
+          precio: getPrecioAdicional(a, planBase),
+          cantidad: a.cantidad || 1,
         })),
+        itemsManuales: itemsManuales && itemsManuales.length > 0 ? itemsManuales : [],
         total: inversionTotal,
       };
 
@@ -422,20 +414,12 @@ export default function ResumenPage() {
           incluye: esSanJuan ? [] : [...planData.incluye],
           bonus: esSanJuan ? bonusSanJuan : [...planData.bonus],
         },
-        adicionales: adicionales.map((a) => {
-          const qty = a.cantidad ?? 1;
-          const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
-          const precio = getPrecioAdicional(a, planBase);
-          return {
-            nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
-            precio: precio * qty,
-          };
-        }),
-        itemsManuales: itemsManuales.map((m) => ({
-          nombre: m.nombre,
-          precio: m.precio,
-          cantidad: m.cantidad,
+        adicionales: adicionales.map((a) => ({
+          nombre: getNombreItem(a.id, getNombreAdicional(a, planBase)),
+          precio: getPrecioAdicional(a, planBase),
+          cantidad: a.cantidad || 1,
         })),
+        itemsManuales: itemsManuales && itemsManuales.length > 0 ? itemsManuales : [],
         total: inversionTotal,
       };
 

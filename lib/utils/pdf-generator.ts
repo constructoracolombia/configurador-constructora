@@ -205,110 +205,6 @@ function renderFooter(doc: jsPDF, margin: number, pageWidth: number, pageHeight:
 }
 
 // ═══════════════════════════════════════════════════════════════
-// ADICIONALES SELECCIONADOS (sin precios)
-// ═══════════════════════════════════════════════════════════════
-
-function renderAdicionalesSimple(
-  doc: jsPDF,
-  adicionales: Array<{ nombre: string; precio: number; cantidad?: number }>,
-  margin: number,
-  pageWidth: number,
-  startY: number
-): number {
-  console.log("✅ renderAdicionalesSimple llamada con:", adicionales.length, "items");
-  const filtrados = filtrarAdicionales(adicionales);
-  console.log("   Después de filtrar:", filtrados.length, "items");
-  if (filtrados.length === 0) {
-    console.log("   ⚠️ No hay items para mostrar");
-    return startY;
-  }
-
-  let currentY = startY;
-
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("ADICIONALES SELECCIONADOS", margin, currentY);
-  currentY += 6;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.text("Ítem", margin + 2, currentY);
-  doc.text("Cant.", pageWidth - margin - 15, currentY);
-
-  currentY += 4;
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(0.5);
-  doc.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 3;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.textSecondary);
-
-  filtrados.forEach((item) => {
-    const nombreTruncado = doc.splitTextToSize(item.nombre, pageWidth - margin - 25)[0];
-    doc.text(nombreTruncado, margin + 2, currentY);
-    doc.text(String(item.cantidad || 1), pageWidth - margin - 15, currentY);
-    currentY += 5;
-  });
-
-  return currentY + 4;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ITEMS PERSONALIZADOS (sin precios)
-// ═══════════════════════════════════════════════════════════════
-
-function renderItemsPersonalizados(
-  doc: jsPDF,
-  itemsManuales: Array<{ nombre: string; precio: number; cantidad?: number }> | undefined,
-  margin: number,
-  pageWidth: number,
-  startY: number
-): number {
-  console.log("✅ renderItemsPersonalizados llamada con:", itemsManuales?.length, "items");
-  if (!itemsManuales || itemsManuales.length === 0) {
-    console.log("   ⚠️ No hay items manuales");
-    return startY;
-  }
-
-  let currentY = startY;
-
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("ITEMS PERSONALIZADOS", margin, currentY);
-  currentY += 6;
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.textPrimary);
-  doc.text("Ítem", margin + 2, currentY);
-  doc.text("Cant.", pageWidth - margin - 15, currentY);
-
-  currentY += 4;
-  doc.setDrawColor(...COLORS.gold);
-  doc.setLineWidth(0.5);
-  doc.line(margin, currentY, pageWidth - margin, currentY);
-  currentY += 3;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(...COLORS.textSecondary);
-
-  itemsManuales.forEach((item) => {
-    const nombreTruncado = doc.splitTextToSize(item.nombre, pageWidth - margin - 25)[0];
-    doc.text(nombreTruncado, margin + 2, currentY);
-    doc.text(String(item.cantidad || 1), pageWidth - margin - 15, currentY);
-    currentY += 5;
-  });
-
-  return currentY + 4;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // GENERADOR PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
@@ -430,14 +326,82 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   // SECCIÓN 1.5: ADICIONALES Y PERSONALIZADOS
   // ════════════════════════════════════════════════════════════
 
-  if (data.adicionales.length > 0) {
+  // RENDERIZAR ADICIONALES - SIN PRECIOS
+  if (data.adicionales && data.adicionales.length > 0) {
+    currentY += 8;
+
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ADICIONALES SELECCIONADOS", margin, currentY);
     currentY += 6;
-    currentY = renderAdicionalesSimple(doc, data.adicionales, margin, pageWidth, currentY);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.text("Ítem", margin + 2, currentY);
+    doc.text("Cant.", pageWidth - margin - 15, currentY);
+
+    currentY += 4;
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(0.5);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 3;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.textSecondary);
+
+    data.adicionales.forEach((item) => {
+      const cant = item.cantidad || 1;
+      const maxWidth = pageWidth - margin - 25;
+      const nombre = doc.splitTextToSize(item.nombre, maxWidth)[0];
+
+      doc.text(nombre, margin + 2, currentY);
+      doc.text(String(cant), pageWidth - margin - 15, currentY);
+      currentY += 5;
+    });
+
+    currentY += 3;
   }
 
+  // RENDERIZAR ITEMS PERSONALIZADOS - SIN PRECIOS
   if (data.itemsManuales && data.itemsManuales.length > 0) {
+    currentY += 8;
+
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ITEMS PERSONALIZADOS", margin, currentY);
     currentY += 6;
-    currentY = renderItemsPersonalizados(doc, data.itemsManuales, margin, pageWidth, currentY);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.text("Ítem", margin + 2, currentY);
+    doc.text("Cant.", pageWidth - margin - 15, currentY);
+
+    currentY += 4;
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(0.5);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 3;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.textSecondary);
+
+    data.itemsManuales.forEach((item) => {
+      const cant = item.cantidad || 1;
+      const maxWidth = pageWidth - margin - 25;
+      const nombre = doc.splitTextToSize(item.nombre, maxWidth)[0];
+
+      doc.text(nombre, margin + 2, currentY);
+      doc.text(String(cant), pageWidth - margin - 15, currentY);
+      currentY += 5;
+    });
+
+    currentY += 3;
   }
 
   // ════════════════════════════════════════════════════════════
