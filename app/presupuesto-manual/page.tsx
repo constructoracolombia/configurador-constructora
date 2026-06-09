@@ -184,6 +184,12 @@ export default function PresupuestoManual() {
   }>>([]);
   const [formularioManual, setFormularioManual] = useState({ nombre: '', precio: '', cantidad: '1' });
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [mostrarGuardar, setMostrarGuardar] = useState(false);
+  const [mostrarListado, setMostrarListado] = useState(false);
+  const [nombrePresupuesto, setNombrePresupuesto] = useState('');
+  const [presupuestosGuardados, setPresupuestosGuardados] = useState<any[]>([]);
+  const [cargandoPresupuesto, setCargandoPresupuesto] = useState(false);
+  const [pendingSeleccionados, setPendingSeleccionados] = useState<Record<string, number> | null>(null);
 
   // carga catálogos y leads al montar
   useEffect(() => {
@@ -276,6 +282,81 @@ export default function PresupuestoManual() {
     if (guardados) setItemsManuales(JSON.parse(guardados));
   }, []);
 
+  // cargar presupuestos guardados al montar
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase
+        .from('presupuestos_manuales_guardados')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      setPresupuestosGuardados(data || []);
+    })();
+  }, []);
+
+  const guardarPresupuesto = async () => {
+    if (!nombrePresupuesto.trim()) { alert('Escribe un nombre para el presupuesto'); return; }
+    if (!cliente.nombre || !cliente.telefono) { alert('Completa al menos nombre y teléfono del cliente'); return; }
+    setCargandoPresupuesto(true);
+    try {
+      const { error } = await supabase.from('presupuestos_manuales_guardados').insert([{
+        nombre_presupuesto: nombrePresupuesto.trim(),
+        cliente_nombre: cliente.nombre,
+        cliente_telefono: cliente.telefono,
+        cliente_proyecto: cliente.proyecto,
+        plan_base: planBase,
+        conjunto,
+        catalogo_id: catalogoId,
+        precio_manual: precioManual,
+        seleccionados: seleccionados,
+        items_plan_estado: itemsPlanEstado,
+        items_ocultos: Array.from(itemsOcultos),
+        items_manuales: itemsManuales,
+      }]);
+      if (error) throw error;
+      mostrarToast(`✅ Presupuesto guardado: "${nombrePresupuesto}"`);
+      setNombrePresupuesto('');
+      setMostrarGuardar(false);
+      const { data } = await supabase.from('presupuestos_manuales_guardados').select('*').order('updated_at', { ascending: false });
+      setPresupuestosGuardados(data || []);
+    } catch (err: any) {
+      mostrarToast(`❌ Error al guardar: ${err.message}`);
+    } finally {
+      setCargandoPresupuesto(false);
+    }
+  };
+
+  const cargarPresupuestoGuardado = async (ppto: any) => {
+    setCliente({ nombre: ppto.cliente_nombre, telefono: ppto.cliente_telefono, proyecto: ppto.cliente_proyecto || '' });
+    setPlanBase(ppto.plan_base || '');
+    setConjunto(ppto.conjunto || '');
+    setCatalogoId(ppto.catalogo_id || '');
+    setPrecioManual(ppto.precio_manual ?? null);
+    setItemsPlanEstado(ppto.items_plan_estado || {});
+    setItemsOcultos(new Set(ppto.items_ocultos || []));
+    const manuales = ppto.items_manuales || [];
+    setItemsManuales(manuales);
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(manuales));
+    setPendingSeleccionados(ppto.seleccionados || {});
+    setMostrarListado(false);
+    mostrarToast(`✅ Presupuesto cargado: "${ppto.nombre_presupuesto}"`);
+  };
+
+  const eliminarPresupuestoGuardado = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar "${nombre}"?`)) return;
+    setCargandoPresupuesto(true);
+    try {
+      const { error } = await supabase.from('presupuestos_manuales_guardados').delete().eq('id', id);
+      if (error) throw error;
+      mostrarToast('✅ Presupuesto eliminado');
+      const { data } = await supabase.from('presupuestos_manuales_guardados').select('*').order('updated_at', { ascending: false });
+      setPresupuestosGuardados(data || []);
+    } catch (err: any) {
+      mostrarToast(`❌ Error al eliminar: ${err.message}`);
+    } finally {
+      setCargandoPresupuesto(false);
+    }
+  };
+
   const agregarItemManual = () => {
     if (!formularioManual.nombre.trim() || !formularioManual.precio) return;
     const nuevoItem = {
@@ -313,7 +394,12 @@ export default function PresupuestoManual() {
       // los ítems del plan se gestionan por itemsPlanEstado — no se preseleccionan en el catálogo
       setItemsPlanIds([]);
       setItems(catalogoItems);
-      setSeleccionados({});
+      if (pendingSeleccionados) {
+        setSeleccionados(pendingSeleccionados);
+        setPendingSeleccionados(null);
+      } else {
+        setSeleccionados({});
+      }
       setPaso(2);
     } finally {
       setLoading(false);
@@ -771,6 +857,22 @@ export default function PresupuestoManual() {
             {[1, 2, 3].map((n) => (
               <div key={n} className={`h-1.5 flex-1 rounded-full transition-colors ${n <= paso ? "bg-emerald-500" : "bg-gray-200"}`} />
             ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => setMostrarGuardar(true)}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+            >
+              Guardar borrador
+            </button>
+            {presupuestosGuardados.length > 0 && (
+              <button
+                onClick={() => setMostrarListado(true)}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                Mis borradores ({presupuestosGuardados.length})
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1617,6 +1719,104 @@ export default function PresupuestoManual() {
           </div>
         )}
       </div>
+
+      {/* MODAL GUARDAR BORRADOR */}
+      {mostrarGuardar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-1 text-xl font-bold text-gray-900">Guardar borrador</h3>
+            <p className="mb-4 text-sm text-gray-500">Guarda el presupuesto para retomarlo después</p>
+            <div className="mb-4">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Nombre del borrador</label>
+              <input
+                type="text"
+                autoFocus
+                value={nombrePresupuesto}
+                onChange={(e) => setNombrePresupuesto(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void guardarPresupuesto()}
+                placeholder="Ej: Apto 301 Ciudadela Verde"
+                className="h-10 w-full rounded-lg border-2 border-gray-300 px-3 text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div className="mb-4 rounded-lg border-l-4 border-emerald-500 bg-emerald-50 p-3 text-sm text-gray-700">
+              <p className="font-semibold text-gray-900">Se guardará:</p>
+              <p className="text-xs">• Cliente: {cliente.nombre || '(sin nombre)'}</p>
+              <p className="text-xs">• Plan: {planBase || '(no seleccionado)'}</p>
+              <p className="text-xs">• Items catálogo: {Object.keys(seleccionados).length}</p>
+              <p className="text-xs">• Items manuales: {itemsManuales.length}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => void guardarPresupuesto()}
+                disabled={cargandoPresupuesto || !nombrePresupuesto.trim()}
+                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:bg-gray-300"
+              >
+                {cargandoPresupuesto ? 'Guardando…' : 'Guardar'}
+              </button>
+              <button
+                onClick={() => { setMostrarGuardar(false); setNombrePresupuesto(''); }}
+                className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL LISTADO DE BORRADORES */}
+      {mostrarListado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-1 text-xl font-bold text-gray-900">Mis borradores</h3>
+            <p className="mb-4 text-sm text-gray-500">Selecciona uno para retomar donde lo dejaste</p>
+            {presupuestosGuardados.length === 0 ? (
+              <p className="py-8 text-center text-gray-400">No hay borradores guardados</p>
+            ) : (
+              <div className="space-y-3">
+                {presupuestosGuardados.map((ppto) => (
+                  <div key={ppto.id} className="rounded-lg border-2 border-gray-200 p-4 transition-all hover:border-blue-400 hover:bg-blue-50">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold text-gray-900">{ppto.nombre_presupuesto}</p>
+                        <p className="mt-0.5 text-sm text-gray-600">{ppto.cliente_nombre} · {ppto.cliente_telefono}</p>
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          Plan: {ppto.plan_base || 'N/A'} · {Object.keys(ppto.seleccionados || {}).length} catálogo · {(ppto.items_manuales || []).length} manuales
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400">{new Date(ppto.updated_at).toLocaleString('es-CO')}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          onClick={() => cargarPresupuestoGuardado(ppto)}
+                          disabled={cargandoPresupuesto}
+                          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-300"
+                        >
+                          Cargar
+                        </button>
+                        <button
+                          onClick={() => void eliminarPresupuestoGuardado(ppto.id, ppto.nombre_presupuesto)}
+                          disabled={cargandoPresupuesto}
+                          className="rounded-lg bg-red-500 px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:bg-gray-300"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => setMostrarListado(false)}
+                className="rounded-lg bg-gray-200 px-6 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-300"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
