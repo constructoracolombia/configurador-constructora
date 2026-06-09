@@ -545,6 +545,83 @@ export default function PresupuestoManual() {
     doc.text(`$ ${precioEfectivo.toLocaleString("es-CO")}`, W - 14, currentY + 6, { align: "right" });
     currentY += 14;
 
+    // ── ADICIONALES ───────────────────────────────────────────────
+    if (itemsAdicionales.length > 0) {
+      const bodyAdicionales: any[][] = itemsAdicionales.map((item) => [
+        item.codigo ? String(item.codigo) : "",
+        item.nombre,
+        String(seleccionados[item.id] || 1),
+        `$ ${Math.round(item.valor_venta * 1.20).toLocaleString("es-CO")}`,
+        `$ ${(Math.round(item.valor_venta * 1.20) * (seleccionados[item.id] || 1)).toLocaleString("es-CO")}`,
+      ]);
+
+      const subtotalAdicionalesPDF = itemsAdicionales.reduce(
+        (sum, i) => sum + Math.round(i.valor_venta * 1.20) * (seleccionados[i.id] || 1), 0
+      );
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [
+          [{ content: "ADICIONALES", colSpan: 5, styles: { halign: "left" as const, fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 } }],
+          ["Cód.", "Ítem", "Cant.", "Vlr. Unit. (+20%)", "Total"],
+        ],
+        body: [
+          ...bodyAdicionales,
+          [
+            { content: "Subtotal adicionales", colSpan: 4, styles: { halign: "right" as const, fontStyle: "bold" as const } },
+            `$ ${subtotalAdicionalesPDF.toLocaleString("es-CO")}`,
+          ],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [60, 60, 60], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7.5 },
+        bodyStyles: { fontSize: 8, textColor: [rNegro, gNegro, bNegro] },
+        columnStyles: {
+          0: { cellWidth: 14, halign: "center" as const },
+          1: { cellWidth: "auto" as const },
+          2: { cellWidth: 14, halign: "center" as const },
+          3: { cellWidth: 36, halign: "right" as const },
+          4: { cellWidth: 28, halign: "right" as const },
+        },
+        alternateRowStyles: { fillColor: [250, 250, 249] },
+        margin: { left: 12, right: 12 },
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 4;
+    }
+
+    // ── ITEMS PERSONALIZADOS ──────────────────────────────────────
+    const personalizadosParaPDF = itemsManuales.filter((item) => item.nombre?.trim() !== "");
+    if (personalizadosParaPDF.length > 0) {
+      const bodyPersonalizados: any[][] = personalizadosParaPDF.map((item) => [
+        item.nombre,
+        String(item.cantidad || 1),
+        `$ ${item.precio.toLocaleString("es-CO")}`,
+        `$ ${(item.precio * (item.cantidad || 1)).toLocaleString("es-CO")}`,
+      ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [
+          [{ content: "ITEMS PERSONALIZADOS", colSpan: 4, styles: { halign: "left" as const, fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 } }],
+          ["Ítem", "Cant.", "Vlr. Unit.", "Total"],
+        ],
+        body: bodyPersonalizados,
+        theme: "grid",
+        headStyles: { fillColor: [60, 60, 60], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 7.5 },
+        bodyStyles: { fontSize: 8, textColor: [rNegro, gNegro, bNegro] },
+        columnStyles: {
+          0: { cellWidth: "auto" as const },
+          1: { cellWidth: 14, halign: "center" as const },
+          2: { cellWidth: 36, halign: "right" as const },
+          3: { cellWidth: 28, halign: "right" as const },
+        },
+        alternateRowStyles: { fillColor: [250, 250, 249] },
+        margin: { left: 12, right: 12 },
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 4;
+    }
+
     // ── TOTAL ─────────────────────────────────────────────────────
     const lineX = W - 12;
     currentY += 4;
