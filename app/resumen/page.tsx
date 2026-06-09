@@ -62,6 +62,7 @@ export default function ResumenPage() {
     proyecto,
     planBase,
     adicionales,
+    itemsManuales,
     getPrecioPlanBase,
     getTotal,
     clienteNombre,
@@ -341,6 +342,11 @@ export default function ResumenPage() {
             precio: precio * qty,
           };
         }),
+        itemsManuales: itemsManuales.map((m) => ({
+          nombre: m.nombre,
+          precio: m.precio,
+          cantidad: m.cantidad,
+        })),
         total: inversionTotal,
       };
 
@@ -423,6 +429,11 @@ export default function ResumenPage() {
             precio: precio * qty,
           };
         }),
+        itemsManuales: itemsManuales.map((m) => ({
+          nombre: m.nombre,
+          precio: m.precio,
+          cantidad: m.cantidad,
+        })),
         total: inversionTotal,
       };
 

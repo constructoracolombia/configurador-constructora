@@ -9,10 +9,18 @@ export interface ProductoConCantidad extends Producto {
   cantidad?: number;
 }
 
+export interface ItemManual {
+  id: string;
+  nombre: string;
+  precio: number;
+  cantidad?: number;
+}
+
 interface CotizadorState {
   proyecto: string | null;
   planBase: "basico" | "intermedio" | null;
   adicionales: ProductoConCantidad[];
+  itemsManuales: ItemManual[];
   clienteNombre: string;
   clienteTelefono: string;
   clienteEmail: string;
@@ -28,6 +36,7 @@ interface CotizadorActions {
   decrementarCantidad: (id: string) => void;
   getCantidad: (id: string) => number;
   clearAdicionales: () => void;
+  setItemsManuales: (items: ItemManual[]) => void;
   setClienteInfo: (nombre: string, telefono: string, email: string) => void;
   reset: () => void;
   getPrecioPlanBase: () => number;
@@ -45,6 +54,7 @@ export const useCotizador = create<CotizadorStore>()(
       proyecto: null,
       planBase: null,
       adicionales: [],
+      itemsManuales: [],
       clienteNombre: "",
       clienteTelefono: "",
       clienteEmail: "",
@@ -150,6 +160,8 @@ export const useCotizador = create<CotizadorStore>()(
         set({ adicionales: [] });
       },
 
+      setItemsManuales: (items) => set({ itemsManuales: items }),
+
       setClienteInfo: (nombre, telefono, email) => {
         if (process.env.NODE_ENV === "development") {
           console.log("👤 Datos del cliente guardados:", { nombre, telefono, email });
@@ -169,6 +181,7 @@ export const useCotizador = create<CotizadorStore>()(
           proyecto: null,
           planBase: null,
           adicionales: [],
+          itemsManuales: [],
           clienteNombre: "",
           clienteTelefono: "",
           clienteEmail: "",
