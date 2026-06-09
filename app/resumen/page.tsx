@@ -244,11 +244,12 @@ export default function ResumenPage() {
           if (leadError) {
             console.error("⚠️ No se pudo crear lead:", leadError);
           } else if (lead?.id) {
-            await supabase.from("lead_actividades").insert({
-              lead_id: lead.id,
-              tipo: "NOTA",
-              descripcion: `Cotización generada: ${numeroCotizacion}. Total: ${formatoPrecio(inversionTotal)}`,
-            });
+            // Temporalmente comentado para debugging
+            // await supabase.from("lead_actividades").insert({
+            //   lead_id: lead.id,
+            //   tipo: "NOTA",
+            //   descripcion: `Cotización generada: ${numeroCotizacion}. Total: ${formatoPrecio(inversionTotal)}`,
+            // });
           }
         } catch (leadFlowError) {
           console.error("⚠️ Error integrando lead desde cotización:", leadFlowError);
