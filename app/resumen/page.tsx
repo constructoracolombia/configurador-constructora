@@ -63,6 +63,7 @@ export default function ResumenPage() {
     planBase,
     adicionales,
     itemsManuales,
+    _hasHydrated,
     getPrecioPlanBase,
     getTotal,
     clienteNombre,
@@ -383,10 +384,10 @@ export default function ResumenPage() {
   };
 
   useEffect(() => {
-    if (planBase && proyecto && clienteEmail && !emailEnviado) {
+    if (_hasHydrated && planBase && proyecto && clienteEmail && !emailEnviado) {
       void generarYEnviarPresupuestoAutomatico();
     }
-  }, [planBase, proyecto, clienteEmail]);
+  }, [_hasHydrated, planBase, proyecto, clienteEmail]);
 
   if (!planBase || !proyecto || !planData) {
     return null;

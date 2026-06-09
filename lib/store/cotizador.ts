@@ -24,6 +24,7 @@ interface CotizadorState {
   clienteNombre: string;
   clienteTelefono: string;
   clienteEmail: string;
+  _hasHydrated: boolean;
 }
 
 interface CotizadorActions {
@@ -37,6 +38,7 @@ interface CotizadorActions {
   getCantidad: (id: string) => number;
   clearAdicionales: () => void;
   setItemsManuales: (items: ItemManual[]) => void;
+  setHasHydrated: (state: boolean) => void;
   setClienteInfo: (nombre: string, telefono: string, email: string) => void;
   reset: () => void;
   getPrecioPlanBase: () => number;
@@ -58,6 +60,7 @@ export const useCotizador = create<CotizadorStore>()(
       clienteNombre: "",
       clienteTelefono: "",
       clienteEmail: "",
+      _hasHydrated: false,
 
       // Acciones
       setProyecto: (proyecto) => {
@@ -162,6 +165,8 @@ export const useCotizador = create<CotizadorStore>()(
 
       setItemsManuales: (items) => set({ itemsManuales: items }),
 
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
+
       setClienteInfo: (nombre, telefono, email) => {
         if (process.env.NODE_ENV === "development") {
           console.log("👤 Datos del cliente guardados:", { nombre, telefono, email });
@@ -236,7 +241,10 @@ export const useCotizador = create<CotizadorStore>()(
     }),
     {
       name: "cotizador-storage",
-      storage: createJSONStorage(() => localStorage)
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
