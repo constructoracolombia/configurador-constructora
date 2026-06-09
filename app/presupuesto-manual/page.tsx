@@ -267,11 +267,12 @@ export default function PresupuestoManual() {
     }));
   };
 
-  const toggleOcultarItem = (nombre: string) => {
+  const toggleOcultarItem = (seccion: string, nombre: string) => {
+    const key = `${seccion}_${nombre}`;
     setItemsOcultos((prev) => {
       const next = new Set(prev);
-      if (next.has(nombre)) next.delete(nombre);
-      else next.add(nombre);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -440,7 +441,7 @@ export default function PresupuestoManual() {
   const baseTotal = precioBase !== null ? precioEfectivo + subtotalAdicionales : subtotalSinPlan;
   const iva = aplicaIva ? Math.round(baseTotal * 0.19) : 0;
   const subtotalManuales = itemsManuales.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const totalFinal = baseTotal + iva + subtotalManuales;
+  const totalFinal = Math.round((baseTotal + iva + subtotalManuales) / 100000) * 100000;
 
   const hayDescuentos = Object.values(itemsPlanEstado).some((e) => !e.aplica);
   const diasEntrega = planBase === "Plan Básico" ? 39 : 59;
@@ -507,7 +508,7 @@ export default function PresupuestoManual() {
     const bodyPlan: any[][] = [];
     seccionesActivas.forEach((sec) => {
       const itemsVisibles = sec.items.filter(
-        (n) => !itemsOcultos.has(n) && n !== "Tendedero abatible en zona húmeda"
+        (n) => !itemsOcultos.has(`${sec.seccion}_${n}`) && n !== "Tendedero abatible en zona húmeda"
       );
       if (itemsVisibles.length === 0) return;
       bodyPlan.push([{
@@ -555,96 +556,9 @@ export default function PresupuestoManual() {
     doc.text(`$ ${precioEfectivo.toLocaleString("es-CO")}`, W - 14, currentY + 6, { align: "right" });
     currentY += 14;
 
-    // ── ADICIONALES ───────────────────────────────────────────────
-    const adicsList = items.filter((i) => seleccionados[i.id] && !itemsOcultos.has(i.nombre));
-    if (adicsList.length > 0) {
-      autoTable(doc, {
-        startY: currentY,
-        head: [["Cód.", "Ítem", "Cant.", "Vlr. Unitario", "Total"]],
-        body: adicsList.map((item) => {
-          const cant = seleccionados[item.id] || 1;
-          const precioConUtil = Math.round(item.valor_venta * 1.2);
-          return [
-            item.codigo || "—",
-            item.nombre,
-            String(cant),
-            `$ ${precioConUtil.toLocaleString("es-CO")}`,
-            `$ ${(precioConUtil * cant).toLocaleString("es-CO")}`,
-          ];
-        }),
-        theme: "grid",
-        headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-        bodyStyles: { fontSize: 7.5, textColor: [rNegro, gNegro, bNegro] },
-        columnStyles: {
-          0: { cellWidth: 14, halign: "center" as const },
-          1: { cellWidth: "auto" as const },
-          2: { cellWidth: 14, halign: "center" as const },
-          3: { cellWidth: 30, halign: "right" as const },
-          4: { cellWidth: 30, halign: "right" as const },
-        },
-        alternateRowStyles: { fillColor: [250, 250, 249] },
-        margin: { left: 12, right: 12 },
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 3;
-    }
-
-    // ── ITEMS MANUALES ────────────────────────────────────────
-    if (itemsManuales.length > 0) {
-      autoTable(doc, {
-        startY: currentY,
-        head: [["Ítem Personalizado", "Cant.", "Vlr. Unitario", "Total"]],
-        body: itemsManuales.map((item) => [
-          item.nombre,
-          String(item.cantidad),
-          `$ ${item.precio.toLocaleString("es-CO")}`,
-          `$ ${(item.precio * item.cantidad).toLocaleString("es-CO")}`,
-        ]),
-        theme: "grid",
-        headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-        bodyStyles: { fontSize: 7.5, textColor: [rNegro, gNegro, bNegro] },
-        columnStyles: {
-          0: { cellWidth: "auto" as const },
-          1: { cellWidth: 14, halign: "center" as const },
-          2: { cellWidth: 30, halign: "right" as const },
-          3: { cellWidth: 30, halign: "right" as const },
-        },
-        alternateRowStyles: { fillColor: [250, 250, 249] },
-        margin: { left: 12, right: 12 },
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 3;
-    }
-
-    // ── TOTALES ───────────────────────────────────────────────────
-    const subtotalAdic = adicsList.reduce((sum, item) => {
-      const cant = seleccionados[item.id] || 1;
-      return sum + Math.round(item.valor_venta * 1.2) * cant;
-    }, 0);
-
+    // ── TOTAL ─────────────────────────────────────────────────────
     const lineX = W - 12;
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(rGrisTexto, gGrisTexto, bGrisTexto);
-
-    if (planBase) {
-      doc.text("Plan base:", lineX - 45, currentY + 5);
-      doc.text(`$ ${precioEfectivo.toLocaleString("es-CO")}`, lineX, currentY + 5, { align: "right" });
-      currentY += 6;
-    }
-    if (subtotalAdic > 0) {
-      doc.text("Adicionales:", lineX - 45, currentY + 5);
-      doc.text(`$ ${subtotalAdic.toLocaleString("es-CO")}`, lineX, currentY + 5, { align: "right" });
-      currentY += 6;
-    }
-    if (subtotalManuales > 0) {
-      doc.text("Personalizados:", lineX - 45, currentY + 5);
-      doc.text(`$ ${subtotalManuales.toLocaleString("es-CO")}`, lineX, currentY + 5, { align: "right" });
-      currentY += 6;
-    }
-
-    doc.setDrawColor(rNegro, gNegro, bNegro);
-    doc.setLineWidth(0.4);
-    doc.line(lineX - 55, currentY + 2, lineX, currentY + 2);
-    currentY += 5;
+    currentY += 4;
 
     doc.setFillColor(rNegro, gNegro, bNegro);
     doc.roundedRect(lineX - 60, currentY, 60, 11, 2, 2, "F");
@@ -1065,7 +979,7 @@ export default function PresupuestoManual() {
                         {planItems.map((itemNombre) => {
                           const estado = itemsPlanEstado[itemNombre];
                           const aplica = estado?.aplica ?? true;
-                          const oculto = itemsOcultos.has(itemNombre);
+                          const oculto = itemsOcultos.has(`${seccion}_${itemNombre}`);
                           return (
                             <tr
                               key={`${seccion}-${itemNombre}`}
@@ -1075,7 +989,7 @@ export default function PresupuestoManual() {
                               <td className={`py-1.5 pl-2 pr-0 text-center`} style={{ width: 24 }}>
                                 <button
                                   type="button"
-                                  onClick={() => toggleOcultarItem(itemNombre)}
+                                  onClick={() => toggleOcultarItem(seccion, itemNombre)}
                                   title={oculto ? "Mostrar en presupuesto" : "Ocultar del presupuesto"}
                                   style={{
                                     fontSize: 13, lineHeight: 1, background: "none", border: "none",
@@ -1466,7 +1380,7 @@ export default function PresupuestoManual() {
                       </thead>
                       <tbody>
                         {secciones.map(({ seccion, items: planItems }) => {
-                          const visibles = planItems.filter((n) => !itemsOcultos.has(n));
+                          const visibles = planItems.filter((n) => !itemsOcultos.has(`${seccion}_${n}`));
                           if (visibles.length === 0) return null;
                           return (
                             <>
