@@ -313,10 +313,10 @@ function renderItemsPersonalizados(
 // ═══════════════════════════════════════════════════════════════
 
 export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> {
-  console.log("🎯 DATOS RECIBIDOS EN PDF:");
-  console.log("   adicionales:", data.adicionales);
-  console.log("   itemsManuales:", data.itemsManuales);
-  console.log("   total items:", (data.adicionales?.length || 0) + (data.itemsManuales?.length || 0));
+  console.log("🎯 FUNCIÓN LLAMADA - generarCotizacionPDF");
+  console.log("   adicionales:", data.adicionales?.length || 0);
+  console.log("   itemsManuales:", data.itemsManuales?.length || 0);
+  console.log("   total:", (data.adicionales?.length || 0) + (data.itemsManuales?.length || 0));
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
 
