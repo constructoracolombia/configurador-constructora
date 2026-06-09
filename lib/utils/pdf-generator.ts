@@ -215,8 +215,13 @@ function renderAdicionalesSimple(
   pageWidth: number,
   startY: number
 ): number {
+  console.log("✅ renderAdicionalesSimple llamada con:", adicionales.length, "items");
   const filtrados = filtrarAdicionales(adicionales);
-  if (filtrados.length === 0) return startY;
+  console.log("   Después de filtrar:", filtrados.length, "items");
+  if (filtrados.length === 0) {
+    console.log("   ⚠️ No hay items para mostrar");
+    return startY;
+  }
 
   let currentY = startY;
 
@@ -263,7 +268,11 @@ function renderItemsPersonalizados(
   pageWidth: number,
   startY: number
 ): number {
-  if (!itemsManuales || itemsManuales.length === 0) return startY;
+  console.log("✅ renderItemsPersonalizados llamada con:", itemsManuales?.length, "items");
+  if (!itemsManuales || itemsManuales.length === 0) {
+    console.log("   ⚠️ No hay items manuales");
+    return startY;
+  }
 
   let currentY = startY;
 
@@ -304,6 +313,11 @@ function renderItemsPersonalizados(
 // ═══════════════════════════════════════════════════════════════
 
 export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> {
+  console.log("🎯 DATOS RECIBIDOS EN PDF:");
+  console.log("   adicionales:", data.adicionales);
+  console.log("   itemsManuales:", data.itemsManuales);
+  console.log("   total items:", (data.adicionales?.length || 0) + (data.itemsManuales?.length || 0));
+
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
 
   const pageWidth = 215.9;
