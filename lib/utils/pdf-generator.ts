@@ -24,6 +24,11 @@ interface CotizacionData {
     precio: number;
     cantidad?: number;
   }>;
+  itemsManuales?: Array<{
+    nombre: string;
+    precio: number;
+    cantidad?: number;
+  }>;
   total: number;
 }
 
@@ -200,6 +205,101 @@ function renderFooter(doc: jsPDF, margin: number, pageWidth: number, pageHeight:
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ADICIONALES SELECCIONADOS (sin precios)
+// ═══════════════════════════════════════════════════════════════
+
+function renderAdicionalesSimple(
+  doc: jsPDF,
+  adicionales: Array<{ nombre: string; precio: number; cantidad?: number }>,
+  margin: number,
+  pageWidth: number,
+  startY: number
+): number {
+  const filtrados = filtrarAdicionales(adicionales);
+  if (filtrados.length === 0) return startY;
+
+  let currentY = startY;
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("ADICIONALES SELECCIONADOS", margin, currentY);
+  currentY += 6;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.text("Ítem", margin + 2, currentY);
+  doc.text("Cant.", pageWidth - margin - 15, currentY);
+
+  currentY += 4;
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.5);
+  doc.line(margin, currentY, pageWidth - margin, currentY);
+  currentY += 3;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.textSecondary);
+
+  filtrados.forEach((item) => {
+    const nombreTruncado = doc.splitTextToSize(item.nombre, pageWidth - margin - 25)[0];
+    doc.text(nombreTruncado, margin + 2, currentY);
+    doc.text(String(item.cantidad || 1), pageWidth - margin - 15, currentY);
+    currentY += 5;
+  });
+
+  return currentY + 4;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ITEMS PERSONALIZADOS (sin precios)
+// ═══════════════════════════════════════════════════════════════
+
+function renderItemsPersonalizados(
+  doc: jsPDF,
+  itemsManuales: Array<{ nombre: string; precio: number; cantidad?: number }> | undefined,
+  margin: number,
+  pageWidth: number,
+  startY: number
+): number {
+  if (!itemsManuales || itemsManuales.length === 0) return startY;
+
+  let currentY = startY;
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("ITEMS PERSONALIZADOS", margin, currentY);
+  currentY += 6;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.text("Ítem", margin + 2, currentY);
+  doc.text("Cant.", pageWidth - margin - 15, currentY);
+
+  currentY += 4;
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.5);
+  doc.line(margin, currentY, pageWidth - margin, currentY);
+  currentY += 3;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.textSecondary);
+
+  itemsManuales.forEach((item) => {
+    const nombreTruncado = doc.splitTextToSize(item.nombre, pageWidth - margin - 25)[0];
+    doc.text(nombreTruncado, margin + 2, currentY);
+    doc.text(String(item.cantidad || 1), pageWidth - margin - 15, currentY);
+    currentY += 5;
+  });
+
+  return currentY + 4;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // GENERADOR PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
@@ -311,6 +411,20 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
 
   const actividades = getActividadesPorPlan(data.plan.nombre);
   currentY = renderActividadesEnGrid(doc, actividades, margin, contentWidth, currentY);
+
+  // ════════════════════════════════════════════════════════════
+  // SECCIÓN 1.5: ADICIONALES Y PERSONALIZADOS
+  // ════════════════════════════════════════════════════════════
+
+  if (data.adicionales.length > 0) {
+    currentY += 6;
+    currentY = renderAdicionalesSimple(doc, data.adicionales, margin, pageWidth, currentY);
+  }
+
+  if (data.itemsManuales && data.itemsManuales.length > 0) {
+    currentY += 6;
+    currentY = renderItemsPersonalizados(doc, data.itemsManuales, margin, pageWidth, currentY);
+  }
 
   // ════════════════════════════════════════════════════════════
   // SECCIÓN 2: INVERSIÓN TOTAL
