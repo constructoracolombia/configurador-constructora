@@ -179,35 +179,15 @@ export function getPreciosPlanPorProyecto(proyectoId: string | null): {
 } {
   const id = proyectoId?.toLowerCase().trim() || "";
 
-  console.log('📊 getPreciosPlanPorProyecto:', { input: proyectoId, normalizado: id });
-
-  // PRECIOS PREMIUM - Parque Oriente (y torres) y Azafrán
-  const proyectosPremium = [
-    "parque-oriente",
-    "parque oriente",
-    "aurora",
-    "montevista",
-    "azafran",
-    "azafrán",
-  ];
-
-  if (proyectosPremium.includes(id)) {
-    console.log('✅ PREMIUM detectado → basico: 15.9M, intermedio: 31.9M');
-    return { basico: 15_900_000, intermedio: 31_900_000 };
-  }
-
-  // PRECIO ESPECIAL - Ciudadela Verde (único con Plus en $29.9M)
-  if (id === "ciudadela-verde" || id === "ciudadela verde") {
-    return { basico: 14_900_000, intermedio: 29_900_000 };
-  }
-
-  // PRECIO ESPECIAL - Parque Oriente Solei (proyecto VIS más económico)
   if (id === "solei") {
     return { basico: 12_900_000, intermedio: 25_900_000 };
   }
 
-  // PRECIOS ESTÁNDAR - Resto de proyectos
-  return { basico: 14_900_000, intermedio: 30_900_000 };
+  if (id === "ciudadela-verde" || id === "ciudadela verde") {
+    return { basico: 15_900_000, intermedio: 31_900_000 };
+  }
+
+  return { basico: 16_900_000, intermedio: 32_900_000 };
 }
 
 // ═══════════════════════════════════════
