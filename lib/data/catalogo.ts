@@ -60,6 +60,12 @@ export const proyectos = [
     imagen: "/proyectos/morada-del-viento.jpg.jpeg",
   },
   {
+    id: "solei",
+    nombre: "Solei",
+    ubicacion: "Floridablanca",
+    imagen: "/proyectos/solei.jpg",
+  },
+  {
     id: "fontana-de-la-sierra",
     nombre: "Fontana de la Sierra",
     ubicacion: "Bucaramanga",
