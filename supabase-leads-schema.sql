@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS leads (
   fecha_proxima_accion DATE,
 
   -- Relaciones
-  cotizacion_id UUID REFERENCES cotizaciones(id),
+  cotizacion_id UUID REFERENCES cotizaciones(id) ON DELETE SET NULL,
 
   -- Metadata
   prioridad TEXT DEFAULT 'MEDIA' CHECK (prioridad IN ('ALTA', 'MEDIA', 'BAJA'))
