@@ -61,7 +61,7 @@ export const proyectos = [
   },
   {
     id: "solei",
-    nombre: "Solei",
+    nombre: "Parque Oriente Solei",
     ubicacion: "Floridablanca",
     imagen: "/proyectos/solei.jpg",
   },
@@ -199,6 +199,11 @@ export function getPreciosPlanPorProyecto(proyectoId: string | null): {
   // PRECIO ESPECIAL - Ciudadela Verde (único con Plus en $29.9M)
   if (id === "ciudadela-verde" || id === "ciudadela verde") {
     return { basico: 14_900_000, intermedio: 29_900_000 };
+  }
+
+  // PRECIO ESPECIAL - Parque Oriente Solei (proyecto VIS más económico)
+  if (id === "solei") {
+    return { basico: 12_900_000, intermedio: 25_900_000 };
   }
 
   // PRECIOS ESTÁNDAR - Resto de proyectos
