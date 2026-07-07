@@ -160,7 +160,7 @@ export default function CRMPage() {
           }
           return estadoLead === estado.id;
         })
-        .sort((a, b) => (a.posicion_kanban || 0) - (b.posicion_kanban || 0));
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     });
     setLeadsAgrupados(agrupados);
   }, [busqueda, leads]);
