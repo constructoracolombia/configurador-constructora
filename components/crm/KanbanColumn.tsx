@@ -5,33 +5,28 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LeadCard } from "./LeadCard";
-import type { Lead, Estado } from "@/lib/types/crm";
+import { ClienteGroupCard } from "./ClienteGroupCard";
+import type { ClienteGroup, Lead, Estado } from "@/lib/types/crm";
 
 interface KanbanColumnProps {
   estado: Estado;
-  leads: Lead[];
-  onLeadClick: (lead: Lead) => void | Promise<void>;
-  onWhatsApp: (lead: Lead) => void;
-  onReenviarEmail: (lead: Lead) => void;
-  onEliminar?: (lead: Lead) => void;
+  groups: ClienteGroup[];
+  onCotizacionClick: (lead: Lead) => void | Promise<void>;
+  onWhatsApp: (group: ClienteGroup) => void;
+  onEliminar: (lead: Lead) => void;
   eliminandoId?: string | null;
 }
 
 export function KanbanColumn({
   estado,
-  leads,
-  onLeadClick,
+  groups,
+  onCotizacionClick,
   onWhatsApp,
-  onReenviarEmail,
   onEliminar,
   eliminandoId,
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: estado.id,
-  });
-
-  const leadsIds = useMemo(() => leads.map((l) => l.id), [leads]);
+  const { setNodeRef, isOver } = useDroppable({ id: estado.id });
+  const groupKeys = useMemo(() => groups.map((g) => g.key), [groups]);
 
   return (
     <Card
@@ -47,30 +42,26 @@ export function KanbanColumn({
             {estado.nombre}
           </span>
           <Badge className={`${estado.color} text-white`}>
-            {leads.length}
+            {groups.length}
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="min-h-[400px] space-y-3">
-        <SortableContext
-          items={leadsIds}
-          strategy={verticalListSortingStrategy}
-        >
-          {leads.map((lead) => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              onClick={() => onLeadClick(lead)}
-              onWhatsApp={() => onWhatsApp(lead)}
-              onReenviarEmail={() => onReenviarEmail(lead)}
-              onEliminar={onEliminar ? () => onEliminar(lead) : undefined}
-              isDeleting={eliminandoId === lead.id}
+        <SortableContext items={groupKeys} strategy={verticalListSortingStrategy}>
+          {groups.map((group) => (
+            <ClienteGroupCard
+              key={group.key}
+              group={group}
+              onCotizacionClick={onCotizacionClick}
+              onWhatsApp={() => onWhatsApp(group)}
+              onEliminar={onEliminar}
+              eliminandoId={eliminandoId}
             />
           ))}
         </SortableContext>
-        {leads.length === 0 && (
+        {groups.length === 0 && (
           <p className="py-8 text-center text-xs text-brand-textSecondary">
-            No hay leads en esta etapa
+            No hay clientes en esta etapa
           </p>
         )}
       </CardContent>

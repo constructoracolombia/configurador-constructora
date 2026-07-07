@@ -43,9 +43,10 @@ import {
   BarChart3,
 } from "lucide-react";
 import { formatoPrecio } from "@/lib/utils/format";
-import { LeadCard } from "@/components/crm/LeadCard";
 import { KanbanColumn } from "@/components/crm/KanbanColumn";
-import type { Lead, Nota, Estado } from "@/lib/types/crm";
+import { ClienteGroupCard } from "@/components/crm/ClienteGroupCard";
+import { agruparPorCliente } from "@/lib/utils/crm-groups";
+import type { Lead, Nota, Estado, ClienteGroup } from "@/lib/types/crm";
 
 const ESTADOS: Estado[] = [
   { id: "NUEVO", nombre: "Nuevos", color: "bg-blue-500", icon: "📨" },
@@ -77,8 +78,9 @@ export default function CRMPage() {
   const [password, setPassword] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsAgrupados, setLeadsAgrupados] = useState<
-    Record<string, Lead[]>
+    Record<string, ClienteGroup[]>
   >({});
+  const [gruposIndex, setGruposIndex] = useState<Map<string, ClienteGroup>>(new Map());
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -140,27 +142,23 @@ export default function CRMPage() {
     const filtrados = busqueda
       ? leads.filter(
           (lead) =>
-            lead.cliente_nombre
-              .toLowerCase()
-              .includes(busqueda.toLowerCase()) ||
+            lead.cliente_nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
             lead.cliente_email.toLowerCase().includes(busqueda.toLowerCase()) ||
-            lead.numero_cotizacion
-              .toLowerCase()
-              .includes(busqueda.toLowerCase())
+            lead.numero_cotizacion.toLowerCase().includes(busqueda.toLowerCase())
         )
       : leads;
-    const agrupados: Record<string, Lead[]> = {};
+
+    const todosGrupos = agruparPorCliente(filtrados);
+
+    const idx = new Map<string, ClienteGroup>();
+    todosGrupos.forEach((g) => idx.set(g.key, g));
+    setGruposIndex(idx);
+
+    const agrupados: Record<string, ClienteGroup[]> = {};
     ESTADOS.forEach((estado) => {
-      agrupados[estado.id] = filtrados
-        .filter((lead) => {
-          const estadoLead = lead.estado_crm || "NUEVO";
-          // Compatibilidad: leads con "RESERVADO" antiguo van a "EN_SEGUIMIENTO"
-          if (estado.id === "EN_SEGUIMIENTO") {
-            return estadoLead === "EN_SEGUIMIENTO" || estadoLead === "RESERVADO";
-          }
-          return estadoLead === estado.id;
-        })
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      agrupados[estado.id] = todosGrupos.filter(
+        (g) => g.etapaMasAvanzada === estado.id
+      );
     });
     setLeadsAgrupados(agrupados);
   }, [busqueda, leads]);
@@ -177,35 +175,36 @@ export default function CRMPage() {
       return;
     }
 
-    const leadId = active.id as string;
+    const groupKey = active.id as string;
     let nuevoEstado: string;
 
     const esEstadoId = ESTADOS.some((e) => e.id === over.id);
     if (esEstadoId) {
       nuevoEstado = over.id as string;
     } else {
-      const leadOver = leads.find((l) => l.id === over.id);
-      if (!leadOver) {
+      const groupOver = gruposIndex.get(over.id as string);
+      if (!groupOver) {
         setActiveId(null);
         return;
       }
-      nuevoEstado = leadOver.estado_crm || "NUEVO";
+      nuevoEstado = groupOver.etapaMasAvanzada;
     }
 
-    const lead = leads.find((l) => l.id === leadId);
-    if (!lead || (lead.estado_crm || "NUEVO") === nuevoEstado) {
+    const group = gruposIndex.get(groupKey);
+    if (!group || group.etapaMasAvanzada === nuevoEstado) {
       setActiveId(null);
       return;
     }
 
     try {
+      const ids = group.cotizaciones.map((c) => c.id);
       const { error } = await supabase
         .from("cotizaciones")
         .update({
           estado_crm: nuevoEstado,
           ultima_interaccion: new Date().toISOString(),
         })
-        .eq("id", leadId);
+        .in("id", ids);
 
       if (error) throw error;
 
@@ -285,6 +284,19 @@ export default function CRMPage() {
       console.error("Error:", error);
       alert("❌ Error enviando email");
     }
+  };
+
+  const abrirWhatsAppGrupo = (group: ClienteGroup) => {
+    const rep = group.cotizaciones[0];
+    const telefono = group.telefono || "573175639674";
+    if (!group.telefono) {
+      alert("Cliente no registró teléfono. Usando número de la empresa.");
+    }
+    const mensaje = `Hola ${group.nombre}!\n\nTe contacto desde Constructora Colombia. Vi que generaste tu presupuesto para *${rep.proyecto_nombre}* (${rep.numero_cotizacion}).\n\nTu presupuesto: ${rep.pdf_url || ""}\n\nQuieres asegurar tu precio actual antes de que suban los insumos? Sigue disponible el cupo de reserva por $500.000 para este mes.`;
+    window.open(
+      `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`,
+      "_blank"
+    );
   };
 
   const abrirWhatsApp = (lead: Lead) => {
@@ -410,7 +422,7 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
   const tasaConversion =
     leads.length > 0 ? ((ganados / leads.length) * 100).toFixed(1) : "0";
 
-  const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
+  const activeGroup = activeId ? (gruposIndex.get(activeId) ?? null) : null;
 
   if (!autenticado) {
     return (
@@ -583,10 +595,9 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
               <KanbanColumn
                 key={estado.id}
                 estado={estado}
-                leads={leadsAgrupados[estado.id] || []}
-                onLeadClick={abrirDetalles}
-                onWhatsApp={abrirWhatsApp}
-                onReenviarEmail={reenviarEmail}
+                groups={leadsAgrupados[estado.id] || []}
+                onCotizacionClick={abrirDetalles}
+                onWhatsApp={abrirWhatsAppGrupo}
                 onEliminar={eliminarLead}
                 eliminandoId={eliminando}
               />
@@ -594,13 +605,13 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
           </div>
 
           <DragOverlay>
-            {activeLead ? (
+            {activeGroup ? (
               <div className="opacity-90">
-                <LeadCard
-                  lead={activeLead}
-                  onClick={() => {}}
-                  onWhatsApp={() => abrirWhatsApp(activeLead)}
-                  onReenviarEmail={() => reenviarEmail(activeLead)}
+                <ClienteGroupCard
+                  group={activeGroup}
+                  onCotizacionClick={() => {}}
+                  onWhatsApp={() => {}}
+                  onEliminar={() => {}}
                 />
               </div>
             ) : null}

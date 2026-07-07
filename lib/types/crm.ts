@@ -1,3 +1,13 @@
+export interface ClienteGroup {
+  key: string;               // teléfono normalizado (fallback: email)
+  nombre: string;            // nombre de la cotización más reciente
+  telefono: string | null;
+  email: string;
+  cotizaciones: Lead[];      // ordenadas más reciente primero
+  etapaMasAvanzada: string;  // columna Kanban donde va la tarjeta
+  valorMax: number;          // cotización más alta del cliente
+}
+
 export interface Lead {
   id: string;
   created_at: string;
