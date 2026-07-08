@@ -6,7 +6,6 @@ const ETAPA_RANK: Record<string, number> = {
   CORREO_ENVIADO: 1,
   CITA_AGENDADA: 2,
   EN_SEGUIMIENTO: 3,
-  RESERVADO: 3,        // legacy — se normaliza a EN_SEGUIMIENTO en etapaMasAvanzada
   CONTRATO_FIRMADO: 4,
 };
 
@@ -45,8 +44,7 @@ export function agruparPorCliente(leads: Lead[]): ClienteGroup[] {
       const rank = ETAPA_RANK[estado] ?? 0;
       if (rank > maxRank) {
         maxRank = rank;
-        // Normalizar RESERVADO → EN_SEGUIMIENTO
-        etapaMasAvanzada = estado === "RESERVADO" ? "EN_SEGUIMIENTO" : estado;
+        etapaMasAvanzada = estado;
       }
     }
 

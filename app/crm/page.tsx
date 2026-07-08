@@ -211,6 +211,9 @@ export default function CRMPage() {
       await cargarLeads();
     } catch (error) {
       console.error("Error actualizando estado:", error);
+      const msg = error instanceof Error ? error.message : String(error);
+      alert(`❌ Error al mover el cliente a "${nuevoEstado}":\n\n${msg}\n\nRevisa la consola para más detalles.`);
+      await cargarLeads();
     }
 
     setActiveId(null);
