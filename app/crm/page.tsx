@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -407,20 +407,27 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
     }
   };
 
-  const totalPipeline = leads.reduce(
-    (sum, l) => sum + Number(l.total || 0),
-    0
-  );
-  const enNegociacion = leads
-    .filter((l) =>
-      ["CITA_AGENDADA", "EN_SEGUIMIENTO", "RESERVADO"].includes(l.estado_crm || "NUEVO")
+  // KPIs: un cliente = una vez, usando su cotización más alta (coherente con las tarjetas)
+  const allGroups = useMemo(() => agruparPorCliente(leads), [leads]);
+
+  const totalPipeline = allGroups
+    .filter((g) => g.etapaMasAvanzada !== "PERDIDO")
+    .reduce((sum, g) => sum + g.valorMax, 0);
+
+  const enNegociacion = allGroups
+    .filter((g) =>
+      ["CITA_AGENDADA", "EN_SEGUIMIENTO"].includes(g.etapaMasAvanzada)
     )
-    .reduce((sum, l) => sum + Number(l.total || 0), 0);
-  const ganados = leads.filter(
-    (l) => l.estado_crm === "CONTRATO_FIRMADO"
+    .reduce((sum, g) => sum + g.valorMax, 0);
+
+  const ganados = allGroups.filter(
+    (g) => g.etapaMasAvanzada === "CONTRATO_FIRMADO"
   ).length;
+
   const tasaConversion =
-    leads.length > 0 ? ((ganados / leads.length) * 100).toFixed(1) : "0";
+    allGroups.length > 0
+      ? ((ganados / allGroups.length) * 100).toFixed(1)
+      : "0";
 
   const activeGroup = activeId ? (gruposIndex.get(activeId) ?? null) : null;
 
