@@ -129,6 +129,7 @@ export default function CRMPage() {
 
       if (error) throw error;
 
+      console.log('fetch filas:', data?.length, data);
       const leadsData = (data || []) as Lead[];
       setLeads(leadsData);
     } catch (error) {
@@ -149,6 +150,7 @@ export default function CRMPage() {
       : leads;
 
     const todosGrupos = agruparPorCliente(filtrados);
+    console.log('grupos:', todosGrupos);
 
     const idx = new Map<string, ClienteGroup>();
     todosGrupos.forEach((g) => idx.set(g.key, g));
