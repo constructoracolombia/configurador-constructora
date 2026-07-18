@@ -25,6 +25,7 @@ import { formatoPrecio } from "@/lib/utils/format";
 import CalendarioAnual from "@/components/CalendarioAnual";
 import GraficaSeguimiento from "@/components/GraficaSeguimiento";
 import { cerrarSesionDashboard } from "@/components/ProteccionDashboard";
+import { ContratoModal } from "@/components/ContratoModal";
 
 type Lead = {
   id: string;
@@ -78,6 +79,7 @@ type NuevoLeadForm = {
 
 type EditarLeadForm = {
   id: string;
+  etapa: string;
   fecha_contacto: string;
   origen: string;
   nombre: string;
@@ -203,10 +205,13 @@ function CentroOperacionesDashboard() {
   const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
   const [leadEditando, setLeadEditando] = useState<EditarLeadForm | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
-  type VersionResumen = { version_num: number; estado: string; total_final: number; created_at: string; token_publico: string | null; veces_visto: number; visto_primera_vez: string | null };
+  type VersionResumen = { id: string; version_num: number; estado: string; total_final: number; created_at: string; token_publico: string | null; veces_visto: number; visto_primera_vez: string | null };
   const [versionesLeadEdit, setVersionesLeadEdit] = useState<VersionResumen[]>([]);
   const [copiandoToken, setCopiandoToken] = useState<number | null>(null);
   const [cargandoPresupuestosLeadEdit, setCargandoPresupuestosLeadEdit] = useState(false);
+
+  const [mostrarContratoModal, setMostrarContratoModal] = useState(false);
+  const [contratoPresupuestoId, setContratoPresupuestoId] = useState<string | null>(null);
 
   const [mostrarModalProximoPaso, setMostrarModalProximoPaso] = useState(false);
   const [leadProximoPaso, setLeadProximoPaso] = useState<Lead | null>(null);
@@ -461,6 +466,7 @@ function CentroOperacionesDashboard() {
 
     setLeadEditando({
       id: lead.id,
+      etapa: lead.etapa || "",
       fecha_contacto: lead.fecha_contacto || new Date().toISOString().split("T")[0],
       origen: lead.origen || "PAUTA_META",
       nombre: lead.nombre || "",
@@ -606,7 +612,7 @@ function CentroOperacionesDashboard() {
     void (async () => {
       const { data } = await supabase
         .from('presupuestos')
-        .select('version_num, estado, total_final, created_at, token_publico, veces_visto, visto_primera_vez')
+        .select('id, version_num, estado, total_final, created_at, token_publico, veces_visto, visto_primera_vez')
         .eq('lead_id', leadEditando.id)
         .order('version_num', { ascending: false });
       setVersionesLeadEdit((data || []) as VersionResumen[]);
@@ -2581,6 +2587,19 @@ function CentroOperacionesDashboard() {
                               </a>
                             </div>
                           )}
+                          {leadEditando?.etapa === 'NEGOCIACION' && (
+                            <div className="border-t border-amber-100 bg-amber-50 px-3 py-1.5">
+                              <button
+                                onClick={() => {
+                                  setContratoPresupuestoId(v.id);
+                                  setMostrarContratoModal(true);
+                                }}
+                                className="flex items-center gap-1 rounded bg-[#B0894F] px-2 py-0.5 text-[10px] font-bold text-white hover:bg-[#9a7642] transition-colors"
+                              >
+                                📄 Crear contrato V{v.version_num}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -2741,6 +2760,15 @@ function CentroOperacionesDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {mostrarContratoModal && contratoPresupuestoId && leadEditando && (
+        <ContratoModal
+          leadId={leadEditando.id}
+          leadNombre={leadEditando.nombre}
+          presupuestoId={contratoPresupuestoId}
+          onClose={() => { setMostrarContratoModal(false); setContratoPresupuestoId(null); }}
+        />
       )}
 
       {/* Modal de Observaciones con Fecha */}

@@ -44,11 +44,11 @@ type CatItem = { id: string; nombre: string; codigo: string | null };
 
 const cop = (n: number) => `$ ${Math.round(n).toLocaleString("es-CO")}`;
 
-const NAVY   = "#111D2E";
-const CARD   = "#1A2740";
-const GOLD   = "#B0894F";
-const CREAM  = "#FAF8F4";
-const CREAM2 = "#E8E0D4";
+const BG    = "#FAF8F4";
+const CARD  = "#FFFFFF";
+const GOLD  = "#B0894F";
+const TEXT  = "#111D2E";
+const TEXT2 = "#6B7280";
 
 // ── componente ───────────────────────────────────────────────────────────────
 
@@ -80,7 +80,6 @@ export default function PresupuestoPublicoPage() {
 
       setPpto(data as Presupuesto);
 
-      // Nombres de ítems del catálogo para mostrar en Adicionales
       const selIds = Object.keys(data.seleccionados || {});
       if (selIds.length > 0) {
         const { data: cats } = await supabase
@@ -94,7 +93,7 @@ export default function PresupuestoPublicoPage() {
     })();
   }, [token]);
 
-  // ── tracking (guard anti-doble-invoke Strict Mode) ──────────────────────
+  // ── tracking ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!ppto || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
@@ -109,10 +108,10 @@ export default function PresupuestoPublicoPage() {
       .eq("id", ppto.id);
   }, [ppto]);
 
-  // ── estados de carga / error ────────────────────────────────────────────
+  // ── estados carga / error ────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ background: NAVY, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: BG, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ color: GOLD, fontFamily: "serif", fontSize: 18 }}>Cargando…</div>
       </div>
     );
@@ -120,26 +119,25 @@ export default function PresupuestoPublicoPage() {
 
   if (error || !ppto) {
     return (
-      <div style={{ background: NAVY, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: BG, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ color: GOLD, fontSize: 40, marginBottom: 12 }}>⚠</div>
-          <p style={{ color: CREAM, fontFamily: "serif", fontSize: 20, marginBottom: 8 }}>Link no disponible</p>
-          <p style={{ color: CREAM2, fontSize: 14 }}>{error ?? "Presupuesto no encontrado."}</p>
+          <p style={{ color: TEXT, fontFamily: "serif", fontSize: 20, marginBottom: 8 }}>Link no disponible</p>
+          <p style={{ color: TEXT2, fontSize: 14 }}>{error ?? "Presupuesto no encontrado."}</p>
         </div>
       </div>
     );
   }
 
-  // ── cálculos (usando precios_snapshot — nunca catálogo actual) ──────────
+  // ── cálculos ─────────────────────────────────────────────────────────────
   const precioEfectivo = ppto.precio_manual ?? ppto.precio_base ?? 0;
   const itemsOcultosSet = new Set(ppto.items_ocultos || []);
-
   const catItemMap = new Map(catItems.map((i) => [i.id, i]));
 
   const adicionales = Object.entries(ppto.seleccionados).map(([id, qty]) => {
-    const snap  = ppto.precios_snapshot[id] ?? 0;
+    const snap   = ppto.precios_snapshot[id] ?? 0;
     const precio = Math.round(snap * 1.20);
-    const cat   = catItemMap.get(id);
+    const cat    = catItemMap.get(id);
     return { id, nombre: cat?.nombre ?? "Ítem", codigo: cat?.codigo ?? null, qty, precio, total: precio * qty };
   }).filter((a) => a.precio > 0 || a.qty > 0);
 
@@ -147,14 +145,14 @@ export default function PresupuestoPublicoPage() {
   const subtotalManuales    = ppto.items_manuales.reduce((s, i) => s + i.precio * i.cantidad, 0);
   const baseTotal           = precioEfectivo + subtotalAdicionales + subtotalManuales;
   const iva                 = ppto.aplica_iva ? Math.round(baseTotal * 0.19) : 0;
-  const totalFinal          = ppto.total_final; // valor congelado
+  const totalFinal          = ppto.total_final;
 
   const secciones: PlanSeccion[] = SECCIONES_POR_PLAN[ppto.plan_base] ?? [];
 
   const fechaFormato = new Date(ppto.created_at).toLocaleDateString("es-CO", {
     day: "numeric", month: "long", year: "numeric",
   });
-  const refNum = `V${ppto.version_num} · ${new Date(ppto.created_at).toISOString().split("T")[0].replace(/-/g, "")}`;
+  const refNum = `V${ppto.version_num} · ${new Date(ppto.created_at).toISOString().split("T")[0]!.replace(/-/g, "")}`;
 
   const waMsg = encodeURIComponent(
     `Hola, vi mi presupuesto (${refNum}) por ${cop(totalFinal)} y quiero avanzar con la remodelación. 🏠`
@@ -177,7 +175,7 @@ export default function PresupuestoPublicoPage() {
       const canvas = await html2canvas(pdfContentRef.current, {
         scale: 2,
         useCORS: true,
-        backgroundColor: NAVY,
+        backgroundColor: BG,
         logging: false,
       });
 
@@ -194,7 +192,7 @@ export default function PresupuestoPublicoPage() {
         pdf.addImage(imgData, "JPEG", 0, -(i * pdfH), imgW, imgH);
       }
 
-      const clienteSlug = ppto.nombre_cliente.split(" ")[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
+      const clienteSlug = ppto.nombre_cliente.split(" ")[0]!.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
       const fecha = ppto.created_at.slice(0, 10).replace(/-/g, "");
       pdf.save(`Presupuesto-${clienteSlug}-V${ppto.version_num}-${fecha}.pdf`);
     } finally {
@@ -204,67 +202,67 @@ export default function PresupuestoPublicoPage() {
 
   // ── render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ background: NAVY, minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ background: BG, minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
 
-      {/* ── ZONA CAPTURADA POR PDF (header → footer, sin botones) ── */}
-      <div ref={pdfContentRef} style={{ background: NAVY }}>
+      {/* ── ZONA CAPTURADA POR PDF ── */}
+      <div ref={pdfContentRef} style={{ background: BG }}>
 
-      {/* ── HEADER ── */}
-      <div style={{ background: CARD, borderBottom: `2px solid ${GOLD}`, padding: "16px 20px", textAlign: "center" }}>
+      {/* ── HEADER (oscuro — identidad de marca) ── */}
+      <div style={{ background: "#111D2E", borderBottom: `2px solid ${GOLD}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: GOLD, fontSize: 11, letterSpacing: 3, fontWeight: 700, marginBottom: 2, textTransform: "uppercase" }}>
           Constructora Colombia
         </p>
-        <p style={{ color: CREAM, fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, margin: 0 }}>
+        <p style={{ color: "#FAF8F4", fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, margin: 0 }}>
           REMODELA
         </p>
-        <p style={{ color: CREAM2, fontSize: 11, marginTop: 2, opacity: 0.7 }}>constructoracolombia.com</p>
+        <p style={{ color: "#D4C9B8", fontSize: 11, marginTop: 2, opacity: 0.7 }}>constructoracolombia.com</p>
       </div>
 
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 16px 32px" }}>
 
-        {/* ── HERO: datos del cliente ── */}
-        <div style={{ background: CARD, borderRadius: 16, padding: 24, marginBottom: 16, border: `1px solid rgba(176,137,79,0.25)` }}>
+        {/* ── HERO ── */}
+        <div style={{ background: CARD, borderRadius: 16, padding: 24, marginBottom: 16, border: `1px solid rgba(176,137,79,0.25)`, boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
           <p style={{ color: GOLD, fontSize: 10, letterSpacing: 2, fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>
             Cotización de remodelación
           </p>
-          <p style={{ color: CREAM, fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, margin: "0 0 4px", lineHeight: 1.2 }}>
+          <p style={{ color: TEXT, fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, margin: "0 0 4px", lineHeight: 1.2 }}>
             {ppto.nombre_cliente}
           </p>
           {ppto.conjunto && (
-            <p style={{ color: CREAM2, fontSize: 14, marginBottom: 2 }}>
+            <p style={{ color: TEXT2, fontSize: 14, marginBottom: 2 }}>
               {ppto.conjunto}{ppto.nombre_proyecto ? ` · ${ppto.nombre_proyecto}` : ""}
             </p>
           )}
-          <p style={{ color: "#7a8a9a", fontSize: 12, marginTop: 6 }}>
+          <p style={{ color: TEXT2, fontSize: 12, marginTop: 6 }}>
             {fechaFormato} · <span style={{ fontFamily: "monospace" }}>{refNum}</span>
           </p>
         </div>
 
         {/* ── TOTAL DESTACADO ── */}
         <div style={{
-          background: `linear-gradient(135deg, ${CARD} 0%, #24374f 100%)`,
+          background: `linear-gradient(135deg, #FDF6EC 0%, #FAF0E0 100%)`,
           border: `2px solid ${GOLD}`,
           borderRadius: 16, padding: "24px 20px", marginBottom: 16, textAlign: "center",
         }}>
-          <p style={{ color: CREAM2, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+          <p style={{ color: TEXT2, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
             Inversión total
           </p>
           <p style={{ color: GOLD, fontFamily: "Georgia, serif", fontSize: 42, fontWeight: 800, margin: "0 0 6px", lineHeight: 1 }}>
             {cop(totalFinal)}
           </p>
-          <p style={{ color: CREAM2, fontSize: 13, fontStyle: "italic", opacity: 0.8 }}>
+          <p style={{ color: TEXT2, fontSize: 13, fontStyle: "italic", opacity: 0.9 }}>
             Precio fijo · Sin sobrecostos
           </p>
         </div>
 
         {/* ── PLAN BASE ── */}
         {ppto.plan_base && secciones.length > 0 && (
-          <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)` }}>
+          <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)`, boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <span style={{ background: GOLD, color: NAVY, fontSize: 10, fontWeight: 700, letterSpacing: 1.5, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase" }}>
+              <span style={{ background: GOLD, color: "#fff", fontSize: 10, fontWeight: 700, letterSpacing: 1.5, padding: "3px 10px", borderRadius: 20, textTransform: "uppercase" }}>
                 {ppto.plan_base}
               </span>
-              <p style={{ color: CREAM, fontSize: 13, margin: 0 }}>· Todo lo que incluye tu remodelación</p>
+              <p style={{ color: TEXT, fontSize: 13, margin: 0 }}>· Todo lo que incluye tu remodelación</p>
             </div>
 
             {secciones.map(({ seccion, items: secItems }) => {
@@ -280,13 +278,13 @@ export default function PresupuestoPublicoPage() {
                     const aplica = estado?.aplica ?? true;
                     return (
                       <div key={nombre} style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4, opacity: aplica ? 1 : 0.4 }}>
-                        <span style={{ color: aplica ? "#4ade80" : "#9ca3af", fontSize: 13, flexShrink: 0 }}>
+                        <span style={{ color: aplica ? "#16a34a" : "#9ca3af", fontSize: 13, flexShrink: 0 }}>
                           {aplica ? "✓" : "✗"}
                         </span>
-                        <span style={{ color: aplica ? CREAM : "#6b7280", fontSize: 13, textDecoration: aplica ? "none" : "line-through" }}>
+                        <span style={{ color: aplica ? TEXT : TEXT2, fontSize: 13, textDecoration: aplica ? "none" : "line-through" }}>
                           {nombre}
                           {aplica && (estado?.cantidad ?? 1) > 1 && (
-                            <span style={{ color: "#7a8a9a", fontSize: 11, marginLeft: 4 }}>×{estado.cantidad}</span>
+                            <span style={{ color: TEXT2, fontSize: 11, marginLeft: 4 }}>×{estado.cantidad}</span>
                           )}
                         </span>
                       </div>
@@ -296,31 +294,30 @@ export default function PresupuestoPublicoPage() {
               );
             })}
 
-            {/* Total plan */}
             <div style={{ borderTop: `1px solid rgba(176,137,79,0.3)`, marginTop: 14, paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: CREAM2, fontSize: 13 }}>Total {ppto.plan_base}</span>
+              <span style={{ color: TEXT2, fontSize: 13 }}>Total {ppto.plan_base}</span>
               <span style={{ color: GOLD, fontWeight: 700, fontSize: 16 }}>{cop(precioEfectivo)}</span>
             </div>
           </div>
         )}
 
-        {/* ── ADICIONALES DEL CATÁLOGO ── */}
+        {/* ── ADICIONALES ── */}
         {adicionales.length > 0 && (
-          <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)` }}>
+          <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)`, boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}>
             <p style={{ color: GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>
               + Adicionales seleccionados
             </p>
             {adicionales.map((a) => (
               <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 8 }}>
                 <div style={{ flex: 1 }}>
-                  <span style={{ color: CREAM, fontSize: 13 }}>{a.nombre}</span>
-                  {a.qty > 1 && <span style={{ color: "#7a8a9a", fontSize: 11, marginLeft: 4 }}>×{a.qty}</span>}
+                  <span style={{ color: TEXT, fontSize: 13 }}>{a.nombre}</span>
+                  {a.qty > 1 && <span style={{ color: TEXT2, fontSize: 11, marginLeft: 4 }}>×{a.qty}</span>}
                 </div>
-                <span style={{ color: CREAM2, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{cop(a.total)}</span>
+                <span style={{ color: TEXT, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{cop(a.total)}</span>
               </div>
             ))}
             <div style={{ borderTop: `1px solid rgba(176,137,79,0.3)`, marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: CREAM2, fontSize: 13 }}>Subtotal adicionales</span>
+              <span style={{ color: TEXT2, fontSize: 13 }}>Subtotal adicionales</span>
               <span style={{ color: GOLD, fontWeight: 700, fontSize: 15 }}>{cop(subtotalAdicionales)}</span>
             </div>
           </div>
@@ -328,21 +325,21 @@ export default function PresupuestoPublicoPage() {
 
         {/* ── PERSONALIZADOS ── */}
         {ppto.items_manuales.length > 0 && (
-          <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)` }}>
+          <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)`, boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}>
             <p style={{ color: GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>
               + Personalizados
             </p>
             {ppto.items_manuales.map((item) => (
               <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 8 }}>
                 <div style={{ flex: 1 }}>
-                  <span style={{ color: CREAM, fontSize: 13 }}>{item.nombre}</span>
-                  {item.cantidad > 1 && <span style={{ color: "#7a8a9a", fontSize: 11, marginLeft: 4 }}>×{item.cantidad}</span>}
+                  <span style={{ color: TEXT, fontSize: 13 }}>{item.nombre}</span>
+                  {item.cantidad > 1 && <span style={{ color: TEXT2, fontSize: 11, marginLeft: 4 }}>×{item.cantidad}</span>}
                 </div>
-                <span style={{ color: CREAM2, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{cop(item.precio * item.cantidad)}</span>
+                <span style={{ color: TEXT, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{cop(item.precio * item.cantidad)}</span>
               </div>
             ))}
             <div style={{ borderTop: `1px solid rgba(176,137,79,0.3)`, marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: CREAM2, fontSize: 13 }}>Subtotal personalizados</span>
+              <span style={{ color: TEXT2, fontSize: 13 }}>Subtotal personalizados</span>
               <span style={{ color: GOLD, fontWeight: 700, fontSize: 15 }}>{cop(subtotalManuales)}</span>
             </div>
           </div>
@@ -350,83 +347,83 @@ export default function PresupuestoPublicoPage() {
 
         {/* ── BONUS GRATIS ── */}
         <div style={{
-          background: `linear-gradient(135deg, #1c2e1a 0%, #1e3320 100%)`,
-          border: `1.5px solid rgba(74,222,128,0.35)`,
+          background: "#F0FDF4",
+          border: `1.5px solid rgba(34,197,94,0.3)`,
           borderRadius: 16, padding: 20, marginBottom: 16,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             <span style={{ fontSize: 24 }}>🎁</span>
             <div>
-              <p style={{ color: "#4ade80", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", margin: "0 0 2px" }}>
+              <p style={{ color: "#15803D", fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", margin: "0 0 2px" }}>
                 Bonus gratis incluido
               </p>
-              <p style={{ color: CREAM2, fontSize: 12, margin: 0, opacity: 0.8 }}>Solo por confirmar en este mes</p>
+              <p style={{ color: "#166534", fontSize: 12, margin: 0, opacity: 0.85 }}>Solo por confirmar en este mes</p>
             </div>
           </div>
           {BONUS_ITEMS.map((b, i) => (
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-              <span style={{ color: "#4ade80", fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</span>
-              <span style={{ color: CREAM2, fontSize: 13 }}>{b}</span>
+              <span style={{ color: "#16a34a", fontSize: 12, flexShrink: 0, marginTop: 1 }}>✦</span>
+              <span style={{ color: "#166534", fontSize: 13 }}>{b}</span>
             </div>
           ))}
         </div>
 
         {/* ── DESGLOSE TOTALES ── */}
-        <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)` }}>
+        <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)`, boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}>
           {ppto.plan_base && (
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ color: CREAM2, fontSize: 14 }}>{ppto.plan_base}</span>
-              <span style={{ color: CREAM, fontSize: 14, fontWeight: 600 }}>{cop(precioEfectivo)}</span>
+              <span style={{ color: TEXT2, fontSize: 14 }}>{ppto.plan_base}</span>
+              <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>{cop(precioEfectivo)}</span>
             </div>
           )}
           {subtotalAdicionales > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ color: CREAM2, fontSize: 14 }}>Adicionales</span>
-              <span style={{ color: CREAM, fontSize: 14, fontWeight: 600 }}>{cop(subtotalAdicionales)}</span>
+              <span style={{ color: TEXT2, fontSize: 14 }}>Adicionales</span>
+              <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>{cop(subtotalAdicionales)}</span>
             </div>
           )}
           {subtotalManuales > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ color: CREAM2, fontSize: 14 }}>Personalizados</span>
-              <span style={{ color: CREAM, fontSize: 14, fontWeight: 600 }}>{cop(subtotalManuales)}</span>
+              <span style={{ color: TEXT2, fontSize: 14 }}>Personalizados</span>
+              <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>{cop(subtotalManuales)}</span>
             </div>
           )}
           {iva > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ color: CREAM2, fontSize: 14 }}>IVA (19%)</span>
-              <span style={{ color: CREAM, fontSize: 14, fontWeight: 600 }}>{cop(iva)}</span>
+              <span style={{ color: TEXT2, fontSize: 14 }}>IVA (19%)</span>
+              <span style={{ color: TEXT, fontSize: 14, fontWeight: 600 }}>{cop(iva)}</span>
             </div>
           )}
           <div style={{ borderTop: `1.5px solid ${GOLD}`, marginTop: 10, paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: CREAM, fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700 }}>TOTAL GENERAL</span>
+            <span style={{ color: TEXT, fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700 }}>TOTAL GENERAL</span>
             <span style={{ color: GOLD, fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 800 }}>{cop(totalFinal)}</span>
           </div>
         </div>
 
         {/* ── CONDICIONES ── */}
-        <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(255,255,255,0.07)` }}>
+        <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(0,0,0,0.08)`, boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}>
           <p style={{ color: GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
             Condiciones
           </p>
           {CONDICIONES.map((c, i) => (
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <span style={{ color: GOLD, fontSize: 14, flexShrink: 0 }}>·</span>
-              <span style={{ color: CREAM2, fontSize: 13 }}>{c}</span>
+              <span style={{ color: TEXT2, fontSize: 13 }}>{c}</span>
             </div>
           ))}
           {ppto.notas?.trim() && (
-            <div style={{ marginTop: 12, borderTop: `1px solid rgba(255,255,255,0.07)`, paddingTop: 12 }}>
-              <p style={{ color: CREAM2, fontSize: 13, lineHeight: 1.6, margin: 0, whiteSpace: "pre-line" }}>{ppto.notas}</p>
+            <div style={{ marginTop: 12, borderTop: `1px solid rgba(0,0,0,0.07)`, paddingTop: 12 }}>
+              <p style={{ color: TEXT2, fontSize: 13, lineHeight: 1.6, margin: 0, whiteSpace: "pre-line" }}>{ppto.notas}</p>
             </div>
           )}
         </div>
 
         {/* ── FOOTER ── */}
         <div style={{ textAlign: "center", paddingTop: 8 }}>
-          <p style={{ color: "#4a5568", fontSize: 12, marginBottom: 4 }}>
+          <p style={{ color: TEXT2, fontSize: 12, marginBottom: 4 }}>
             @constructoraColombia · constructoracolombia.com
           </p>
-          <p style={{ color: "#2d3748", fontSize: 11 }}>
+          <p style={{ color: TEXT2, fontSize: 11, opacity: 0.6 }}>
             Bucaramanga, Santander · © {new Date().getFullYear()}
           </p>
         </div>
@@ -462,7 +459,7 @@ export default function PresupuestoPublicoPage() {
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             width: "100%", background: "transparent", border: `1px solid rgba(176,137,79,0.4)`,
-            color: CREAM2, borderRadius: 12, padding: "12px 20px", marginBottom: 10,
+            color: TEXT, borderRadius: 12, padding: "12px 20px", marginBottom: 10,
             fontSize: 14, cursor: "pointer",
           }}
         >
@@ -475,8 +472,8 @@ export default function PresupuestoPublicoPage() {
           disabled={descargandoPDF}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            width: "100%", background: "transparent", border: `1px solid rgba(255,255,255,0.15)`,
-            color: "#7a8a9a", borderRadius: 12, padding: "12px 20px", marginBottom: 24,
+            width: "100%", background: "transparent", border: `1px solid rgba(0,0,0,0.12)`,
+            color: TEXT2, borderRadius: 12, padding: "12px 20px", marginBottom: 24,
             fontSize: 14, cursor: descargandoPDF ? "wait" : "pointer",
             opacity: descargandoPDF ? 0.6 : 1,
           }}
