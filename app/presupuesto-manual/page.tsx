@@ -1586,20 +1586,20 @@ export default function PresupuestoManual() {
                   <table className="w-full border-collapse text-sm">
                     <thead>
                       <tr className="border-b-2 border-blue-300 bg-blue-100">
-                        <th className="px-3 py-2 text-left font-bold">Item</th>
-                        <th className="px-3 py-2 text-center font-bold">Cant.</th>
-                        <th className="px-3 py-2 text-right font-bold">Precio Unit.</th>
-                        <th className="px-3 py-2 text-right font-bold">Total</th>
-                        <th className="px-3 py-2 text-center font-bold">Acción</th>
+                        <th className="px-3 py-2 text-left font-bold text-gray-700">Item</th>
+                        <th className="px-3 py-2 text-center font-bold text-gray-700">Cant.</th>
+                        <th className="px-3 py-2 text-right font-bold text-gray-700">Precio Unit.</th>
+                        <th className="px-3 py-2 text-right font-bold text-gray-700">Total</th>
+                        <th className="px-3 py-2 text-center font-bold text-gray-700">Acción</th>
                       </tr>
                     </thead>
                     <tbody>
                       {itemsManuales.map((item) => (
                         <tr key={item.id} className="border-b border-blue-100 hover:bg-blue-50">
                           <td className="px-3 py-2 font-medium text-gray-900">{item.nombre}</td>
-                          <td className="px-3 py-2 text-center">{item.cantidad}</td>
-                          <td className="px-3 py-2 text-right">$ {item.precio.toLocaleString('es-CO')}</td>
-                          <td className="px-3 py-2 text-right font-bold">$ {(item.precio * item.cantidad).toLocaleString('es-CO')}</td>
+                          <td className="px-3 py-2 text-center text-gray-900">{item.cantidad}</td>
+                          <td className="px-3 py-2 text-right text-gray-900">$ {item.precio.toLocaleString('es-CO')}</td>
+                          <td className="px-3 py-2 text-right font-bold text-gray-900">$ {(item.precio * item.cantidad).toLocaleString('es-CO')}</td>
                           <td className="px-3 py-2 text-center">
                             <button
                               onClick={() => eliminarItemManual(item.id)}
