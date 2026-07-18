@@ -24,9 +24,7 @@ import {
 import { formatoPrecio } from "@/lib/utils/format";
 import CalendarioAnual from "@/components/CalendarioAnual";
 import GraficaSeguimiento from "@/components/GraficaSeguimiento";
-import ProteccionDashboard, {
-  cerrarSesionDashboard,
-} from "@/components/ProteccionDashboard";
+import { cerrarSesionDashboard } from "@/components/ProteccionDashboard";
 
 type Lead = {
   id: string;
@@ -205,8 +203,9 @@ function CentroOperacionesDashboard() {
   const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
   const [leadEditando, setLeadEditando] = useState<EditarLeadForm | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
-  type VersionResumen = { version_num: number; estado: string; total_final: number; created_at: string };
+  type VersionResumen = { version_num: number; estado: string; total_final: number; created_at: string; token_publico: string | null; veces_visto: number; visto_primera_vez: string | null };
   const [versionesLeadEdit, setVersionesLeadEdit] = useState<VersionResumen[]>([]);
+  const [copiandoToken, setCopiandoToken] = useState<number | null>(null);
   const [cargandoPresupuestosLeadEdit, setCargandoPresupuestosLeadEdit] = useState(false);
 
   const [mostrarModalProximoPaso, setMostrarModalProximoPaso] = useState(false);
@@ -607,7 +606,7 @@ function CentroOperacionesDashboard() {
     void (async () => {
       const { data } = await supabase
         .from('presupuestos')
-        .select('version_num, estado, total_final, created_at')
+        .select('version_num, estado, total_final, created_at, token_publico, veces_visto, visto_primera_vez')
         .eq('lead_id', leadEditando.id)
         .order('version_num', { ascending: false });
       setVersionesLeadEdit((data || []) as VersionResumen[]);
@@ -2526,29 +2525,63 @@ function CentroOperacionesDashboard() {
                         APROBADA: 'bg-emerald-100 text-emerald-700',
                         RECHAZADA: 'bg-red-100 text-red-600',
                       };
+                      const publicUrl = v.token_publico ? `${window.location.origin}/p/${v.token_publico}` : null;
+                      const waMsg = publicUrl
+                        ? encodeURIComponent(`Hola ${leadEditando?.nombre ?? ''}, te comparto tu presupuesto de remodelación (V${v.version_num}) por $ ${v.total_final.toLocaleString('es-CO')}:\n${publicUrl}`)
+                        : null;
                       return (
-                        <button
-                          key={v.version_num}
-                          onClick={() => {
-                            if (!leadEditando) return;
-                            const ok = window.confirm('Los cambios sin guardar se perderán. ¿Ir a esta versión?');
-                            if (!ok) return;
-                            setMostrarModalEditar(false);
-                            router.push(`/presupuesto-manual?lead_id=${leadEditando.id}&version=${v.version_num}`);
-                          }}
-                          className="flex w-full items-center gap-3 border-b border-gray-100 px-3 py-2 text-left text-sm last:border-0 hover:bg-violet-50"
-                        >
-                          <span className="w-8 font-bold text-gray-900">V{v.version_num}</span>
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badgeColor[v.estado] ?? badgeColor.BORRADOR}`}>
-                            {v.estado}
-                          </span>
-                          <span className="flex-1 text-xs text-gray-500">
-                            {new Date(v.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: '2-digit' })}
-                          </span>
-                          <span className="font-semibold text-gray-900">
-                            $ {v.total_final.toLocaleString('es-CO')}
-                          </span>
-                        </button>
+                        <div key={v.version_num} className="border-b border-gray-100 last:border-0">
+                          <button
+                            onClick={() => {
+                              if (!leadEditando) return;
+                              const ok = window.confirm('Los cambios sin guardar se perderán. ¿Ir a esta versión?');
+                              if (!ok) return;
+                              setMostrarModalEditar(false);
+                              router.push(`/presupuesto-manual?lead_id=${leadEditando.id}&version=${v.version_num}`);
+                            }}
+                            className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-violet-50"
+                          >
+                            <span className="w-8 font-bold text-gray-900">V{v.version_num}</span>
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badgeColor[v.estado] ?? badgeColor.BORRADOR}`}>
+                              {v.estado}
+                            </span>
+                            <span className="flex-1 text-xs text-gray-500">
+                              {new Date(v.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: '2-digit' })}
+                            </span>
+                            <span className="font-semibold text-gray-900">
+                              $ {v.total_final.toLocaleString('es-CO')}
+                            </span>
+                            {/* tracking badge */}
+                            {v.veces_visto > 0 && (
+                              <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700" title={`Visto por primera vez: ${new Date(v.visto_primera_vez!).toLocaleDateString('es-CO')}`}>
+                                👁 {v.veces_visto}
+                              </span>
+                            )}
+                          </button>
+                          {publicUrl && (
+                            <div className="flex gap-2 border-t border-gray-50 bg-gray-50 px-3 py-1.5">
+                              <button
+                                onClick={() => {
+                                  void navigator.clipboard.writeText(publicUrl);
+                                  setCopiandoToken(v.version_num);
+                                  setTimeout(() => setCopiandoToken(null), 2000);
+                                }}
+                                className="flex items-center gap-1 rounded bg-white border border-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                              >
+                                {copiandoToken === v.version_num ? '✓ Copiado' : '🔗 Copiar link'}
+                              </button>
+                              <a
+                                href={`https://wa.me/573175639674?text=${waMsg}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1 rounded bg-[#25D366] px-2 py-0.5 text-[10px] font-medium text-white hover:bg-[#20bd5a] transition-colors"
+                              >
+                                WhatsApp
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -2851,9 +2884,5 @@ function CentroOperacionesDashboard() {
 }
 
 export default function CentroOperacionesPage() {
-  return (
-    <ProteccionDashboard>
-      <CentroOperacionesDashboard />
-    </ProteccionDashboard>
-  );
+  return <CentroOperacionesDashboard />;
 }

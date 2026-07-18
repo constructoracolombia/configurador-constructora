@@ -43,6 +43,7 @@ type PresupuestoVersion = {
   notas: string;
   pdf_url: string | null;
   precios_snapshot: Record<string, number>;
+  token_publico: string | null;
   created_at: string;
 };
 
@@ -506,6 +507,7 @@ export default function PresupuestoManual() {
           notas,
           pdf_url: null,
           precios_snapshot,
+          token_publico: crypto.randomUUID(),
         }])
         .select('*')
         .single();

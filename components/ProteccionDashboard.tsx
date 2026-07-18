@@ -73,12 +73,6 @@ export default function ProteccionDashboard({
     }
   };
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem(DASHBOARD_AUTH_STORAGE_KEY);
-    setAutenticado(false);
-    setPassword("");
-  }, []);
-
   if (cargando) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -155,18 +149,5 @@ export default function ProteccionDashboard({
     );
   }
 
-  return (
-    <>
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="fixed right-4 top-4 z-50 flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:bg-red-700"
-        title="Cerrar sesión del dashboard"
-      >
-        <span>🔓</span>
-        Cerrar Sesión
-      </button>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
