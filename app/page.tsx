@@ -205,6 +205,8 @@ function CentroOperacionesDashboard() {
   const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
   const [leadEditando, setLeadEditando] = useState<EditarLeadForm | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [presupuestosLeadEdit, setPresupuestosLeadEdit] = useState<{ max_version: number } | null>(null);
+  const [cargandoPresupuestosLeadEdit, setCargandoPresupuestosLeadEdit] = useState(false);
 
   const [mostrarModalProximoPaso, setMostrarModalProximoPaso] = useState(false);
   const [leadProximoPaso, setLeadProximoPaso] = useState<Lead | null>(null);
@@ -596,6 +598,22 @@ function CentroOperacionesDashboard() {
       alert(`Error: ${error.message}`);
     }
   };
+
+  // Consulta versiones de presupuesto al abrir el modal de edición
+  useEffect(() => {
+    if (!leadEditando) { setPresupuestosLeadEdit(null); return; }
+    setCargandoPresupuestosLeadEdit(true);
+    void (async () => {
+      const { data } = await supabase
+        .from('presupuestos')
+        .select('version_num')
+        .eq('lead_id', leadEditando.id)
+        .order('version_num', { ascending: false })
+        .limit(1);
+      setPresupuestosLeadEdit(data && data.length > 0 ? { max_version: data[0].version_num } : null);
+      setCargandoPresupuestosLeadEdit(false);
+    })();
+  }, [leadEditando?.id]);
 
   const guardarEdicionLead = async () => {
     if (!leadEditando) return;
@@ -2472,6 +2490,26 @@ function CentroOperacionesDashboard() {
             </div>
 
             <div className="sticky bottom-0 z-10 border-t border-gray-200 bg-white p-6">
+              <button
+                onClick={() => {
+                  if (!leadEditando) return;
+                  const ok = window.confirm(
+                    "Los cambios sin guardar del formulario se perderán. ¿Ir al presupuesto?"
+                  );
+                  if (!ok) return;
+                  setMostrarModalEditar(false);
+                  router.push(`/presupuesto-manual?lead_id=${leadEditando.id}`);
+                }}
+                disabled={cargandoPresupuestosLeadEdit}
+                className="mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50"
+              >
+                {cargandoPresupuestosLeadEdit
+                  ? "Cargando…"
+                  : presupuestosLeadEdit
+                  ? `Ajustar presupuesto (V${presupuestosLeadEdit.max_version})`
+                  : "Hacer presupuesto"}
+              </button>
+
               <div className="mb-3 flex gap-3">
                 <button
                   onClick={() => setMostrarModalEditar(false)}

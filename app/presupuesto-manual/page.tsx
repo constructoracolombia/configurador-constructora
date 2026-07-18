@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -218,6 +218,9 @@ export default function PresupuestoManual() {
   const [versionesLead, setVersionesLead] = useState<PresupuestoVersion[]>([]);
   const [guardandoVersion, setGuardandoVersion] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  // Para auto-selección desde ?lead_id y auto-carga de última versión
+  const [paramLeadId, setParamLeadId] = useState<string | null>(null);
+  const autoLoadedRef = useRef(false);
 
   // carga catálogos y leads al montar
   useEffect(() => {
@@ -322,6 +325,23 @@ export default function PresupuestoManual() {
     })();
   }, []);
 
+  // leer ?lead_id del query param al montar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('lead_id');
+    if (id) setParamLeadId(id);
+  }, []);
+
+  // auto-seleccionar lead cuando leads ya están cargados y hay paramLeadId
+  useEffect(() => {
+    if (!paramLeadId || leads.length === 0 || leadId) return;
+    const lead = leads.find((l) => l.id === paramLeadId);
+    if (!lead) return;
+    setLeadId(lead.id);
+    setCliente({ nombre: lead.nombre, telefono: lead.telefono || '', proyecto: lead.nombre_proyecto || '' });
+    setBusquedaLead(`${lead.nombre} — ${lead.telefono || ''}`);
+  }, [paramLeadId, leads, leadId]);
+
   // cargar versiones del lead seleccionado
   useEffect(() => {
     if (!leadId) { setVersionesLead([]); return; }
@@ -334,6 +354,14 @@ export default function PresupuestoManual() {
       setVersionesLead((data || []) as PresupuestoVersion[]);
     })();
   }, [leadId]);
+
+  // auto-cargar última versión cuando viene de ?lead_id y ya hay versiones disponibles
+  useEffect(() => {
+    if (!paramLeadId || autoLoadedRef.current || versionesLead.length === 0) return;
+    autoLoadedRef.current = true;
+    cargarDesdeVersion(versionesLead[0]); // [0] = versión más alta (orden desc)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramLeadId, versionesLead]);
 
   const guardarPresupuesto = async () => {
     if (!nombrePresupuesto.trim()) { alert('Escribe un nombre para el presupuesto'); return; }
