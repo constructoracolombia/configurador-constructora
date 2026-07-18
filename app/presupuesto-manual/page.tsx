@@ -223,6 +223,9 @@ export default function PresupuestoManual() {
   const [paramLeadId, setParamLeadId] = useState<string | null>(null);
   const [paramVersion, setParamVersion] = useState<number | null>(null);
   const autoLoadedRef = useRef(false);
+  const [categoriasColapsadas, setCategoriasColapsadas] = useState<Set<string>>(new Set());
+  const hasInitCategoriasRef = useRef(false);
+  const itemsManualesRef = useRef<HTMLDivElement>(null);
 
   // carga catálogos y leads al montar
   useEffect(() => {
@@ -562,6 +565,23 @@ export default function PresupuestoManual() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogoId]);
 
+  // inicializar acordeón cuando se cargan ítems; reset cuando se limpian (cambio de catálogo)
+  useEffect(() => {
+    if (items.length === 0) {
+      hasInitCategoriasRef.current = false;
+      return;
+    }
+    if (hasInitCategoriasRef.current) return;
+    hasInitCategoriasRef.current = true;
+    const catMap = new Map<string, boolean>();
+    for (const item of items) {
+      catMap.set(item.categoria, (catMap.get(item.categoria) ?? false) || seleccionados[item.id] !== undefined);
+    }
+    const colapsadas = new Set([...catMap.entries()].filter(([, hasSel]) => !hasSel).map(([cat]) => cat));
+    setCategoriasColapsadas(colapsadas);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
   const validarParaResumen = (): string[] => {
     const errores: string[] = [];
     if (!cliente.nombre.trim()) errores.push('nombre del cliente');
@@ -583,6 +603,15 @@ export default function PresupuestoManual() {
   const setCantidad = (id: string, val: string) => {
     const n = Number(val);
     if (n >= 1) setSeleccionados((prev) => ({ ...prev, [id]: n }));
+  };
+
+  // ── acordeón de categorías ─────────────────────────────────────────────────
+  const toggleCategoria = (cat: string) => {
+    setCategoriasColapsadas((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
   };
 
   // ── cálculos ───────────────────────────────────────────────────────────────
@@ -955,6 +984,14 @@ export default function PresupuestoManual() {
     return i.nombre.toLowerCase().includes(t) || (i.descripcion || "").toLowerCase().includes(t);
   });
   const grupos = agruparPorCategoria(itemsFiltrados);
+  const todasColapsadas = grupos.length > 0 && grupos.every(({ categoria }) => categoriasColapsadas.has(categoria));
+  const toggleTodas = () => {
+    if (todasColapsadas) {
+      setCategoriasColapsadas(new Set());
+    } else {
+      setCategoriasColapsadas(new Set(grupos.map(({ categoria }) => categoria)));
+    }
+  };
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
@@ -1397,9 +1434,46 @@ export default function PresupuestoManual() {
                   <p className="py-12 text-center text-sm text-gray-500">No se encontraron ítems</p>
                 )}
 
-                {grupos.map(({ categoria, items: gItems }) => (
-                  <div key={categoria} className="mb-6">
-                    <div className="mb-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800">{categoria}</div>
+                {grupos.length > 0 && (
+                  <div className="mb-3 flex items-center justify-between">
+                    <button
+                      onClick={toggleTodas}
+                      className="text-xs text-gray-500 underline hover:text-gray-700"
+                    >
+                      {todasColapsadas ? 'Expandir todo' : 'Colapsar todo'}
+                    </button>
+                    <button
+                      onClick={() => itemsManualesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                    >
+                      + Ítem personalizado ↓
+                    </button>
+                  </div>
+                )}
+
+                {grupos.map(({ categoria, items: gItems }) => {
+                  const colapsada = categoriasColapsadas.has(categoria);
+                  const selCount = gItems.filter((i) => seleccionados[i.id] !== undefined).length;
+                  return (
+                  <div key={categoria} className="mb-3">
+                    <button
+                      onClick={() => toggleCategoria(categoria)}
+                      className="mb-2 flex w-full items-center justify-between rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-100"
+                    >
+                      <span>{categoria}</span>
+                      <span className="flex items-center gap-2">
+                        {selCount > 0 && (
+                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                            {selCount} sel.
+                          </span>
+                        )}
+                        {colapsada && (
+                          <span className="font-normal text-emerald-600 text-xs">({gItems.length} disponibles)</span>
+                        )}
+                        <span className="text-emerald-500 text-xs">{colapsada ? '▶' : '▼'}</span>
+                      </span>
+                    </button>
+                    {!colapsada && (
                     <div className="space-y-2">
                       {gItems.map((item) => {
                         const sel = seleccionados[item.id] !== undefined;
@@ -1451,8 +1525,10 @@ export default function PresupuestoManual() {
                         );
                       })}
                     </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* panel lateral sticky */}
@@ -1516,7 +1592,7 @@ export default function PresupuestoManual() {
             </div>
 
             {/* ITEMS MANUALES */}
-            <div className="mt-6 border-t-2 border-gray-200 pt-6">
+            <div ref={itemsManualesRef} className="mt-6 border-t-2 border-gray-200 pt-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-900">Items Adicionales Personalizados</h3>
                 {!mostrarFormulario && (
