@@ -214,10 +214,11 @@ export default function PresupuestoManual() {
   const [nombrePresupuesto, setNombrePresupuesto] = useState('');
   const [presupuestosGuardados, setPresupuestosGuardados] = useState<any[]>([]);
   const [cargandoPresupuesto, setCargandoPresupuesto] = useState(false);
-  const [pendingSeleccionados, setPendingSeleccionados] = useState<Record<string, number> | null>(null);
+  const pendingSeleccionadosRef = useRef<Record<string, number> | null>(null);
   const [versionesLead, setVersionesLead] = useState<PresupuestoVersion[]>([]);
   const [guardandoVersion, setGuardandoVersion] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
+  const [datosDesplegados, setDatosDesplegados] = useState(true);
   // Para auto-selección desde ?lead_id y auto-carga de última versión
   const [paramLeadId, setParamLeadId] = useState<string | null>(null);
   const autoLoadedRef = useRef(false);
@@ -340,6 +341,7 @@ export default function PresupuestoManual() {
     setLeadId(lead.id);
     setCliente({ nombre: lead.nombre, telefono: lead.telefono || '', proyecto: lead.nombre_proyecto || '' });
     setBusquedaLead(`${lead.nombre} — ${lead.telefono || ''}`);
+    setDatosDesplegados(false); // datos ya vienen del lead — aterrizar en la selección de ítems
   }, [paramLeadId, leads, leadId]);
 
   // cargar versiones del lead seleccionado
@@ -406,7 +408,7 @@ export default function PresupuestoManual() {
     const manuales = ppto.items_manuales || [];
     setItemsManuales(manuales);
     localStorage.setItem('items_manuales_presupuesto', JSON.stringify(manuales));
-    setPendingSeleccionados(ppto.seleccionados || {});
+    pendingSeleccionadosRef.current = ppto.seleccionados || {};
     setMostrarListado(false);
     mostrarToast(`✅ Presupuesto cargado: "${ppto.nombre_presupuesto}"`);
   };
@@ -450,6 +452,12 @@ export default function PresupuestoManual() {
 
   const guardarVersionPresupuesto = async () => {
     if (!leadId) { mostrarToast('⚠️ Selecciona un lead para guardar versión'); return; }
+    const errores = validarParaResumen();
+    if (errores.length > 0) {
+      mostrarToast(`⚠️ Completa antes de guardar: ${errores.join(', ')}`);
+      setDatosDesplegados(true);
+      return;
+    }
     setGuardandoVersion(true);
     try {
       const precios_snapshot: Record<string, number> = {};
@@ -501,7 +509,7 @@ export default function PresupuestoManual() {
     setItemsOcultos(new Set(version.items_ocultos));
     setItemsManuales(version.items_manuales);
     localStorage.setItem('items_manuales_presupuesto', JSON.stringify(version.items_manuales));
-    setPendingSeleccionados(version.seleccionados);
+    pendingSeleccionadosRef.current = version.seleccionados;
     setAplicaIva(version.aplica_iva);
     setNotas(version.notas);
     setMostrarHistorial(false);
@@ -509,32 +517,41 @@ export default function PresupuestoManual() {
     mostrarToast(`✅ Versión ${version.version_num} cargada — modifica y guarda como nueva versión`);
   };
 
-  // paso 1 → 2: cargar ítems del catálogo
-  const continuar = async () => {
+  // auto-cargar ítems cuando cambia el catálogo seleccionado
+  useEffect(() => {
+    if (!catalogoId) { setItems([]); setSeleccionados({}); return; }
     setLoading(true);
-    try {
-      const { data } = await supabase
-        .from("catalogo_items")
-        .select("id, codigo, categoria, nombre, descripcion, valor_venta")
-        .eq("catalogo_id", catalogoId)
-        .eq("activo", true)
-        .order("categoria");
-
-      const catalogoItems: CatalogoItem[] = data || [];
-
-      // los ítems del plan se gestionan por itemsPlanEstado — no se preseleccionan en el catálogo
-      setItemsPlanIds([]);
-      setItems(catalogoItems);
-      if (pendingSeleccionados) {
-        setSeleccionados(pendingSeleccionados);
-        setPendingSeleccionados(null);
-      } else {
-        setSeleccionados({});
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("catalogo_items")
+          .select("id, codigo, categoria, nombre, descripcion, valor_venta")
+          .eq("catalogo_id", catalogoId)
+          .eq("activo", true)
+          .order("categoria");
+        setItemsPlanIds([]);
+        setItems(data || []);
+        if (pendingSeleccionadosRef.current !== null) {
+          setSeleccionados(pendingSeleccionadosRef.current);
+          pendingSeleccionadosRef.current = null;
+        } else {
+          setSeleccionados({});
+        }
+      } finally {
+        setLoading(false);
       }
-      setPaso(2);
-    } finally {
-      setLoading(false);
-    }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogoId]);
+
+  const validarParaResumen = (): string[] => {
+    const errores: string[] = [];
+    if (!cliente.nombre.trim()) errores.push('nombre del cliente');
+    if (!cliente.telefono.trim()) errores.push('teléfono');
+    if (!cliente.proyecto.trim()) errores.push('nombre del proyecto');
+    if (!conjunto) errores.push('conjunto residencial');
+    if (!catalogoId) errores.push('catálogo de precios');
+    return errores;
   };
 
   const toggleItem = (item: CatalogoItem, checked: boolean) => {
@@ -906,7 +923,6 @@ export default function PresupuestoManual() {
     }
   };
 
-  const paso1Completo = cliente.nombre.trim() && cliente.telefono.trim() && cliente.proyecto.trim() && fecha && catalogoId;
   const itemsPlanNombres = (planBase === "Plan Básico"
     ? ITEMS_PLAN_BASICO
     : planBase === "Plan Intermedio Plus"
@@ -938,8 +954,8 @@ export default function PresupuestoManual() {
             <div>
               <h1 className="text-xl font-bold text-gray-900">Presupuesto Manual</h1>
               <p className="text-sm text-gray-500">
-                Paso {paso} de 3 —{" "}
-                {paso === 1 ? "Datos del cliente" : paso === 2 ? "Selección de ítems" : "Resumen y PDF"}
+                Paso {paso} de 2 —{" "}
+                {paso === 1 ? "Datos y selección" : "Resumen y PDF"}
               </p>
             </div>
             <button onClick={() => router.push("/")} className="text-sm text-gray-500 hover:text-gray-700">
@@ -947,7 +963,7 @@ export default function PresupuestoManual() {
             </button>
           </div>
           <div className="mt-4 flex gap-2">
-            {[1, 2, 3].map((n) => (
+            {[1, 2].map((n) => (
               <div key={n} className={`h-1.5 flex-1 rounded-full transition-colors ${n <= paso ? "bg-emerald-500" : "bg-gray-200"}`} />
             ))}
           </div>
@@ -980,12 +996,45 @@ export default function PresupuestoManual() {
 
       <div className="mx-auto max-w-5xl px-6 py-8">
 
-        {/* ═══════════════ PASO 1 ═══════════════ */}
+        {/* ═══════════════ PASO 1: Datos + Ítems ═══════════════ */}
         {paso === 1 && (
-          <Card className="border-0 shadow-sm">
-            <CardContent className="space-y-5 p-8">
-              <h2 className="text-lg font-bold text-gray-900">Datos del cliente</h2>
+          <div className="space-y-4">
 
+          {/* ── DATOS DEL CLIENTE — collapsible ───────────────── */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6">
+            {!datosDesplegados ? (
+              /* COLAPSADO: resumen en una línea + botón Editar */
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1 text-sm">
+                  <span className="font-semibold text-gray-900">{cliente.nombre}</span>
+                  {cliente.telefono && <><span className="mx-2 text-gray-300">·</span><span className="text-gray-600">{cliente.telefono}</span></>}
+                  {(cliente.proyecto || nombreConjuntoFinal) && <><span className="mx-2 text-gray-300">·</span><span className="text-gray-600">{cliente.proyecto || nombreConjuntoFinal}</span></>}
+                  {planBase && <><span className="mx-2 text-gray-300">·</span><span className="text-gray-500">{planBase}</span></>}
+                  {leadId && (
+                    <span className="ml-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Lead vinculado
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setDatosDesplegados(true)}
+                  className="shrink-0 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 hover:bg-violet-100"
+                >
+                  Editar datos
+                </button>
+              </div>
+            ) : (
+              /* EXPANDIDO: formulario completo */
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900">Datos del cliente</h2>
+                  {cliente.nombre && paramLeadId && (
+                    <button onClick={() => setDatosDesplegados(false)} className="text-sm text-gray-400 hover:text-gray-600">
+                      Colapsar ↑
+                    </button>
+                  )}
+                </div>
               <div className="relative">
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">Buscar lead existente (opcional)</label>
                 <Input
@@ -1105,29 +1154,33 @@ export default function PresupuestoManual() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">Catálogo de precios *</label>
-                <select
-                  value={catalogoId}
-                  onChange={(e) => setCatalogoId(e.target.value)}
-                  className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">Selecciona un catálogo…</option>
-                  {catalogos.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
               </div>
-
-              <div className="flex justify-end pt-2">
-                <Button onClick={continuar} disabled={!paso1Completo || loading} className="bg-emerald-600 hover:bg-emerald-700">
-                  {loading ? "Cargando ítems…" : "Continuar →"}
-                </Button>
-              </div>
+            )}
             </CardContent>
           </Card>
-        )}
 
-        {/* ═══════════════ PASO 2 ═══════════════ */}
-        {paso === 2 && (
+          {/* ── CATÁLOGO + SELECCIÓN DE ÍTEMS ─────────────────── */}
+          <div>
+            <div className="mb-4 rounded-lg border border-gray-200 bg-white px-5 py-4">
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Catálogo de precios *</label>
+              <select
+                value={catalogoId}
+                onChange={(e) => setCatalogoId(e.target.value)}
+                className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">Selecciona un catálogo…</option>
+                {catalogos.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </div>
+            {!catalogoId ? (
+              <div className="rounded-lg border border-dashed border-gray-300 py-14 text-center text-sm text-gray-400">
+                Selecciona un catálogo para ver los ítems disponibles
+              </div>
+            ) : loading ? (
+              <div className="rounded-lg border border-gray-200 bg-white py-14 text-center text-sm text-gray-500">
+                Cargando ítems…
+              </div>
+            ) : (
           <div>
             {/* Banner plan */}
             {precioBase !== null && (
@@ -1426,14 +1479,18 @@ export default function PresupuestoManual() {
                       </div>
                       <Button
                         className="w-full bg-emerald-600 hover:bg-emerald-700"
-                        disabled={itemsSeleccionados.length === 0 && precioBase === null}
-                        onClick={() => setPaso(3)}
+                        onClick={() => {
+                          const errores = validarParaResumen();
+                          if (errores.length > 0) {
+                            mostrarToast(`⚠️ Completa: ${errores.join(', ')}`);
+                            setDatosDesplegados(true);
+                            return;
+                          }
+                          setPaso(2);
+                        }}
                       >
                         Ver resumen →
                       </Button>
-                      <button onClick={() => setPaso(1)} className="mt-3 w-full text-center text-xs text-gray-500 hover:text-gray-700">
-                        ← Volver
-                      </button>
                     </CardContent>
                   </Card>
                 </div>
@@ -1544,10 +1601,13 @@ export default function PresupuestoManual() {
               )}
             </div>
           </div>
+            )}
+          </div>
+          </div>
         )}
 
-        {/* ═══════════════ PASO 3 ═══════════════ */}
-        {paso === 3 && (
+        {/* ═══════════════ PASO 2: Resumen ═══════════════ */}
+        {paso === 2 && (
           <div className="space-y-6">
             <Card className="border-0 shadow-sm">
               <CardContent className="p-6">
@@ -1822,7 +1882,7 @@ export default function PresupuestoManual() {
             </Card>
 
             <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => setPaso(2)} className="text-sm text-gray-500 hover:text-gray-700">← Volver a ítems</button>
+              <button onClick={() => setPaso(1)} className="text-sm text-gray-500 hover:text-gray-700">← Volver a ítems</button>
               <div className="flex-1" />
               <Button onClick={descargarPDF} variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50">Descargar PDF</Button>
               {leadId && (
