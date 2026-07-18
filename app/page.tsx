@@ -205,7 +205,8 @@ function CentroOperacionesDashboard() {
   const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
   const [leadEditando, setLeadEditando] = useState<EditarLeadForm | null>(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
-  const [presupuestosLeadEdit, setPresupuestosLeadEdit] = useState<{ max_version: number } | null>(null);
+  type VersionResumen = { version_num: number; estado: string; total_final: number; created_at: string };
+  const [versionesLeadEdit, setVersionesLeadEdit] = useState<VersionResumen[]>([]);
   const [cargandoPresupuestosLeadEdit, setCargandoPresupuestosLeadEdit] = useState(false);
 
   const [mostrarModalProximoPaso, setMostrarModalProximoPaso] = useState(false);
@@ -601,16 +602,15 @@ function CentroOperacionesDashboard() {
 
   // Consulta versiones de presupuesto al abrir el modal de edición
   useEffect(() => {
-    if (!leadEditando) { setPresupuestosLeadEdit(null); return; }
+    if (!leadEditando) { setVersionesLeadEdit([]); return; }
     setCargandoPresupuestosLeadEdit(true);
     void (async () => {
       const { data } = await supabase
         .from('presupuestos')
-        .select('version_num')
+        .select('version_num, estado, total_final, created_at')
         .eq('lead_id', leadEditando.id)
-        .order('version_num', { ascending: false })
-        .limit(1);
-      setPresupuestosLeadEdit(data && data.length > 0 ? { max_version: data[0].version_num } : null);
+        .order('version_num', { ascending: false });
+      setVersionesLeadEdit((data || []) as VersionResumen[]);
       setCargandoPresupuestosLeadEdit(false);
     })();
   }, [leadEditando?.id]);
@@ -2505,10 +2505,55 @@ function CentroOperacionesDashboard() {
               >
                 {cargandoPresupuestosLeadEdit
                   ? "Cargando…"
-                  : presupuestosLeadEdit
-                  ? `Ajustar presupuesto (V${presupuestosLeadEdit.max_version})`
+                  : versionesLeadEdit.length > 0
+                  ? `Ajustar presupuesto (V${versionesLeadEdit[0].version_num})`
                   : "Hacer presupuesto"}
               </button>
+
+              {/* Historial de versiones del lead */}
+              {versionesLeadEdit.length > 0 && (
+                <div className="mb-3 overflow-hidden rounded-lg border border-gray-200">
+                  <div className="border-b border-gray-200 bg-gray-50 px-3 py-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                      Historial — {versionesLeadEdit.length} versión{versionesLeadEdit.length !== 1 ? 'es' : ''}
+                    </span>
+                  </div>
+                  <div className="max-h-44 overflow-y-auto">
+                    {versionesLeadEdit.map((v) => {
+                      const badgeColor: Record<string, string> = {
+                        BORRADOR: 'bg-gray-100 text-gray-600',
+                        ENVIADA:  'bg-blue-100 text-blue-700',
+                        APROBADA: 'bg-emerald-100 text-emerald-700',
+                        RECHAZADA: 'bg-red-100 text-red-600',
+                      };
+                      return (
+                        <button
+                          key={v.version_num}
+                          onClick={() => {
+                            if (!leadEditando) return;
+                            const ok = window.confirm('Los cambios sin guardar se perderán. ¿Ir a esta versión?');
+                            if (!ok) return;
+                            setMostrarModalEditar(false);
+                            router.push(`/presupuesto-manual?lead_id=${leadEditando.id}&version=${v.version_num}`);
+                          }}
+                          className="flex w-full items-center gap-3 border-b border-gray-100 px-3 py-2 text-left text-sm last:border-0 hover:bg-violet-50"
+                        >
+                          <span className="w-8 font-bold text-gray-900">V{v.version_num}</span>
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badgeColor[v.estado] ?? badgeColor.BORRADOR}`}>
+                            {v.estado}
+                          </span>
+                          <span className="flex-1 text-xs text-gray-500">
+                            {new Date(v.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: '2-digit' })}
+                          </span>
+                          <span className="font-semibold text-gray-900">
+                            $ {v.total_final.toLocaleString('es-CO')}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="mb-3 flex gap-3">
                 <button

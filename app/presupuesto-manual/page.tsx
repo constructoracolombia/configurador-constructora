@@ -219,8 +219,9 @@ export default function PresupuestoManual() {
   const [guardandoVersion, setGuardandoVersion] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [datosDesplegados, setDatosDesplegados] = useState(true);
-  // Para auto-selección desde ?lead_id y auto-carga de última versión
+  // Para auto-selección desde ?lead_id y auto-carga de versión específica
   const [paramLeadId, setParamLeadId] = useState<string | null>(null);
+  const [paramVersion, setParamVersion] = useState<number | null>(null);
   const autoLoadedRef = useRef(false);
 
   // carga catálogos y leads al montar
@@ -338,11 +339,13 @@ export default function PresupuestoManual() {
     })();
   }, []);
 
-  // leer ?lead_id del query param al montar
+  // leer ?lead_id y ?version del query param al montar
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('lead_id');
     if (id) setParamLeadId(id);
+    const v = params.get('version');
+    if (v) setParamVersion(parseInt(v, 10));
   }, []);
 
   // auto-seleccionar lead cuando leads ya están cargados y hay paramLeadId
@@ -369,11 +372,14 @@ export default function PresupuestoManual() {
     })();
   }, [leadId]);
 
-  // auto-cargar última versión cuando viene de ?lead_id y ya hay versiones disponibles
+  // auto-cargar versión específica (o la última) cuando viene de ?lead_id
   useEffect(() => {
     if (!paramLeadId || autoLoadedRef.current || versionesLead.length === 0) return;
     autoLoadedRef.current = true;
-    cargarDesdeVersion(versionesLead[0]); // [0] = versión más alta (orden desc)
+    const target = paramVersion !== null
+      ? (versionesLead.find((v) => v.version_num === paramVersion) ?? versionesLead[0])
+      : versionesLead[0];
+    cargarDesdeVersion(target);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramLeadId, versionesLead]);
 
