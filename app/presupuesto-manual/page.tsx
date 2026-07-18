@@ -21,6 +21,30 @@ type CatalogoItem = {
 type Cliente = { nombre: string; telefono: string; proyecto: string };
 type PlanSeccion = { seccion: string; items: string[] };
 type EstadoItemPlan = { aplica: boolean; cantidad: number; descuento: number };
+type PresupuestoVersion = {
+  id: string;
+  lead_id: string;
+  version_num: number;
+  estado: 'BORRADOR' | 'ENVIADA' | 'APROBADA' | 'RECHAZADA';
+  total_final: number;
+  precio_base: number | null;
+  nombre_cliente: string;
+  telefono_cliente: string;
+  nombre_proyecto: string;
+  catalogo_id: string | null;
+  plan_base: string;
+  conjunto: string;
+  precio_manual: number | null;
+  seleccionados: Record<string, number>;
+  items_plan_estado: Record<string, EstadoItemPlan>;
+  items_ocultos: string[];
+  items_manuales: Array<{ id: string; nombre: string; precio: number; cantidad: number }>;
+  aplica_iva: boolean;
+  notas: string;
+  pdf_url: string | null;
+  precios_snapshot: Record<string, number>;
+  created_at: string;
+};
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -170,6 +194,7 @@ export default function PresupuestoManual() {
   const [busquedaLead, setBusquedaLead] = useState("");
   const [mostrarDropdownLead, setMostrarDropdownLead] = useState(false);
   const [conjunto, setConjunto] = useState("");
+  const [conjuntoPersonalizado, setConjuntoPersonalizado] = useState("");
   const [planBase, setPlanBase] = useState("");
   const [precioBase, setPrecioBase] = useState<number | null>(null);
   const [itemsPlanIds, setItemsPlanIds] = useState<string[]>([]);
@@ -190,6 +215,9 @@ export default function PresupuestoManual() {
   const [presupuestosGuardados, setPresupuestosGuardados] = useState<any[]>([]);
   const [cargandoPresupuesto, setCargandoPresupuesto] = useState(false);
   const [pendingSeleccionados, setPendingSeleccionados] = useState<Record<string, number> | null>(null);
+  const [versionesLead, setVersionesLead] = useState<PresupuestoVersion[]>([]);
+  const [guardandoVersion, setGuardandoVersion] = useState(false);
+  const [mostrarHistorial, setMostrarHistorial] = useState(false);
 
   // carga catálogos y leads al montar
   useEffect(() => {
@@ -294,6 +322,19 @@ export default function PresupuestoManual() {
     })();
   }, []);
 
+  // cargar versiones del lead seleccionado
+  useEffect(() => {
+    if (!leadId) { setVersionesLead([]); return; }
+    void (async () => {
+      const { data } = await supabase
+        .from('presupuestos')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('version_num', { ascending: false });
+      setVersionesLead((data || []) as PresupuestoVersion[]);
+    })();
+  }, [leadId]);
+
   const guardarPresupuesto = async () => {
     if (!nombrePresupuesto.trim()) { alert('Escribe un nombre para el presupuesto'); return; }
     if (!cliente.nombre || !cliente.telefono) { alert('Completa al menos nombre y teléfono del cliente'); return; }
@@ -379,6 +420,67 @@ export default function PresupuestoManual() {
     localStorage.setItem('items_manuales_presupuesto', JSON.stringify(nuevosItems));
   };
 
+  const guardarVersionPresupuesto = async () => {
+    if (!leadId) { mostrarToast('⚠️ Selecciona un lead para guardar versión'); return; }
+    setGuardandoVersion(true);
+    try {
+      const precios_snapshot: Record<string, number> = {};
+      for (const item of items) { precios_snapshot[item.id] = item.valor_venta; }
+
+      const { data: versionData, error } = await supabase
+        .from('presupuestos')
+        .insert([{
+          lead_id: leadId,
+          estado: 'BORRADOR',
+          total_final: totalFinal,
+          precio_base: precioBase,
+          nombre_cliente: cliente.nombre,
+          telefono_cliente: cliente.telefono,
+          nombre_proyecto: cliente.proyecto,
+          catalogo_id: catalogoId || null,
+          plan_base: planBase,
+          conjunto,
+          precio_manual: precioManual,
+          seleccionados,
+          items_plan_estado: itemsPlanEstado,
+          items_ocultos: Array.from(itemsOcultos),
+          items_manuales: itemsManuales,
+          aplica_iva: aplicaIva,
+          notas,
+          pdf_url: null,
+          precios_snapshot,
+        }])
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      setVersionesLead((prev) => [versionData as PresupuestoVersion, ...prev]);
+      mostrarToast(`✅ Versión ${(versionData as PresupuestoVersion).version_num} guardada`);
+    } catch (err: any) {
+      mostrarToast(`❌ Error al guardar versión: ${err.message}`);
+    } finally {
+      setGuardandoVersion(false);
+    }
+  };
+
+  const cargarDesdeVersion = (version: PresupuestoVersion) => {
+    setCliente({ nombre: version.nombre_cliente, telefono: version.telefono_cliente, proyecto: version.nombre_proyecto });
+    setPlanBase(version.plan_base);
+    setConjunto(version.conjunto);
+    setCatalogoId(version.catalogo_id || '');
+    setPrecioManual(version.precio_manual);
+    setItemsPlanEstado(version.items_plan_estado);
+    setItemsOcultos(new Set(version.items_ocultos));
+    setItemsManuales(version.items_manuales);
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(version.items_manuales));
+    setPendingSeleccionados(version.seleccionados);
+    setAplicaIva(version.aplica_iva);
+    setNotas(version.notas);
+    setMostrarHistorial(false);
+    setPaso(1);
+    mostrarToast(`✅ Versión ${version.version_num} cargada — modifica y guarda como nueva versión`);
+  };
+
   // paso 1 → 2: cargar ítems del catálogo
   const continuar = async () => {
     setLoading(true);
@@ -445,6 +547,7 @@ export default function PresupuestoManual() {
 
   const hayDescuentos = Object.values(itemsPlanEstado).some((e) => !e.aplica);
   const diasEntrega = planBase === "Plan Básico" ? 39 : 59;
+  const nombreConjuntoFinal = conjunto === "Otro" ? (conjuntoPersonalizado || "Otro") : conjunto;
 
   const secciones = planBase === "Plan Básico" ? PLAN_BASICO_SECCIONES
     : planBase === "Plan Intermedio Plus" ? PLAN_INTERMEDIO_SECCIONES : [];
@@ -492,7 +595,7 @@ export default function PresupuestoManual() {
     doc.setTextColor(rNegro, gNegro, bNegro);
     doc.setFontSize(9);
     doc.text(`${cliente.nombre}  ·  ${cliente.telefono}`, 18, 65);
-    doc.text(cliente.proyecto || conjunto, 75, 65);
+    doc.text(cliente.proyecto || nombreConjuntoFinal, 75, 65);
     doc.text("Bucaramanga", 145, 65);
 
     // ── TÍTULO TABLA ──────────────────────────────────────────────
@@ -501,7 +604,7 @@ export default function PresupuestoManual() {
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.text(`Constructora Colombia Remodela — ${cliente.proyecto || conjunto}`, W / 2, 83.5, { align: "center" });
+    doc.text(`Constructora Colombia Remodela — ${cliente.proyecto || nombreConjuntoFinal}`, W / 2, 83.5, { align: "center" });
 
     // ── TABLA DEL PLAN ────────────────────────────────────────────
     const seccionesActivas = planBase === "Plan Básico" ? PLAN_BASICO_SECCIONES : PLAN_INTERMEDIO_SECCIONES;
@@ -718,7 +821,7 @@ export default function PresupuestoManual() {
       const mensajeActividad = [
         `📄 Presupuesto manual: ${numeroCot}`,
         `💰 Total: $ ${totalFinal.toLocaleString("es-CO")}`,
-        `📋 Plan: ${planBase || "Sin plan"} — ${conjunto || cliente.proyecto}`,
+        `📋 Plan: ${planBase || "Sin plan"} — ${nombreConjuntoFinal || cliente.proyecto}`,
         pdfUrl ? `🔗 Ver PDF: ${pdfUrl}` : "(PDF no disponible)",
       ].join("\n");
 
@@ -733,7 +836,7 @@ export default function PresupuestoManual() {
           }),
           supabase.from("leads").update({
             presupuesto_estimado: totalFinal,
-            nombre_proyecto: cliente.proyecto || conjunto,
+            nombre_proyecto: cliente.proyecto || nombreConjuntoFinal,
             observaciones: mensajeActividad,
             updated_at: new Date().toISOString(),
           }).eq("id", leadId),
@@ -835,6 +938,14 @@ export default function PresupuestoManual() {
                 Mis borradores ({presupuestosGuardados.length})
               </button>
             )}
+            {leadId && versionesLead.length > 0 && (
+              <button
+                onClick={() => setMostrarHistorial(true)}
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700"
+              >
+                Versiones ({versionesLead.length})
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -927,12 +1038,25 @@ export default function PresupuestoManual() {
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">Conjunto residencial *</label>
                   <select
                     value={conjunto}
-                    onChange={(e) => { setConjunto(e.target.value); if (!cliente.proyecto.trim()) setCliente((p) => ({ ...p, proyecto: e.target.value })); }}
+                    onChange={(e) => {
+                      setConjunto(e.target.value);
+                      if (e.target.value !== "Otro") setConjuntoPersonalizado("");
+                      if (!cliente.proyecto.trim() && e.target.value !== "Otro") setCliente((p) => ({ ...p, proyecto: e.target.value }));
+                    }}
                     className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">Selecciona un conjunto…</option>
                     {CONJUNTOS.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
+                  {conjunto === "Otro" && (
+                    <input
+                      type="text"
+                      value={conjuntoPersonalizado}
+                      onChange={(e) => setConjuntoPersonalizado(e.target.value)}
+                      placeholder="Escribe el nombre del conjunto…"
+                      className="mt-2 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">Plan base (opcional)</label>
@@ -947,7 +1071,7 @@ export default function PresupuestoManual() {
                   </select>
                   {planBase && precioBase !== null && (
                     <p className="mt-1 text-xs text-emerald-600">
-                      Precio: {cop(precioBase)} — {conjunto || "precio estándar"}
+                      Precio: {cop(precioBase)} — {nombreConjuntoFinal || "precio estándar"}
                     </p>
                   )}
                 </div>
@@ -981,7 +1105,7 @@ export default function PresupuestoManual() {
             {precioBase !== null && (
               <div className="mb-3 rounded-xl" style={{ background: "#14532d", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{planBase} — {conjunto}</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{planBase} — {nombreConjuntoFinal}</div>
                   <div style={{ color: "#86efac", fontSize: 12 }}>Precio base del plan incluido</div>
                   {precioManual !== null && precioManual !== precioBase && (
                     <div style={{ color: "#86efac", fontSize: 11, marginTop: 2 }}>Precio ajustado manualmente</div>
@@ -1416,7 +1540,7 @@ export default function PresupuestoManual() {
                     {/* Header negro */}
                     <div className="bg-gray-900 px-4 py-3">
                       <div className="text-xs font-bold text-white">CONSTRUCTORA COLOMBIA REMODELA</div>
-                      <div className="text-[11px] text-gray-400">Constructora Colombia Remodela — {conjunto}</div>
+                      <div className="text-[11px] text-gray-400">Constructora Colombia Remodela — {nombreConjuntoFinal}</div>
                     </div>
                     <table className="w-full" style={{ fontSize: 13 }}>
                       <thead>
@@ -1673,6 +1797,11 @@ export default function PresupuestoManual() {
               <button onClick={() => setPaso(2)} className="text-sm text-gray-500 hover:text-gray-700">← Volver a ítems</button>
               <div className="flex-1" />
               <Button onClick={descargarPDF} variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50">Descargar PDF</Button>
+              {leadId && (
+                <Button onClick={guardarVersionPresupuesto} disabled={guardandoVersion} className="bg-violet-600 hover:bg-violet-700">
+                  {guardandoVersion ? "Guardando…" : "Guardar como versión"}
+                </Button>
+              )}
               <Button onClick={guardarCotizacion} disabled={guardando} className="bg-emerald-600 hover:bg-emerald-700">
                 {guardando ? "Guardando…" : "Guardar cotización"}
               </Button>
@@ -1720,6 +1849,69 @@ export default function PresupuestoManual() {
                 className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-300"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL HISTORIAL DE VERSIONES */}
+      {mostrarHistorial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-1 text-xl font-bold text-gray-900">Historial de versiones</h3>
+            <p className="mb-4 text-sm text-gray-500">
+              Lead seleccionado — {versionesLead.length} versión{versionesLead.length !== 1 ? 'es' : ''} guardada{versionesLead.length !== 1 ? 's' : ''}
+            </p>
+            {versionesLead.length === 0 ? (
+              <p className="py-8 text-center text-gray-400">Sin versiones guardadas para este lead</p>
+            ) : (
+              <div className="space-y-3">
+                {versionesLead.map((v) => {
+                  const estadoColor: Record<string, string> = {
+                    BORRADOR: 'bg-gray-100 text-gray-600',
+                    ENVIADA: 'bg-blue-100 text-blue-700',
+                    APROBADA: 'bg-emerald-100 text-emerald-700',
+                    RECHAZADA: 'bg-red-100 text-red-600',
+                  };
+                  return (
+                    <div key={v.id} className="rounded-lg border-2 border-gray-200 p-4 transition-all hover:border-violet-300 hover:bg-violet-50">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold text-gray-900">V{v.version_num}</span>
+                            <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${estadoColor[v.estado] || estadoColor.BORRADOR}`}>
+                              {v.estado}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-sm text-gray-700 font-semibold">
+                            $ {Math.round(v.total_final).toLocaleString('es-CO')}
+                          </p>
+                          <p className="mt-0.5 text-sm text-gray-600">
+                            {v.plan_base || 'Sin plan'} · {v.nombre_proyecto || v.conjunto || '—'}
+                          </p>
+                          <p className="mt-0.5 text-xs text-gray-400">
+                            {new Date(v.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => cargarDesdeVersion(v)}
+                          className="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-violet-700"
+                        >
+                          Nueva versión desde esta
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => setMostrarHistorial(false)}
+                className="rounded-lg bg-gray-200 px-6 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-300"
+              >
+                Cerrar
               </button>
             </div>
           </div>
