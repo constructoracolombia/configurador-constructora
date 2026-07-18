@@ -309,10 +309,22 @@ export default function PresupuestoManual() {
     });
   };
 
-  // cargar items manuales del localStorage al montar
+  // cargar items manuales del localStorage al montar — solo si coincide con el lead de la URL
   useEffect(() => {
-    const guardados = localStorage.getItem('items_manuales_presupuesto');
-    if (guardados) setItemsManuales(JSON.parse(guardados));
+    const urlLeadId = new URLSearchParams(window.location.search).get('lead_id');
+    const raw = localStorage.getItem('items_manuales_presupuesto');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      const storedLeadId = Array.isArray(parsed) ? null : (parsed?.lead_id ?? null);
+      if (urlLeadId && storedLeadId === urlLeadId) {
+        setItemsManuales(Array.isArray(parsed) ? parsed : parsed.items);
+      } else {
+        localStorage.removeItem('items_manuales_presupuesto');
+      }
+    } catch {
+      localStorage.removeItem('items_manuales_presupuesto');
+    }
   }, []);
 
   // cargar presupuestos guardados al montar
@@ -407,7 +419,7 @@ export default function PresupuestoManual() {
     setItemsOcultos(new Set(ppto.items_ocultos || []));
     const manuales = ppto.items_manuales || [];
     setItemsManuales(manuales);
-    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(manuales));
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify({ lead_id: leadId ?? null, items: manuales }));
     pendingSeleccionadosRef.current = ppto.seleccionados || {};
     setMostrarListado(false);
     mostrarToast(`✅ Presupuesto cargado: "${ppto.nombre_presupuesto}"`);
@@ -439,7 +451,7 @@ export default function PresupuestoManual() {
     };
     const nuevosItems = [...itemsManuales, nuevoItem];
     setItemsManuales(nuevosItems);
-    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(nuevosItems));
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify({ lead_id: leadId ?? null, items: nuevosItems }));
     setFormularioManual({ nombre: '', precio: '', cantidad: '1' });
     setMostrarFormulario(false);
   };
@@ -447,7 +459,7 @@ export default function PresupuestoManual() {
   const eliminarItemManual = (id: string) => {
     const nuevosItems = itemsManuales.filter((item) => item.id !== id);
     setItemsManuales(nuevosItems);
-    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(nuevosItems));
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify({ lead_id: leadId ?? null, items: nuevosItems }));
   };
 
   const guardarVersionPresupuesto = async () => {
@@ -508,7 +520,7 @@ export default function PresupuestoManual() {
     setItemsPlanEstado(version.items_plan_estado);
     setItemsOcultos(new Set(version.items_ocultos));
     setItemsManuales(version.items_manuales);
-    localStorage.setItem('items_manuales_presupuesto', JSON.stringify(version.items_manuales));
+    localStorage.setItem('items_manuales_presupuesto', JSON.stringify({ lead_id: version.lead_id, items: version.items_manuales }));
     pendingSeleccionadosRef.current = version.seleccionados;
     setAplicaIva(version.aplica_iva);
     setNotas(version.notas);
