@@ -1777,6 +1777,39 @@ export default function PresupuestoManual() {
                   );
                 })()}
 
+                {/* ── PERSONALIZADOS ─────────────────────────────────── */}
+                {itemsManuales.length > 0 && (
+                  <div className="mb-6 overflow-hidden rounded-lg border border-blue-200">
+                    <div className="border-b border-blue-200 bg-blue-700 px-4 py-2">
+                      <span className="text-xs font-bold text-white">ITEMS PERSONALIZADOS</span>
+                    </div>
+                    <table className="w-full" style={{ fontSize: 13 }}>
+                      <thead>
+                        <tr className="border-b border-blue-100 bg-blue-50">
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Ítem</th>
+                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Cant.</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Vlr. Unit.</th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemsManuales.map((item) => (
+                          <tr key={item.id} className="border-b border-blue-50">
+                            <td className="px-3 py-1.5 text-gray-900">{item.nombre}</td>
+                            <td className="px-3 py-1.5 text-center text-gray-700">{item.cantidad}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-700">{cop(item.precio)}</td>
+                            <td className="px-3 py-1.5 text-right font-semibold text-gray-900">{cop(item.precio * item.cantidad)}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-blue-200 bg-blue-50">
+                          <td colSpan={3} className="px-3 py-2 text-right text-sm font-semibold text-gray-700">Subtotal personalizados</td>
+                          <td className="px-3 py-2 text-right font-bold text-gray-900">{cop(subtotalManuales)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
                 {/* totales finales */}
                 <div className="mt-4 border-t border-gray-200 pt-4">
                   <div className="flex flex-col items-end gap-2">
@@ -1790,6 +1823,12 @@ export default function PresupuestoManual() {
                           <div className="flex w-72 justify-between text-sm">
                             <span className="text-gray-600">Adicionales</span>
                             <span className="font-semibold text-gray-900">{cop(subtotalAdicionales)}</span>
+                          </div>
+                        )}
+                        {subtotalManuales > 0 && (
+                          <div className="flex w-72 justify-between text-sm">
+                            <span className="text-gray-600">Personalizados</span>
+                            <span className="font-semibold text-gray-900">{cop(subtotalManuales)}</span>
                           </div>
                         )}
                       </>
