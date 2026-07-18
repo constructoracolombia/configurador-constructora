@@ -62,8 +62,16 @@ CREATE TRIGGER presupuestos_updated_at
   BEFORE UPDATE ON presupuestos
   FOR EACH ROW EXECUTE FUNCTION _presupuestos_updated_at();
 
--- RLS deshabilitado — acceso por anon key, consistente con leads y cotizaciones
-ALTER TABLE presupuestos DISABLE ROW LEVEL SECURITY;
+-- RLS habilitado con política TO public — igual que leads, cotizaciones y notas_seguimiento.
+-- El configurador usa anon key sin sesión; el rol anon hereda de public.
+ALTER TABLE presupuestos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permitir todo público presupuestos" ON presupuestos;
+CREATE POLICY "Permitir todo público presupuestos"
+ON presupuestos FOR ALL
+TO public
+USING (true)
+WITH CHECK (true);
 
 -- Índices para queries frecuentes
 CREATE INDEX IF NOT EXISTS idx_presupuestos_lead_id ON presupuestos(lead_id);
