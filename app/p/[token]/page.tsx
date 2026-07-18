@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import {
   SECCIONES_POR_PLAN,
@@ -51,11 +52,8 @@ const CREAM2 = "#E8E0D4";
 
 // ── componente ───────────────────────────────────────────────────────────────
 
-export default function PresupuestoPublicoPage({
-  params,
-}: {
-  params: { token: string };
-}) {
+export default function PresupuestoPublicoPage() {
+  const { token } = useParams<{ token: string }>();
   const [ppto, setPpto] = useState<Presupuesto | null>(null);
   const [catItems, setCatItems] = useState<CatItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +67,7 @@ export default function PresupuestoPublicoPage({
       const { data, error: err } = await supabase
         .from("presupuestos")
         .select("*")
-        .eq("token_publico", params.token)
+        .eq("token_publico", token)
         .single();
 
       if (err || !data) {
@@ -92,7 +90,7 @@ export default function PresupuestoPublicoPage({
 
       setLoading(false);
     })();
-  }, [params.token]);
+  }, [token]);
 
   // ── tracking (guard anti-doble-invoke Strict Mode) ──────────────────────
   useEffect(() => {
