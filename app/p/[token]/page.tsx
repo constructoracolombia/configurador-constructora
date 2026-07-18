@@ -59,7 +59,9 @@ export default function PresupuestoPublicoPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiado, setCopiado] = useState(false);
+  const [descargandoPDF, setDescargandoPDF] = useState(false);
   const hasTrackedRef = useRef(false);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
 
   // ── carga de datos ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -165,9 +167,48 @@ export default function PresupuestoPublicoPage() {
     setTimeout(() => setCopiado(false), 2000);
   };
 
+  const descargarPDF = async () => {
+    if (!pdfContentRef.current || !ppto) return;
+    setDescargandoPDF(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const canvas = await html2canvas(pdfContentRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: NAVY,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
+      const imgW = pdfW;
+      const imgH = (canvas.height / canvas.width) * pdfW;
+
+      const pageCount = Math.ceil(imgH / pdfH);
+      for (let i = 0; i < pageCount; i++) {
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, -(i * pdfH), imgW, imgH);
+      }
+
+      const clienteSlug = ppto.nombre_cliente.split(" ")[0].replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
+      const fecha = ppto.created_at.slice(0, 10).replace(/-/g, "");
+      pdf.save(`Presupuesto-${clienteSlug}-V${ppto.version_num}-${fecha}.pdf`);
+    } finally {
+      setDescargandoPDF(false);
+    }
+  };
+
   // ── render ───────────────────────────────────────────────────────────────
   return (
     <div style={{ background: NAVY, minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
+
+      {/* ── ZONA CAPTURADA POR PDF (header → footer, sin botones) ── */}
+      <div ref={pdfContentRef} style={{ background: NAVY }}>
+
       {/* ── HEADER ── */}
       <div style={{ background: CARD, borderBottom: `2px solid ${GOLD}`, padding: "16px 20px", textAlign: "center" }}>
         <p style={{ color: GOLD, fontSize: 11, letterSpacing: 3, fontWeight: 700, marginBottom: 2, textTransform: "uppercase" }}>
@@ -179,7 +220,7 @@ export default function PresupuestoPublicoPage() {
         <p style={{ color: CREAM2, fontSize: 11, marginTop: 2, opacity: 0.7 }}>constructoracolombia.com</p>
       </div>
 
-      <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 16px 40px" }}>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 16px 32px" }}>
 
         {/* ── HERO: datos del cliente ── */}
         <div style={{ background: CARD, borderRadius: 16, padding: 24, marginBottom: 16, border: `1px solid rgba(176,137,79,0.25)` }}>
@@ -380,7 +421,23 @@ export default function PresupuestoPublicoPage() {
           )}
         </div>
 
-        {/* ── CTA WHATSAPP ── */}
+        {/* ── FOOTER ── */}
+        <div style={{ textAlign: "center", paddingTop: 8 }}>
+          <p style={{ color: "#4a5568", fontSize: 12, marginBottom: 4 }}>
+            @constructoraColombia · constructoracolombia.com
+          </p>
+          <p style={{ color: "#2d3748", fontSize: 11 }}>
+            Bucaramanga, Santander · © {new Date().getFullYear()}
+          </p>
+        </div>
+
+      </div>{/* cierra inner max-width */}
+      </div>{/* cierra pdfContentRef */}
+
+      {/* ── BOTONES DE ACCIÓN (excluidos del PDF) ── */}
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 16px 40px" }}>
+
+        {/* CTA WHATSAPP */}
         <a
           href={waUrl}
           target="_blank"
@@ -399,28 +456,33 @@ export default function PresupuestoPublicoPage() {
           Quiero avanzar con mi remodelación
         </a>
 
-        {/* ── COPIAR LINK ── */}
+        {/* COPIAR LINK */}
         <button
           onClick={copiarLink}
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             width: "100%", background: "transparent", border: `1px solid rgba(176,137,79,0.4)`,
-            color: CREAM2, borderRadius: 12, padding: "12px 20px", marginBottom: 24,
-            fontSize: 14, cursor: "pointer", transition: "all 0.2s",
+            color: CREAM2, borderRadius: 12, padding: "12px 20px", marginBottom: 10,
+            fontSize: 14, cursor: "pointer",
           }}
         >
           {copiado ? "✓ Link copiado" : "🔗 Copiar este link"}
         </button>
 
-        {/* ── FOOTER ── */}
-        <div style={{ textAlign: "center", paddingTop: 8 }}>
-          <p style={{ color: "#4a5568", fontSize: 12, marginBottom: 4 }}>
-            @constructoraColombia · constructoracolombia.com
-          </p>
-          <p style={{ color: "#2d3748", fontSize: 11 }}>
-            Bucaramanga, Santander · © {new Date().getFullYear()}
-          </p>
-        </div>
+        {/* DESCARGAR PDF */}
+        <button
+          onClick={() => void descargarPDF()}
+          disabled={descargandoPDF}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            width: "100%", background: "transparent", border: `1px solid rgba(255,255,255,0.15)`,
+            color: "#7a8a9a", borderRadius: 12, padding: "12px 20px", marginBottom: 24,
+            fontSize: 14, cursor: descargandoPDF ? "wait" : "pointer",
+            opacity: descargandoPDF ? 0.6 : 1,
+          }}
+        >
+          {descargandoPDF ? "⏳ Generando PDF…" : "📄 Descargar cotización"}
+        </button>
 
       </div>
     </div>
