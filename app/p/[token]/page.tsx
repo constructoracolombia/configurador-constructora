@@ -75,7 +75,6 @@ export default function PresupuestoPublicoPage() {
         presupuesto: Presupuesto;
         catItems: CatItem[];
       };
-      console.log('[debug] setPpto llamado, id:', presupuesto?.id);
       setPpto(presupuesto);
       setCatItems(cats || []);
       setLoading(false);
@@ -84,11 +83,9 @@ export default function PresupuestoPublicoPage() {
 
   // ── tracking ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    console.log('[track-view] effect corriendo', { ppto_id: ppto?.id, hasTracked: hasTrackedRef.current });
     if (!ppto || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
     const now = new Date().toISOString();
-    console.log('[track-view] disparando fetch, id:', ppto.id);
     fetch("/api/track-view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,10 +95,7 @@ export default function PresupuestoPublicoPage() {
         veces_visto: ppto.veces_visto ?? 0,
       }),
     })
-      .then((r) => {
-        console.log('[track-view] respuesta:', r.status);
-        if (!r.ok) r.json().then((e) => console.error("track-view error body:", e));
-      })
+      .then((r) => { if (!r.ok) r.json().then((e) => console.error("track-view error:", r.status, e)); })
       .catch((err) => console.error("track-view fetch falló:", err));
   }, [ppto]);
 
