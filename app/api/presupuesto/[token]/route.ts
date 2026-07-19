@@ -5,9 +5,9 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
-  const { token } = params;
+  const { token } = await params;
 
   if (!token) {
     return NextResponse.json({ error: "Token requerido" }, { status: 400 });
