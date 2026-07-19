@@ -88,6 +88,7 @@ export default function PresupuestoPublicoPage() {
     if (!ppto || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
     const now = new Date().toISOString();
+    console.log('[track-view] disparando fetch, id:', ppto.id);
     fetch("/api/track-view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,9 +99,10 @@ export default function PresupuestoPublicoPage() {
       }),
     })
       .then((r) => {
-        if (!r.ok) r.json().then((e) => console.error("track-view error:", r.status, e));
+        console.log('[track-view] respuesta:', r.status);
+        if (!r.ok) r.json().then((e) => console.error("track-view error body:", e));
       })
-      .catch((err) => console.error("track-view failed:", err));
+      .catch((err) => console.error("track-view fetch falló:", err));
   }, [ppto]);
 
   // ── estados carga / error ────────────────────────────────────────────────
