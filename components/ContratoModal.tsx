@@ -31,7 +31,7 @@ export interface ContratoModalProps {
   onClose: () => void;
 }
 
-// ── empresa (hardcoded) ───────────────────────────────────────────────────────
+// ── empresa ───────────────────────────────────────────────────────────────────
 
 const EMP = {
   nombre: "CONSTRUCTORA COLOMBIA INVERSIONES SAS",
@@ -66,11 +66,12 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
     numero_contrato: "",
     nombre_contratante: "",
     cedula_contratante: "",
+    torre_apto: "",           // ej: "TORRE 6 APTO 806"
     fecha_firma: new Date().toISOString().split("T")[0]!,
     duracion_dias: 30,
   });
 
-  // ── load data ───────────────────────────────────────────────────────────────
+  // ── load ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
     void (async () => {
       const { data: pptoData } = await supabase
@@ -93,7 +94,6 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         }
       }
 
-      // Auto-generate contract number
       const { data: lastC } = await supabase
         .from("contratos")
         .select("numero_contrato")
@@ -111,11 +111,11 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
     })();
   }, [presupuestoId]);
 
-  // ── PDF generation ───────────────────────────────────────────────────────────
+  // ── PDF ───────────────────────────────────────────────────────────────────────
   const generarPDF = async () => {
     if (!ppto) return;
     if (!form.nombre_contratante.trim() || !form.cedula_contratante.trim() || !form.numero_contrato.trim()) {
-      alert("Completa todos los campos requeridos.");
+      alert("Completa nombre, cédula y número de contrato.");
       return;
     }
 
@@ -130,15 +130,65 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       const W = 210, H = 297;
       const mL = 20, mR = 20;
       const cW = W - mL - mR;
+      const HDR_H = 13;   // header band height
+      const FTR_H = 12;   // footer reserved space
       let y = 0;
 
-      const lh = (sz: number) => sz * 0.3528 * 1.35;
+      const lh = (sz: number) => sz * 0.3528 * 1.38;
+
+      // ── Header (repeated on every page) ──────────────────────────────────────
+      const drawHeader = () => {
+        doc.setFillColor(242, 242, 242);
+        doc.rect(0, 0, W, HDR_H, "F");
+        // bottom separator
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.5);
+        doc.line(0, HDR_H, W, HDR_H);
+        doc.setLineWidth(0.3);
+        doc.setDrawColor(0, 0, 0);
+
+        // left — document label
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(90, 90, 90);
+        doc.text("CONTRATO DE OBRA CIVIL  ·  V. 012", mL, 5.5);
+        doc.setFontSize(6.5);
+        doc.text(`No. ${form.numero_contrato}`, mL, 10);
+
+        // right — company
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(11, 52, 110);
+        doc.text("CONSTRUCTORA COLOMBIA", W - mR, 5.5, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setTextColor(90, 90, 90);
+        doc.text(`NIT ${EMP.nit}`, W - mR, 10, { align: "right" });
+
+        doc.setTextColor(0, 0, 0);
+      };
+
+      // ── Footer (added after all pages are built) ──────────────────────────────
+      const drawFooter = (pageNum: number, totalPages: number) => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setTextColor(140, 140, 140);
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(mL, H - 10, W - mR, H - 10);
+        doc.text("Minuta: JVLO  ·  Revisó: AR.  ·  Elaboró: JVLO", mL, H - 6);
+        doc.text(`Página ${pageNum} de ${totalPages}`, W / 2, H - 6, { align: "center" });
+        doc.text(`Contrato No. ${form.numero_contrato}`, W - mR, H - 6, { align: "right" });
+        doc.setTextColor(0, 0, 0);
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.3);
+      };
 
       const checkPage = (need: number) => {
-        if (y + need > H - 18) {
+        if (y + need > H - FTR_H - 4) {
           doc.addPage();
           drawHeader();
-          y = 22;
+          y = HDR_H + 5;
         }
       };
 
@@ -160,32 +210,19 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         y += h;
       };
 
-      const drawHeader = () => {
-        doc.setFillColor(230, 230, 230);
-        doc.rect(0, 0, W, 10, "F");
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        doc.setTextColor(80, 80, 80);
-        doc.text("CONTRATO DE OBRA CIVIL - V. 012", mL, 6.5);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(11, 52, 110);
-        doc.text("Constructora", W - mR - 1, 5, { align: "right" });
-        doc.text("Colombia", W - mR - 1, 9, { align: "right" });
-        doc.setTextColor(0, 0, 0);
-      };
-
-      // ── PAGE 1 ─────────────────────────────────────────────────────────────
+      // ── Page 1 ───────────────────────────────────────────────────────────────
       drawHeader();
-      y = 18;
+      y = HDR_H + 5;
 
       addPara("CONTRATO DE OBRA CIVIL", 12, "bold", "center", 2);
       addPara(`Contrato No. ${form.numero_contrato}`, 11, "bold", "center", 6);
 
-      const lugar = [
-        ppto.nombre_proyecto ? ppto.nombre_proyecto.toUpperCase() : "",
-        ppto.conjunto ? `DEL CONJUNTO ${ppto.conjunto.toUpperCase()}` : "",
-      ].filter(Boolean).join(" ");
+      // Lugar: torre_apto (si lo ingresó) DEL CONJUNTO {conjunto}
+      const conjuntoUpper = ppto.conjunto?.toUpperCase() ?? "";
+      const torraAptoUpper = form.torre_apto.trim().toUpperCase();
+      const lugar = torraAptoUpper
+        ? `${torraAptoUpper} DEL CONJUNTO ${conjuntoUpper}`
+        : conjuntoUpper;
 
       const valorLetras = numeroALetras(ppto.total_final);
 
@@ -206,7 +243,6 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         return `• El ${pct}% del total del contrato, ${HITO_DESCS[i]}. $${valor.toLocaleString("es-CO")}.`;
       }).join("\n");
 
-      // CONDICIONES table
       autoTable(doc, {
         startY: y,
         margin: { left: mL, right: mR },
@@ -241,24 +277,24 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
           ],
           [
             { content: "Garantía", styles: { fontStyle: "bold", cellWidth: 52 } },
-            "Seis meses (6) contado a partir de la entrega de la obra ejecutada.\n(sujeto a las garantías de fabrica para los materiales)",
+            "Seis meses (6) contado a partir de la entrega de la obra ejecutada.\n(sujeto a las garantías de fábrica para los materiales)",
           ],
         ],
         styles: { fontSize: 8.5, cellPadding: 3, lineColor: [0, 0, 0] as [number, number, number], lineWidth: 0.3 },
         columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: cW - 52 } },
         tableLineColor: [0, 0, 0] as [number, number, number],
         tableLineWidth: 0.3,
+        didDrawPage: () => { drawHeader(); },
       });
       y = ((doc as any).lastAutoTable?.finalY ?? y) + 4;
 
-      // ── CLÁUSULA PRIMERA ────────────────────────────────────────────────────
+      // ── CLÁUSULA PRIMERA ─────────────────────────────────────────────────────
       addPara(
         "CLÁUSULA PRIMERA: OBJETO. EL CONTRATISTA se obliga para con EL CONTRATANTE a cumplir con el objeto " +
         "indicado en las CONDICIONES CONTRACTUALES, así como aquellas actividades inherentes al desarrollo de este. " +
         "De igual manera EL CONTRATISTA debe cumplir con la propuesta técnico-económica de la obra presentada, la " +
         "cual hace parte integral del presente contrato. Así mismo, deberá cumplir con los diseños técnicos y " +
-        "especificaciones técnicas entregados por EL CONTRATANTE.",
-        9
+        "especificaciones técnicas entregados por EL CONTRATANTE.", 9
       );
       addPara(
         "PARÁGRAFO PRIMERO: ACTA DE INICIO. Una vez suscrito el presente contrato, EL CONTRATISTA iniciará la " +
@@ -278,14 +314,13 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         9, "normal", "left", 4
       );
 
-      // ── CLÁUSULA SEGUNDA ────────────────────────────────────────────────────
+      // ── CLÁUSULA SEGUNDA ─────────────────────────────────────────────────────
       addPara(
         "CLÁUSULA SEGUNDA: ALCANCE DE LA OBRA A EJECUTAR POR EL CONTRATISTA ejecutará las actividades que se " +
         "describen a continuación, de conformidad con los metros cuadrados y unidades indicadas a continuación:",
         9, "normal", "left", 3
       );
 
-      // Build activity table
       const tableBody: any[][] = [];
       const secciones = SECCIONES_POR_PLAN[ppto.plan_base] ?? [];
       const ocultosSet = new Set(ppto.items_ocultos || []);
@@ -347,10 +382,12 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         styles: { fontSize: 8, cellPadding: 2, lineColor: [0, 0, 0] as [number, number, number], lineWidth: 0.2 },
         columnStyles: { 0: { cellWidth: "auto" }, 1: { cellWidth: 35, halign: "center" as const }, 2: { cellWidth: 28, halign: "center" as const } },
         showHead: "everyPage",
+        didDrawPage: () => { drawHeader(); },
       });
       y = ((doc as any).lastAutoTable?.finalY ?? y) + 3;
 
-      addPara("* Tiempo de entrega de 30 días hábiles.", 8, "italic", "left", 1);
+      // Notas al pie de tabla — plazo usa duracion_dias del formulario
+      addPara(`* Tiempo de entrega de ${form.duracion_dias} días hábiles.`, 8, "italic", "left", 1);
       addPara("* Te enviamos avances semanales de tu apartamento por Whatsapp.", 8, "italic", "left", 1);
       addPara("* Se realiza esta cotización con precio de enchape de 40 mil pesos el metro cuadrado.", 8, "italic", "left", 4);
 
@@ -358,23 +395,23 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       addPara("PARÁGRAFO SEGUNDO: Se deja la acotación que el enchape cotizado y al que hace referencia la presente CLÁUSULA corresponde a la cerámica por valor de CUARENTA MIL PESOS MCTE ($40.000) M2 en el evento que EL CONTRATISTA, solicite la instalación de un enchape por encima de este valor deberá notificarlo por escrito y pagar los dineros adicionales que esto conlleve.", 9, "normal", "left", 2);
       addPara("PARÁGRAFO TERCERO: Los ítems de ejecución que hayan sido cotizados, aprobados y cuantificados en metros cuadrados (M2), deberán ser debidamente sustentados por el CONTRATISTA respecto de su ejecución real para la facturación. En caso de requerir la ejecución de Metros cuadrados adicionales a los aquí contemplados, el CONTRATISTA deberá presentar un informe técnico para solicitar autorización por escrito a LA CONTRATANTE, para su ejecución y posterior facturación.", 9, "normal", "left", 4);
 
-      // ── CLÁUSULA TERCERA ────────────────────────────────────────────────────
+      // ── CLÁUSULA TERCERA ─────────────────────────────────────────────────────
       addPara("CLÁUSULA TERCERA: DURACIÓN. LAS PARTES han definido que la duración del presente contrato será la indicada en las CONDICIONES CONTRACTUALES, y tendrá su inicio real de acuerdo con la fecha que las partes registren en el acta de inicio. El contrato podrá ser renovado o prorrogado por mutuo acuerdo entre las partes. En este caso, las partes deberán acordar si la renovación o prorroga será por períodos iguales o diferentes a la inicial, siempre y cuando estas modificaciones consten por otrosí suscrito por ambas partes. En caso de no renovarse, el presente contrato se tendrá por terminado al vencimiento del plazo pactado sin necesidad de formalidad alguna por cualquiera de las Partes.", 9);
       addPara("PARÁGRAFO PRIMERO: En caso de presentarse retrasos en la entrega de materiales por circunstancias relacionadas con asuntos no atribuibles AL CONTRATISTA, o que estén enmarcadas en aquellos eventos relacionados con causales de fuerza mayor o caso fortuito y/o Cualquier novedad relacionada con la entrega de materiales que pueda afectar los cronogramas de trabajo pactados en el acta de inicio, será informada de manera inmediata por el medio más expedito. En dado caso, LAS PARTES estarán en la obligación de revisar en un término máximo de dos (2) días los ajustes al cronograma de trabajo, sin que tal situación implique incumplimiento al contrato.", 9, "normal", "left", 2);
       addPara("PARÁGRAFO SEGUNDO: SUSPENSIÓN. El plazo para la ejecución del objeto del presente contrato podrá ser suspendido por mutuo acuerdo entre las partes. Unilateralmente, sólo podrá suspenderse por causa extraña, fuerza mayor y caso fortuito conforme a lo estipulado en la CLÁUSULA DÉCIMA SEXTA. En caso de reanudación de la ejecución del objeto del presente contrato, los plazos indicados en este contrato se prorrogarán por un tiempo igual al de la suspensión. En caso de no poder superarse esta causal dentro de un plazo superior a 30 días calendario, se configurará la terminación de este contrato, sin que dicha terminación genere indemnización a favor de ninguna de las partes.", 9, "normal", "left", 4);
 
-      // ── CLÁUSULA CUARTA ─────────────────────────────────────────────────────
+      // ── CLÁUSULA CUARTA ──────────────────────────────────────────────────────
+      // NIT usa EMP.nit directo (901.590.706-1) — no se transforma
       addPara(
         `CLÁUSULA CUARTA: VALOR DEL CONTRATO Y FORMA DE PAGO. LA CONTRATANTE pagará a EL CONTRATISTA la suma ` +
         `indicada en las CONDICIONES CONTRACTUALES a la cuenta de ahorros No. ${EMP.cuenta} del Banco ${EMP.banco} ` +
-        `a nombre de ${EMP.nombre} con Nit. ${EMP.nit.replace(/\./g, "")} por los servicios descritos en el presente ` +
+        `a nombre de ${EMP.nombre} con Nit. ${EMP.nit} por los servicios descritos en el presente ` +
         `contrato en la forma y plazos allí acordados, una vez hayan sido efectivamente prestados y hayan sido recibidos ` +
-        `a satisfacción por EL CONTRATANTE.`,
-        9
+        `a satisfacción por EL CONTRATANTE.`, 9
       );
       addPara("El valor indicado en las condiciones contractuales podrá estar sujeto a cambios conforme a las variaciones abruptas del mercado, lo cual deberá ser sustentado por EL CONTRATISTA y notificado con antelación AL CONTRATANTE, con el fin de aceptar el incremento propuesto.", 9, "normal", "left", 4);
 
-      // ── CLÁUSULA QUINTA ─────────────────────────────────────────────────────
+      // ── CLÁUSULA QUINTA ──────────────────────────────────────────────────────
       addPara("CLÁUSULA QUINTA. OBLIGACIONES DEL CONTRATISTA:", 9, "bold", "left", 2);
       const obligC = [
         "DISPONIBILIDAD Y CONTINUIDAD EN LA PRESTACIÓN DEL SERVICIO: EL CONTRATISTA se obliga a garantizar, durante la duración del contrato, la disponibilidad necesaria para la prestación del servicio, y a establecer planes de contingencia y continuidad del servicio que le permitan garantizar su continuidad y capacidad de retorno a la operación normal ante eventos imprevistos, salvo por aquellas circunstancias que constituyan fuerza mayor o caso fortuito.",
@@ -386,7 +423,7 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       for (let i = 0; i < obligC.length; i++) addPara(`${i + 1}. ${obligC[i]!}`, 9, "normal", "left", 2);
       y += 2;
 
-      // ── CLÁUSULA SEXTA ──────────────────────────────────────────────────────
+      // ── CLÁUSULA SEXTA ───────────────────────────────────────────────────────
       addPara("CLÁUSULA SEXTA: OBLIGACIONES DE LA CONTRATANTE.", 9, "bold", "left", 2);
       const obligT = [
         "PAGO DE LOS HONORARIOS: LA CONTRATANTE se obliga a pagar de manera puntual y en la forma establecida el valor indicado en las CONDICIONES CONTRACTUALES.",
@@ -397,7 +434,7 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       for (let i = 0; i < obligT.length; i++) addPara(`${i + 1}. ${obligT[i]!}`, 9, "normal", "left", 2);
       y += 2;
 
-      // ── CLÁUSULAS 7–17 ──────────────────────────────────────────────────────
+      // ── CLÁUSULAS 7–17 ───────────────────────────────────────────────────────
       addPara("CLÁUSULA SEPTIMA: INDEPENDENCIA DE LAS PARTES. En ejecución del presente contrato, ambas partes actuarán por su propia cuenta, con absoluta autonomía e independencia técnica administrativa y directiva. De esta manera, ninguna de ellas, ni sus empleados, contratistas o subcontratistas estarán sujeta a subordinación laboral alguna en virtud del presente contrato.", 9, "normal", "left", 4);
 
       addPara("CLÁUSULA OCTAVA: TERMINACIÓN DEL CONTRATO. El contrato podrá terminarse por cualquiera de las siguientes causales:", 9, "bold", "left", 2);
@@ -436,7 +473,7 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         9, "normal", "left", 4
       );
 
-      // ── CLÁUSULA 17 + cierre ────────────────────────────────────────────────
+      // ── CLÁUSULA 17 ──────────────────────────────────────────────────────────
       const DIAS_ES = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve", "treinta", "treinta y uno"];
       const MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
       const fd = new Date(form.fecha_firma + "T12:00:00");
@@ -449,46 +486,50 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         9, "normal", "left", 8
       );
 
-      // ── FIRMA ───────────────────────────────────────────────────────────────
-      checkPage(40);
+      // ── FIRMAS — garantizadas en una sola página ──────────────────────────────
+      checkPage(38);
       const sigY = y;
       const colW2 = cW / 2 - 5;
       const col2X = mL + cW / 2 + 5;
 
       doc.setLineWidth(0.3);
-      doc.rect(mL, sigY, colW2, 28);
-      doc.rect(col2X, sigY, colW2, 28);
+      doc.rect(mL, sigY, colW2, 30);
+      doc.rect(col2X, sigY, colW2, 30);
 
+      // contratante
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(11, 52, 110);
       doc.text(form.nombre_contratante.toUpperCase(), mL + colW2 / 2, sigY + 10, { align: "center" });
-      doc.text(`C.C. ${form.cedula_contratante} DE BUCARAMANGA`, mL + colW2 / 2, sigY + 15, { align: "center" });
+      doc.text(`C.C. ${form.cedula_contratante} DE ${EMP.ciudad.toUpperCase()}`, mL + colW2 / 2, sigY + 15, { align: "center" });
       doc.setTextColor(0, 0, 0);
       doc.setFont("helvetica", "normal");
-      doc.text("EL CONTRATANTE", mL + colW2 / 2, sigY + 25, { align: "center" });
+      doc.text("EL CONTRATANTE", mL + colW2 / 2, sigY + 27, { align: "center" });
 
+      // contratista — NIT con dígito de verificación
       doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 0, 0);
-      doc.text(EMP.rep, col2X + colW2 / 2, sigY + 5, { align: "center" });
-      doc.text(`C.C. ${EMP.repCC}`, col2X + colW2 / 2, sigY + 11, { align: "center" });
-      doc.text("REPRESENTANTE LEGAL NIT.", col2X + colW2 / 2, sigY + 17, { align: "center" });
-      doc.text(EMP.nit.split("-")[0]!.trim(), col2X + colW2 / 2, sigY + 22, { align: "center" });
+      doc.text(EMP.rep, col2X + colW2 / 2, sigY + 6, { align: "center" });
+      doc.text(`C.C. ${EMP.repCC}`, col2X + colW2 / 2, sigY + 12, { align: "center" });
+      doc.text("REPRESENTANTE LEGAL", col2X + colW2 / 2, sigY + 18, { align: "center" });
+      doc.text(`NIT ${EMP.nit}`, col2X + colW2 / 2, sigY + 23, { align: "center" });
       doc.setFont("helvetica", "normal");
-      doc.text("EL CONTRATISTA", col2X + colW2 / 2, sigY + 25, { align: "center" });
+      doc.text("EL CONTRATISTA", col2X + colW2 / 2, sigY + 27, { align: "center" });
 
       y = sigY + 33;
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(7.5);
-      doc.setTextColor(100, 100, 100);
-      doc.text("Minuta: JVLO    Revisó: AR.    Elaboró: JVLO", mL, y);
-      doc.setTextColor(0, 0, 0);
 
-      // ── Download ─────────────────────────────────────────────────────────────
+      // ── Footers en todas las páginas (post-generación) ────────────────────────
+      const totalPages = doc.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        drawFooter(p, totalPages);
+      }
+
+      // ── Guardar PDF ───────────────────────────────────────────────────────────
       const slug = form.nombre_contratante.split(" ")[0] ?? "Cliente";
       doc.save(`Contrato-${form.numero_contrato}-${slug}.pdf`);
 
-      // ── Save to DB ───────────────────────────────────────────────────────────
+      // ── Guardar en DB ─────────────────────────────────────────────────────────
       const { error: dbErr } = await supabase.from("contratos").insert({
         lead_id: leadId,
         presupuesto_id: presupuestoId,
@@ -514,14 +555,13 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
     }
   };
 
-  // ── render ───────────────────────────────────────────────────────────────────
+  // ── render ────────────────────────────────────────────────────────────────────
   const inp = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
   const lbl = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500";
 
   return (
     <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/60 p-4">
       <div className="relative my-8 w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between rounded-t-2xl bg-[#111D2E] px-6 py-4">
           <div>
             <h2 className="text-base font-bold text-white">📄 Generar Contrato</h2>
@@ -546,7 +586,6 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
             </div>
           ) : (
             <>
-              {/* Preview */}
               <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm">
                 <span className="font-semibold text-amber-700">Total contrato: </span>
                 <span className="font-bold text-amber-900">$ {ppto.total_final.toLocaleString("es-CO")}</span>
@@ -584,6 +623,24 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
                     <input type="number" min={1} className={inp} value={form.duracion_dias}
                       onChange={(e) => setForm((f) => ({ ...f, duracion_dias: parseInt(e.target.value) || 30 }))} />
                   </div>
+                </div>
+
+                <div>
+                  <label className={lbl}>Torre / Apartamento</label>
+                  <input
+                    className={inp}
+                    placeholder={`ej: TORRE 6 APTO 806`}
+                    value={form.torre_apto}
+                    onChange={(e) => setForm((f) => ({ ...f, torre_apto: e.target.value }))}
+                  />
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    Conjunto: <span className="font-medium text-gray-600">{ppto.conjunto || "—"}</span>
+                    {form.torre_apto.trim() && (
+                      <span className="ml-2 text-blue-600 font-medium">
+                        → {form.torre_apto.trim().toUpperCase()} DEL CONJUNTO {ppto.conjunto?.toUpperCase()}
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
 
