@@ -7,7 +7,6 @@ import { planesBase, proyectos, findProyecto, getNombreAdicional, getPrecioAdici
 import { formatoPrecio } from "@/lib/utils/format";
 import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
 import { subirPresupuesto } from "@/lib/utils/storage-service";
-import { supabase } from "@/lib/supabase/client";
 import { getStoredTrackingParams } from "@/lib/hooks/useTrackingParams";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -156,109 +155,64 @@ export default function ResumenPage() {
     if (!clienteNombre || !clienteEmail || !planData || !planBase) return;
 
     try {
-      console.log("💾 Guardando cotización en base de datos...");
-      console.log("📝 Intentando insertar:", {
-        cliente_nombre: clienteNombre,
-        cliente_email: clienteEmail,
-        proyecto_id: proyecto,
-        proyecto_nombre: proyectoData?.nombre,
-        plan_tipo: planBase,
-        estado_crm: "NUEVO",
-        numero_cotizacion: numeroCotizacion,
+      console.log("💾 Guardando cotización via API...");
+
+      const trackingParams = getStoredTrackingParams();
+      const utmSource = trackingParams?.utm_source?.toLowerCase() ?? null;
+
+      const res = await fetch("/api/cotizacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente_nombre: clienteNombre,
+          cliente_email: clienteEmail,
+          cliente_telefono: clienteTelefono || null,
+          proyecto_id: proyecto,
+          proyecto_nombre: proyectoData?.nombre,
+          plan_tipo: planBase,
+          plan_nombre: planData.nombre,
+          precio_plan: esSanJuan ? 0 : getPrecioPlanBase(),
+          total: inversionTotal,
+          pdf_url: pdfUrl,
+          numero_cotizacion: numeroCotizacion,
+          adicionales: adicionales.map((a) => {
+            const qty = a.cantidad ?? 1;
+            const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
+            const precio = getPrecioAdicional(a, planBase);
+            return {
+              nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
+              precio: precio * qty,
+            };
+          }),
+          presupuesto_estimado: inversionTotal,
+          fuente: "WEB",
+          origen:
+            utmSource === "facebook" || utmSource === "instagram"
+              ? "PAUTA_META"
+              : utmSource === "google"
+                ? "PAUTA_GOOGLE"
+                : "WEB",
+          utm_source: trackingParams?.utm_source,
+          utm_medium: trackingParams?.utm_medium,
+          utm_campaign: trackingParams?.utm_campaign,
+          utm_content: trackingParams?.utm_content,
+          utm_term: trackingParams?.utm_term,
+          fbclid: trackingParams?.fbclid,
+          gclid: trackingParams?.gclid,
+          landing_page: trackingParams?.landing_page,
+          referrer: trackingParams?.referrer,
+        }),
       });
 
-      const { data, error } = await supabase.from("cotizaciones").insert({
-        cliente_nombre: clienteNombre,
-        cliente_email: clienteEmail,
-        cliente_telefono: clienteTelefono || null,
-        proyecto_id: proyecto,
-        proyecto_nombre: proyectoData?.nombre,
-        plan_tipo: planBase,
-        plan_nombre: planData.nombre,
-        precio_plan: esSanJuan ? 0 : getPrecioPlanBase(),
-        total: inversionTotal,
-        pdf_url: pdfUrl,
-        numero_cotizacion: numeroCotizacion,
-        estado_crm: "NUEVO",
-        posicion_kanban: 0,
-        adicionales: adicionales.map((a) => {
-          const qty = a.cantidad ?? 1;
-          const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
-          const precio = getPrecioAdicional(a, planBase);
-          return {
-            nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
-            precio: precio * qty,
-          };
-        }),
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      }).select();
-
-      console.log("✅ Respuesta de Supabase - Data:", data);
-      console.log("❌ Respuesta de Supabase - Error:", error);
-
-      if (error) {
-        console.error("❌ Error guardando en DB:", error);
-        throw error;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({})) as { error?: string };
+        console.error("❌ Error guardando cotización:", errData);
+        throw new Error(errData.error ?? "Error al guardar cotización");
       }
 
-      console.log("✅ Cotización guardada exitosamente en DB");
-
-      const cotizacionId = data?.[0]?.id as string | undefined;
-      if (cotizacionId) {
-        try {
-          const trackingParams = getStoredTrackingParams();
-          const utmSource = trackingParams?.utm_source?.toLowerCase() ?? null;
-
-          // Crear lead automáticamente desde cotización web
-          const { data: lead, error: leadError } = await supabase
-            .from("leads")
-            .insert({
-              nombre: clienteNombre,
-              telefono: clienteTelefono || "Sin teléfono",
-              email: clienteEmail,
-              proyecto: proyectoData?.nombre,
-              presupuesto_estimado: inversionTotal,
-              fuente: "WEB",
-              origen:
-                utmSource === "facebook" || utmSource === "instagram"
-                  ? "PAUTA_META"
-                  : utmSource === "google"
-                    ? "PAUTA_GOOGLE"
-                    : "WEB",
-              fuente_detalle: "Configurador online",
-              etapa: "COTIZACION",
-              probabilidad: 40,
-              cotizacion_id: cotizacionId,
-              utm_source: trackingParams?.utm_source,
-              utm_medium: trackingParams?.utm_medium,
-              utm_campaign: trackingParams?.utm_campaign,
-              utm_content: trackingParams?.utm_content,
-              utm_term: trackingParams?.utm_term,
-              fbclid: trackingParams?.fbclid,
-              gclid: trackingParams?.gclid,
-              landing_page: trackingParams?.landing_page,
-              referrer: trackingParams?.referrer,
-            })
-            .select("id")
-            .single();
-
-          if (leadError) {
-            console.error("⚠️ No se pudo crear lead:", leadError);
-          }
-          // Temporalmente comentado para debugging
-          // if (lead?.id) {
-          //   await supabase.from("lead_actividades").insert({
-          //     lead_id: lead.id,
-          //     tipo: "NOTA",
-          //     descripcion: `Cotización generada: ${numeroCotizacion}. Total: ${formatoPrecio(inversionTotal)}`,
-          //   });
-          // }
-        } catch (leadFlowError) {
-          console.error("⚠️ Error integrando lead desde cotización:", leadFlowError);
-        }
-      }
-
-      return { success: true, data };
+      const result = await res.json() as { cotizacion_id: string };
+      console.log("✅ Cotización guardada en DB:", result.cotizacion_id);
+      return { success: true };
     } catch (error) {
       console.error("❌ Error:", error);
       return { success: false, error };
@@ -369,10 +323,11 @@ export default function ResumenPage() {
           );
 
           if (emailOk) {
-            await supabase
-              .from("cotizaciones")
-              .update({ estado_crm: "CORREO_ENVIADO" })
-              .eq("numero_cotizacion", numeroCotizacion);
+            void fetch("/api/cotizacion", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ numero_cotizacion: numeroCotizacion, estado_crm: "CORREO_ENVIADO" }),
+            });
           }
         }
       }
@@ -455,10 +410,11 @@ export default function ResumenPage() {
           numeroCotizacion
         );
         if (emailOk) {
-          await supabase
-            .from("cotizaciones")
-            .update({ estado_crm: "CORREO_ENVIADO" })
-            .eq("numero_cotizacion", numeroCotizacion);
+          void fetch("/api/cotizacion", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ numero_cotizacion: numeroCotizacion, estado_crm: "CORREO_ENVIADO" }),
+          });
         }
       } else {
         console.error("❌ Error subiendo PDF:", uploadError);

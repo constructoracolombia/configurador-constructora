@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
 import {
   SECCIONES_POR_PLAN,
   BONUS_ITEMS,
@@ -66,46 +65,42 @@ export default function PresupuestoPublicoPage() {
   // ── carga de datos ──────────────────────────────────────────────────────
   useEffect(() => {
     void (async () => {
-      const { data, error: err } = await supabase
-        .from("presupuestos")
-        .select("*")
-        .eq("token_publico", token)
-        .single();
-
-      if (err || !data) {
+      const res = await fetch(`/api/presupuesto/${token}`);
+      if (!res.ok) {
         setError("Este link no es válido o el presupuesto fue eliminado.");
         setLoading(false);
         return;
       }
-
-      setPpto(data as Presupuesto);
-
-      const selIds = Object.keys(data.seleccionados || {});
-      if (selIds.length > 0) {
-        const { data: cats } = await supabase
-          .from("catalogo_items")
-          .select("id, nombre, codigo")
-          .in("id", selIds);
-        setCatItems(cats || []);
-      }
-
+      const { presupuesto, catItems: cats } = await res.json() as {
+        presupuesto: Presupuesto;
+        catItems: CatItem[];
+      };
+      console.log('[debug] setPpto llamado, id:', presupuesto?.id);
+      setPpto(presupuesto);
+      setCatItems(cats || []);
       setLoading(false);
     })();
   }, [token]);
 
   // ── tracking ─────────────────────────────────────────────────────────────
   useEffect(() => {
+    console.log('[track-view] effect corriendo', { ppto_id: ppto?.id, hasTracked: hasTrackedRef.current });
     if (!ppto || hasTrackedRef.current) return;
     hasTrackedRef.current = true;
     const now = new Date().toISOString();
-    void supabase
-      .from("presupuestos")
-      .update({
+    fetch("/api/track-view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: ppto.id,
         visto_primera_vez: ppto.visto_primera_vez ?? now,
-        visto_ultima_vez: now,
-        veces_visto: (ppto.veces_visto ?? 0) + 1,
+        veces_visto: ppto.veces_visto ?? 0,
+      }),
+    })
+      .then((r) => {
+        if (!r.ok) r.json().then((e) => console.error("track-view error:", r.status, e));
       })
-      .eq("id", ppto.id);
+      .catch((err) => console.error("track-view failed:", err));
   }, [ppto]);
 
   // ── estados carga / error ────────────────────────────────────────────────

@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
 import { MetaAdsService } from "@/lib/services/metaAdsService";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase env vars are required for meta-sync endpoint");
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {

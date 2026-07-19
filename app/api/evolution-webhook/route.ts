@@ -1,13 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
-    : null;
+import { supabaseAdmin as supabase } from "@/lib/supabase/admin";
 
 type ClienteInfo = {
   nombre?: string;
@@ -303,60 +295,56 @@ export async function POST(request: Request) {
 
     let conversacionId: string | null = null;
 
-    if (supabase) {
-      const contextInfo = rawMessage?.message?.extendedTextMessage?.contextInfo;
-      const quotedAd = contextInfo?.quotedAd;
-      let utmParams = {
-        utm_source: null as string | null,
-        utm_medium: null as string | null,
-        utm_campaign: null as string | null,
-        utm_content: null as string | null,
+    const contextInfo = rawMessage?.message?.extendedTextMessage?.contextInfo;
+    const quotedAd = contextInfo?.quotedAd;
+    let utmParams = {
+      utm_source: null as string | null,
+      utm_medium: null as string | null,
+      utm_campaign: null as string | null,
+      utm_content: null as string | null,
+    };
+
+    if (quotedAd) {
+      utmParams = {
+        utm_source: quotedAd.utm_source || "whatsapp",
+        utm_medium: quotedAd.utm_medium || "paid",
+        utm_campaign: quotedAd.utm_campaign || null,
+        utm_content: quotedAd.utm_content || null,
       };
+    }
 
-      if (quotedAd) {
-        utmParams = {
-          utm_source: quotedAd.utm_source || "whatsapp",
-          utm_medium: quotedAd.utm_medium || "paid",
-          utm_campaign: quotedAd.utm_campaign || null,
-          utm_content: quotedAd.utm_content || null,
-        };
-      }
+    const { count } = await supabase
+      .from("conversaciones_whatsapp")
+      .select("id", { count: "exact", head: true })
+      .eq("telefono", telefono);
+    const esPrimerMensaje = (count || 0) === 0;
 
-      const { count } = await supabase
-        .from("conversaciones_whatsapp")
-        .select("id", { count: "exact", head: true })
-        .eq("telefono", telefono);
-      const esPrimerMensaje = (count || 0) === 0;
+    const { data: conversacion, error: convError } = await supabase
+      .from("conversaciones_whatsapp")
+      .insert({
+        telefono,
+        nombre: nombreContacto,
+        mensaje_cliente: contenido,
+        fuente: "whatsapp_evolution",
+        leido: false,
+        utm_source: esPrimerMensaje ? utmParams.utm_source : null,
+        utm_medium: esPrimerMensaje ? utmParams.utm_medium : null,
+        utm_campaign: esPrimerMensaje ? utmParams.utm_campaign : null,
+        utm_content: esPrimerMensaje ? utmParams.utm_content : null,
+      })
+      .select("id")
+      .single();
 
-      const { data: conversacion, error: convError } = await supabase
-        .from("conversaciones_whatsapp")
-        .insert({
-          telefono,
-          nombre: nombreContacto,
-          mensaje_cliente: contenido,
-          fuente: "whatsapp_evolution",
-          leido: false,
-          utm_source: esPrimerMensaje ? utmParams.utm_source : null,
-          utm_medium: esPrimerMensaje ? utmParams.utm_medium : null,
-          utm_campaign: esPrimerMensaje ? utmParams.utm_campaign : null,
-          utm_content: esPrimerMensaje ? utmParams.utm_content : null,
-        })
-        .select("id")
-        .single();
-
-      if (convError) {
-        console.error("Error guardando conversación:", convError);
-      } else {
-        conversacionId = conversacion?.id ?? null;
-      }
+    if (convError) {
+      console.error("Error guardando conversación:", convError);
     } else {
-      console.warn("Supabase no configurado para webhook.");
+      conversacionId = conversacion?.id ?? null;
     }
 
     const respuesta = await generarRespuesta(contenido, cliente);
     await enviarMensaje(telefono, respuesta);
 
-    if (supabase && conversacionId) {
+    if (conversacionId) {
       await supabase
         .from("conversaciones_whatsapp")
         .update({
@@ -368,12 +356,11 @@ export async function POST(request: Request) {
 
     const mensajeLower = contenido.toLowerCase();
     if (
-      supabase &&
-      (mensajeLower.includes("urgente") ||
-        mensajeLower.includes("llamar") ||
-        mensajeLower.includes("precio final") ||
-        mensajeLower.includes("contratar") ||
-        mensajeLower.includes("firmar"))
+      mensajeLower.includes("urgente") ||
+      mensajeLower.includes("llamar") ||
+      mensajeLower.includes("precio final") ||
+      mensajeLower.includes("contratar") ||
+      mensajeLower.includes("firmar")
     ) {
       await supabase.from("notificaciones_admin").insert({
         tipo: "WHATSAPP_IMPORTANTE",
