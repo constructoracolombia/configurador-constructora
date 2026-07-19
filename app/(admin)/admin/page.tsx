@@ -23,7 +23,6 @@ import {
   Users,
   ExternalLink,
   Search,
-  Lock,
   LayoutDashboard,
   RefreshCw,
   Radio,
@@ -71,8 +70,6 @@ interface ConversacionWhatsapp {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [autenticado, setAutenticado] = useState(false);
-  const [password, setPassword] = useState("");
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
   const [conversaciones, setConversaciones] = useState<ConversacionWhatsapp[]>(
     []
@@ -85,8 +82,6 @@ export default function AdminDashboard() {
   const [filtroProyecto, setFiltroProyecto] = useState("todos");
   const [cargando, setCargando] = useState(false);
   const [realtimeConectado, setRealtimeConectado] = useState(false);
-
-  const PASSWORD_ADMIN = "admin2026"; // Cambiar en producción
 
   const enviarLinkConfigurador = async (conversacion: ConversacionWhatsapp) => {
     const mensaje = `Hola ${conversacion.nombre || "Cliente"}! 👋
@@ -150,16 +145,6 @@ Es GRATIS y recibes tu PDF al instante.
     }
 
     setConversaciones((data as ConversacionWhatsapp[]) || []);
-  };
-
-  const handleLogin = () => {
-    if (password === PASSWORD_ADMIN) {
-      setAutenticado(true);
-      localStorage.setItem("admin_auth", "true");
-      void cargarDatos();
-    } else {
-      alert("Contraseña incorrecta");
-    }
   };
 
   const cargarDatos = async () => {
@@ -233,45 +218,18 @@ Es GRATIS y recibes tu PDF al instante.
     }
   };
 
+  useEffect(() => { void cargarDatos(); }, []);
+
   useEffect(() => {
-    const auth = localStorage.getItem("admin_auth");
-    if (auth === "true") {
-      setAutenticado(true);
-      void cargarDatos();
-    }
-  }, []);
-
-  // SUSCRIPCIÓN EN TIEMPO REAL - Se actualiza automáticamente cuando hay cambios en BD
-  useEffect(() => {
-    if (!autenticado) return;
-
-    console.log("👂 Admin: Suscribiéndose a cambios en tiempo real...");
-
     const subscription = supabase
       .channel("admin-cotizaciones-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*", // INSERT, UPDATE, DELETE
-          schema: "public",
-          table: "cotizaciones",
-        },
-        (payload) => {
-          console.log("⚡ Admin: Cambio detectado en cotizaciones:", payload.eventType);
-          // Recargar datos cuando hay cualquier cambio
-          void cargarDatos();
-        }
+      .on("postgres_changes", { event: "*", schema: "public", table: "cotizaciones" },
+        () => { void cargarDatos(); }
       )
-      .subscribe((status) => {
-        console.log("📡 Admin: Estado de suscripción:", status);
-        setRealtimeConectado(status === "SUBSCRIBED");
-      });
+      .subscribe((status) => setRealtimeConectado(status === "SUBSCRIBED"));
 
-    return () => {
-      console.log("👋 Admin: Desuscribiendo de cambios...");
-      void subscription.unsubscribe();
-    };
-  }, [autenticado]);
+    return () => { void subscription.unsubscribe(); };
+  }, []);
 
   const cotizacionesFiltradas = cotizaciones.filter((c) => {
     const matchBusqueda =
@@ -289,37 +247,6 @@ Es GRATIS y recibes tu PDF al instante.
     new Set(cotizaciones.map((c) => c.proyecto_nombre))
   );
   const conversacionesNoLeidas = conversaciones.filter((c) => !c.leido).length;
-
-  if (!autenticado) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-dark p-4">
-        <Card className="w-full max-w-md border-brand-primary bg-brand-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-brand-text">
-              <Lock className="h-6 w-6 text-brand-primary" />
-              Panel de Administración
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              className="border-brand-border bg-brand-dark text-brand-text"
-            />
-            <Button
-              onClick={handleLogin}
-              className="w-full font-bold text-black hover:bg-brand-secondary"
-            >
-              Ingresar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-brand-dark p-4 md:p-8">
@@ -384,10 +311,7 @@ Es GRATIS y recibes tu PDF al instante.
               {cargando ? "Cargando..." : "Actualizar"}
             </Button>
             <Button
-              onClick={() => {
-                localStorage.removeItem("admin_auth");
-                setAutenticado(false);
-              }}
+              onClick={() => void supabase.auth.signOut().then(() => router.push("/login"))}
               className="bg-red-600 font-semibold text-white hover:bg-red-700"
             >
               Cerrar Sesión

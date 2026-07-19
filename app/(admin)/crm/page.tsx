@@ -30,7 +30,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Lock,
   Search,
   DollarSign,
   TrendingUp,
@@ -74,8 +73,6 @@ const ESTADOS: Estado[] = [
 
 export default function CRMPage() {
   const router = useRouter();
-  const [autenticado, setAutenticado] = useState(false);
-  const [password, setPassword] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [leadsAgrupados, setLeadsAgrupados] = useState<
     Record<string, ClienteGroup[]>
@@ -91,8 +88,6 @@ export default function CRMPage() {
   const [guardandoNota, setGuardandoNota] = useState(false);
   const [eliminando, setEliminando] = useState<string | null>(null);
 
-  const PASSWORD_ADMIN = "admin2026";
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -101,23 +96,7 @@ export default function CRMPage() {
     })
   );
 
-  useEffect(() => {
-    const auth = localStorage.getItem("admin_auth");
-    if (auth === "true") {
-      setAutenticado(true);
-      void cargarLeads();
-    }
-  }, []);
-
-  const handleLogin = () => {
-    if (password === PASSWORD_ADMIN) {
-      setAutenticado(true);
-      localStorage.setItem("admin_auth", "true");
-      void cargarLeads();
-    } else {
-      alert("Contraseña incorrecta");
-    }
-  };
+  useEffect(() => { void cargarLeads(); }, []);
 
   const cargarLeads = async () => {
     setCargando(true);
@@ -436,37 +415,6 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
 
   const activeGroup = activeId ? (gruposIndex.get(activeId) ?? null) : null;
 
-  if (!autenticado) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-dark p-4">
-        <Card className="w-full max-w-md border-brand-primary bg-brand-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-brand-text">
-              <Lock className="h-6 w-6 text-brand-primary" />
-              CRM Constructor Master
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              className="border-brand-border bg-brand-dark text-brand-text"
-            />
-            <Button
-              onClick={handleLogin}
-              className="w-full font-bold text-black hover:bg-brand-secondary"
-            >
-              Ingresar al CRM
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-brand-dark p-4">
       <div className="mx-auto max-w-[1800px] space-y-6">
@@ -503,10 +451,7 @@ Quieres asegurar tu precio actual antes de que suban los insumos? Sigue disponib
               {cargando ? "Cargando..." : "Actualizar"}
             </Button>
             <Button
-              onClick={() => {
-                localStorage.removeItem("admin_auth");
-                setAutenticado(false);
-              }}
+              onClick={() => void supabase.auth.signOut().then(() => router.push("/login"))}
               className="bg-red-600 font-semibold text-white hover:bg-red-700"
             >
               Cerrar Sesión

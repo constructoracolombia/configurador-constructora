@@ -27,9 +27,6 @@ import { proyectos, adicionales } from "@/lib/data/catalogo";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [autenticado, setAutenticado] = useState(false);
-  const [password, setPassword] = useState("");
-  const [mostrarLogin, setMostrarLogin] = useState(true);
   const [totalLeads, setTotalLeads] = useState(0);
 
   const cargarStats = async () => {
@@ -46,25 +43,7 @@ export default function DashboardPage() {
     }
   };
 
-  useEffect(() => {
-    const auth = localStorage.getItem("admin_auth");
-    if (auth === "true") {
-      setAutenticado(true);
-      setMostrarLogin(false);
-      void cargarStats();
-    }
-  }, []);
-
-  const handleLogin = () => {
-    if (password === "admin2026") {
-      setAutenticado(true);
-      setMostrarLogin(false);
-      localStorage.setItem("admin_auth", "true");
-      void cargarStats();
-    } else {
-      alert("Contraseña incorrecta");
-    }
-  };
+  useEffect(() => { void cargarStats(); }, []);
 
   // Valores dinámicos
   const numProyectos = proyectos.length;
@@ -133,52 +112,6 @@ export default function DashboardPage() {
       ],
     },
   ];
-
-  if (mostrarLogin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-dark via-black to-brand-dark p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Card className="w-full max-w-md border-2 border-brand-primary bg-brand-card shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]">
-            <CardHeader className="pb-3 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary">
-                <Lock className="h-8 w-8 text-black" />
-              </div>
-              <CardTitle className="text-2xl text-brand-text">
-                Dashboard Comercial
-              </CardTitle>
-              <CardDescription className="text-brand-textSecondary">
-                Ingresa tu contraseña para acceder
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <input
-                type="password"
-                placeholder="Contraseña"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                className="h-12 w-full rounded-lg border-2 border-brand-border bg-brand-dark px-4 text-brand-text outline-none transition-all focus:border-brand-primary"
-                autoFocus
-              />
-              <Button
-                onClick={handleLogin}
-                className="h-12 w-full rounded-lg bg-gradient-to-r from-brand-primary to-brand-secondary text-base font-bold text-black shadow-[0_4px_20px_0_rgba(255,184,0,0.3)] transition-all hover:from-brand-secondary hover:to-brand-primary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)]"
-              >
-                Acceder al Dashboard
-              </Button>
-              <p className="text-center text-xs text-brand-textSecondary">
-                Acceso restringido al equipo comercial
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-brand-dark via-black to-brand-dark p-4 md:p-8">
@@ -346,11 +279,7 @@ export default function DashboardPage() {
                   </Button>
 
                   <Button
-                    onClick={() => {
-                      localStorage.removeItem("admin_auth");
-                      setMostrarLogin(true);
-                      setAutenticado(false);
-                    }}
+                    onClick={() => void supabase.auth.signOut().then(() => router.push("/login"))}
                     className="bg-red-600 font-semibold text-white hover:bg-red-700"
                   >
                     <Lock className="mr-2 h-4 w-4" />

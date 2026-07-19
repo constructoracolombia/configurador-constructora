@@ -37,9 +37,6 @@ interface CampanaMetrics {
 
 export default function PautasPage() {
   const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [mostrarLogin, setMostrarLogin] = useState(true);
-  const [autenticado, setAutenticado] = useState(false);
   const [cargando, setCargando] = useState(false);
 
   const [campanas, setCampanas] = useState<CampanaMetrics[]>([]);
@@ -58,19 +55,9 @@ export default function PautasPage() {
   });
 
   useEffect(() => {
-    const auth = localStorage.getItem("admin_auth");
-    if (auth === "true") {
-      setAutenticado(true);
-      setMostrarLogin(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (autenticado) {
-      void cargarDatos();
-    }
+    void cargarDatos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autenticado, filtroOrigen, filtroFecha]);
+  }, [filtroOrigen, filtroFecha]);
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -211,17 +198,6 @@ export default function PautasPage() {
     }
   };
 
-  const handleLogin = () => {
-    if (password === "admin2026") {
-      setAutenticado(true);
-      setMostrarLogin(false);
-      localStorage.setItem("admin_auth", "true");
-      void cargarDatos();
-    } else {
-      alert("Contraseña incorrecta");
-    }
-  };
-
   const sincronizarConMeta = async () => {
     setSincronizando(true);
     try {
@@ -248,43 +224,6 @@ export default function PautasPage() {
     }
   };
 
-  if (mostrarLogin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardContent className="p-8">
-            <div className="mb-6 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-600">
-                <TrendingUp className="h-8 w-8 text-white" />
-              </div>
-              <h1 className="mb-2 text-2xl font-bold text-gray-900">
-                Análisis de Pautas
-              </h1>
-              <p className="text-sm text-gray-600">
-                Rendimiento de campañas Meta Ads
-              </p>
-            </div>
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-              className="mb-4 h-12 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              autoFocus
-            />
-            <Button
-              onClick={handleLogin}
-              className="h-12 w-full bg-purple-600 hover:bg-purple-700"
-            >
-              Acceder
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="border-b border-gray-200 bg-white">
@@ -308,11 +247,7 @@ export default function PautasPage() {
             </div>
 
             <Button
-              onClick={() => {
-                localStorage.removeItem("admin_auth");
-                setAutenticado(false);
-                setMostrarLogin(true);
-              }}
+              onClick={() => void supabase.auth.signOut().then(() => router.push("/login"))}
               variant="ghost"
               className="text-gray-600"
             >

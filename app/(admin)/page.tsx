@@ -24,7 +24,6 @@ import {
 import { formatoPrecio } from "@/lib/utils/format";
 import CalendarioAnual from "@/components/CalendarioAnual";
 import GraficaSeguimiento from "@/components/GraficaSeguimiento";
-import { cerrarSesionDashboard } from "@/components/ProteccionDashboard";
 import { ContratoModal } from "@/components/ContratoModal";
 
 type Lead = {
@@ -251,7 +250,6 @@ function CentroOperacionesDashboard() {
   const [calendarioRefresh, setCalendarioRefresh] = useState(0);
 
   useEffect(() => {
-    console.log("🔐 Usuario autenticado, cargando datos...");
     void cargarDatos();
   }, []);
 
@@ -1018,7 +1016,7 @@ function CentroOperacionesDashboard() {
                 {cargando ? "Actualizando..." : "Actualizar"}
               </Button>
               <Button
-                onClick={() => cerrarSesionDashboard()}
+                onClick={() => void supabase.auth.signOut().then(() => router.push("/login"))}
                 variant="ghost"
                 className="text-gray-600"
               >

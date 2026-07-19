@@ -23,8 +23,6 @@ type LeadRow = {
 
 export default function NoCerradosPage() {
   const router = useRouter();
-  const [autenticado, setAutenticado] = useState(false);
-  const [password, setPassword] = useState("");
   const [leadsNoCerrados, setLeadsNoCerrados] = useState<LeadRow[]>([]);
   const [cargando, setCargando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -48,22 +46,7 @@ export default function NoCerradosPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("admin_auth") === "true") {
-      setAutenticado(true);
-      void cargarLeadsNoCerrados();
-    }
-  }, [cargarLeadsNoCerrados]);
-
-  const verificarPassword = () => {
-    if (password === "admin2026") {
-      localStorage.setItem("admin_auth", "true");
-      setAutenticado(true);
-      void cargarLeadsNoCerrados();
-    } else {
-      alert("Contraseña incorrecta");
-    }
-  };
+  useEffect(() => { void cargarLeadsNoCerrados(); }, [cargarLeadsNoCerrados]);
 
   const reactivarLead = async (lead: LeadRow) => {
     const confirmacion = confirm(
@@ -137,37 +120,6 @@ export default function NoCerradosPage() {
       lead.nombre_proyecto?.toLowerCase().includes(termino)
     );
   });
-
-  if (!autenticado) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-        <Card className="w-full max-w-md border-0 shadow-xl">
-          <CardHeader className="pb-2 text-center">
-            <CardTitle className="text-2xl font-bold text-gray-900">
-              🔒 Acceso Restringido
-            </CardTitle>
-            <p className="mt-2 text-sm text-gray-600">Leads No Cerrados</p>
-          </CardHeader>
-          <CardContent className="p-6">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && verificarPassword()}
-              placeholder="Contraseña"
-              className="mb-4 h-12 w-full rounded-lg border border-gray-300 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <Button
-              onClick={verificarPassword}
-              className="h-12 w-full bg-blue-600 hover:bg-blue-700"
-            >
-              Entrar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
