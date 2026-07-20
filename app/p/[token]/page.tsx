@@ -127,7 +127,7 @@ export default function PresupuestoPublicoPage() {
 
   const adicionales = Object.entries(ppto.seleccionados).map(([id, qty]) => {
     const snap   = ppto.precios_snapshot[id] ?? 0;
-    const precio = Math.round(snap * 1.20);
+    const precio = snap;
     const cat    = catItemMap.get(id);
     return { id, nombre: cat?.nombre ?? "Ítem", codigo: cat?.codigo ?? null, qty, precio, total: precio * qty };
   }).filter((a) => a.precio > 0 || a.qty > 0);

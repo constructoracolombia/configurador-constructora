@@ -227,20 +227,23 @@ export default function PresupuestoManual() {
   const [categoriasColapsadas, setCategoriasColapsadas] = useState<Set<string>>(new Set());
   const hasInitCategoriasRef = useRef(false);
   const itemsManualesRef = useRef<HTMLDivElement>(null);
+  const [utilidadPct, setUtilidadPct] = useState(20);
 
-  // carga catálogos y leads al montar
+  // carga catálogos, leads y config de precios al montar
   useEffect(() => {
     const cargar = async () => {
-      const [{ data: catData }, { data: leadsData }] = await Promise.all([
+      const [{ data: catData }, { data: leadsData }, { data: configData }] = await Promise.all([
         supabase.from("catalogos_precios").select("id, nombre").eq("activo", true).order("nombre"),
         supabase.from("leads")
           .select("id, nombre, telefono, nombre_proyecto, etapa, tipo_proyecto")
           .not("etapa", "in", '("PERDIDO","DESCALIFICADO")')
           .order("updated_at", { ascending: false })
           .limit(200),
+        supabase.from("config_precios").select("utilidad_pct").single(),
       ]);
       setCatalogos(catData || []);
       setLeads(leadsData || []);
+      if (configData) setUtilidadPct(Number(configData.utilidad_pct));
     };
     void cargar();
   }, []);
@@ -483,7 +486,7 @@ export default function PresupuestoManual() {
     setGuardandoVersion(true);
     try {
       const precios_snapshot: Record<string, number> = {};
-      for (const item of items) { precios_snapshot[item.id] = item.valor_venta; }
+      for (const item of items) { precios_snapshot[item.id] = Math.round(item.valor_venta * (1 + utilidadPct / 100)); }
 
       const { data: versionData, error } = await supabase
         .from('presupuestos')
@@ -629,10 +632,10 @@ export default function PresupuestoManual() {
     : (precioBase || 0) + ajusteTotal;
 
   const subtotalAdicionales = itemsAdicionales.reduce(
-    (s, i) => s + Math.round(i.valor_venta * 1.20) * (seleccionados[i.id] || 1), 0
+    (s, i) => s + Math.round(i.valor_venta * (1 + utilidadPct / 100)) * (seleccionados[i.id] || 1), 0
   );
   const subtotalSinPlan = itemsSeleccionados.reduce(
-    (s, i) => s + Math.round(i.valor_venta * 1.20) * (seleccionados[i.id] || 1), 0
+    (s, i) => s + Math.round(i.valor_venta * (1 + utilidadPct / 100)) * (seleccionados[i.id] || 1), 0
   );
   const baseTotal = precioBase !== null ? precioEfectivo + subtotalAdicionales : subtotalSinPlan;
   const iva = aplicaIva ? Math.round(baseTotal * 0.19) : 0;
@@ -1480,7 +1483,7 @@ export default function PresupuestoManual() {
                       {gItems.map((item) => {
                         const sel = seleccionados[item.id] !== undefined;
                         const esDePlan = itemsPlanSet.has(item.id);
-                        const precioConUtilidad = Math.round(item.valor_venta * 1.20);
+                        const precioConUtilidad = Math.round(item.valor_venta * (1 + utilidadPct / 100));
                         return (
                           <div key={item.id} className={`rounded-lg border px-4 py-3 transition-colors ${sel ? "border-emerald-300 bg-emerald-50" : "border-gray-200 bg-white"}`}>
                             <div className="flex items-start gap-3">
@@ -1508,7 +1511,7 @@ export default function PresupuestoManual() {
                                   <>
                                     <span className="text-xs text-gray-400 line-through">{cop(item.valor_venta)}</span>
                                     <span className="text-sm font-bold text-emerald-700">{cop(precioConUtilidad)}</span>
-                                    <span className="text-[10px] text-emerald-500">+20% utilidad</span>
+                                    <span className="text-[10px] text-emerald-500">+{utilidadPct}% utilidad</span>
                                   </>
                                 ) : (
                                   <span className="text-sm font-semibold text-gray-400">A convenir</span>
@@ -1825,13 +1828,13 @@ export default function PresupuestoManual() {
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Cód.</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Ítem</th>
                             <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Cant.</th>
-                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Vlr. Unit. (+20%)</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Vlr. Unit. (+{utilidadPct}%)</th>
                             <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Total</th>
                           </tr>
                         </thead>
                         <tbody>
                           {itemsMostrar.map((item) => {
-                            const precioUtil = Math.round(item.valor_venta * 1.20);
+                            const precioUtil = Math.round(item.valor_venta * (1 + utilidadPct / 100));
                             const cant = seleccionados[item.id] || 1;
                             return (
                               <tr key={item.id} className="border-b border-gray-100">
