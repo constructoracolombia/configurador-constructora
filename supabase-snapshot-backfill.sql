@@ -91,10 +91,13 @@ backfill AS (
     total_final,
     precio_manual,
     precio_base,
+    seleccionados,
     precios_snapshot
 ),
 
--- 2. Calcular subtotal del snapshot ya actualizado
+-- 2. Calcular subtotal correcto: solo ítems seleccionados × cantidad
+--    (precios_snapshot es un price book completo del catálogo — sumar todo
+--     daría ~3x el real; hay que filtrar por seleccionados)
 subtotales AS (
   SELECT
     b.id,
@@ -103,8 +106,12 @@ subtotales AS (
     b.total_final,
     COALESCE(b.precio_manual, b.precio_base, 0)          AS base_efectiva,
     COALESCE(
-      (SELECT SUM((val #>> '{}')::numeric)
-       FROM jsonb_each(b.precios_snapshot) AS t(k, val)),
+      (SELECT SUM(
+         (snap.value #>> '{}')::numeric
+         * COALESCE((sel.value #>> '{}')::numeric, 1)
+       )
+       FROM jsonb_each(b.seleccionados)    AS sel(key, value)
+       JOIN jsonb_each(b.precios_snapshot) AS snap ON snap.key = sel.key),
       0
     )                                                     AS subtotal_snap_nuevo
   FROM backfill b
@@ -126,7 +133,7 @@ SELECT
     WHEN ABS(s.total_final - (s.base_efectiva + s.subtotal_snap_nuevo)) <= 500
       THEN 'REDONDEO — aceptable'
     ELSE
-      'DIFERENCIA SIGNIFICATIVA — NO proceder con PASO 3'
+      'DIFERENCIA — puede ser items_manuales (normal) o error real (investigar)'
   END                                                    AS semaforo
 FROM subtotales s
 JOIN contratos c ON c.presupuesto_id = s.id

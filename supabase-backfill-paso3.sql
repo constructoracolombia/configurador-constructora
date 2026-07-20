@@ -31,22 +31,48 @@ SET precios_snapshot = (
 )
 WHERE precios_snapshot != '{}'::jsonb;
 
--- Verificación post-UPDATE: los 2 presupuestos con contrato
+-- Verificación post-UPDATE: los presupuestos con contrato
+--
+-- NOTA: precios_snapshot es un price book completo (todos los ítems del catálogo).
+-- La fórmula correcta une snapshot con seleccionados para obtener solo los ítems
+-- que el cliente eligió, multiplicados por su cantidad. Sumar todo el snapshot
+-- daría ~3x el total real (suma el catálogo entero).
 SELECT
   p.nombre_cliente,
   p.version_num,
   c.numero_contrato,
   p.total_final                                                    AS total_db,
   COALESCE(p.precio_manual, p.precio_base, 0)                      AS base_efectiva,
+  -- Subtotal correcto: solo ítems seleccionados × cantidad
   COALESCE(
-    (SELECT SUM((v #>> '{}')::numeric)
-     FROM jsonb_each(p.precios_snapshot) AS t(k, v)), 0
-  )                                                                AS subtotal_snap_nuevo,
+    (SELECT SUM(
+       (snap.value #>> '{}')::numeric
+       * COALESCE((sel.value #>> '{}')::numeric, 1)
+     )
+     FROM jsonb_each(p.seleccionados)    AS sel(key, value)
+     JOIN jsonb_each(p.precios_snapshot) AS snap ON snap.key = sel.key),
+    0
+  )                                                                AS subtotal_seleccionados,
+  -- Total reconstruido = base + adicionales seleccionados
+  -- (items_manuales van aparte en el render, no en precios_snapshot)
+  COALESCE(p.precio_manual, p.precio_base, 0) + COALESCE(
+    (SELECT SUM(
+       (snap.value #>> '{}')::numeric
+       * COALESCE((sel.value #>> '{}')::numeric, 1)
+     )
+     FROM jsonb_each(p.seleccionados)    AS sel(key, value)
+     JOIN jsonb_each(p.precios_snapshot) AS snap ON snap.key = sel.key),
+    0
+  )                                                                AS total_reconstruido,
   p.total_final - (
-    COALESCE(p.precio_manual, p.precio_base, 0) +
-    COALESCE(
-      (SELECT SUM((v #>> '{}')::numeric)
-       FROM jsonb_each(p.precios_snapshot) AS t(k, v)), 0
+    COALESCE(p.precio_manual, p.precio_base, 0) + COALESCE(
+      (SELECT SUM(
+         (snap.value #>> '{}')::numeric
+         * COALESCE((sel.value #>> '{}')::numeric, 1)
+       )
+       FROM jsonb_each(p.seleccionados)    AS sel(key, value)
+       JOIN jsonb_each(p.precios_snapshot) AS snap ON snap.key = sel.key),
+      0
     )
   )                                                                AS diferencia
 FROM presupuestos p
@@ -55,6 +81,6 @@ ORDER BY p.nombre_cliente;
 
 COMMIT;
 
--- Si "diferencia" ≠ 0 después del COMMIT → investigar items_manuales.
--- Los items_manuales se suman aparte en el render y no están en precios_snapshot,
--- por lo que una diferencia igual al subtotal de items_manuales es normal y esperada.
+-- Si "diferencia" ≠ 0:
+--   • Diferencia = subtotal de items_manuales → normal (van fuera del snapshot)
+--   • Diferencia > subtotal_manuales → investigar antes de considerar OK
