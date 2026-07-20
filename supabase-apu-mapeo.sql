@@ -33,15 +33,14 @@ SELECT
 FROM catalogo_items ci
 JOIN apus a ON (
   -- Mapeos directos por nombre de APU conocido
-  -- (ajustar si los nombres en catalogo_items difieren)
-       (ci.nombre ILIKE '%estuco%'                   AND a.codigo = '1.1')
+       (ci.nombre ILIKE '%estuc%'                    AND a.codigo = '1.1')  -- captura "estucar" y "estuco"
   OR   (ci.nombre ILIKE '%pintura%'                  AND a.codigo = '1.2')
   OR   (ci.nombre ILIKE '%mortero%'                  AND a.codigo = '1.3')
   OR   (ci.nombre ILIKE '%porcelanato%'              AND a.codigo = '1.4' AND a.nombre ILIKE '%porcelanato%')
   OR   (ci.nombre ILIKE '%cerámica%' AND ci.nombre ILIKE '%piso%' AND a.codigo = '1.4' AND a.nombre ILIKE '%cerámica%')
   OR   (ci.nombre ILIKE '%drywall%' AND (ci.nombre ILIKE '%baño%' OR ci.nombre ILIKE '%cocina%') AND a.codigo = '1.5')
-  OR   (ci.nombre ILIKE '%demolición%'               AND a.codigo = '2.0')
-  OR   (ci.nombre ILIKE '%enchape%' AND ci.nombre ILIKE '%baño%' AND ci.nombre NOT ILIKE '%complement%' AND a.codigo = '2.1' AND a.nombre NOT ILIKE '%complement%')
+  OR   (ci.nombre ILIKE '%demolici%'                 AND a.codigo = '2.0')
+  OR   (ci.nombre ILIKE '%enchape%' AND ci.nombre ILIKE '%baño%' AND ci.nombre NOT ILIKE '%complement%' AND ci.nombre NOT ILIKE '%demolici%' AND a.codigo = '2.1' AND a.nombre NOT ILIKE '%complement%')
   OR   (ci.nombre ILIKE '%complement%' AND ci.nombre ILIKE '%baño%' AND a.codigo = '2.1' AND a.nombre ILIKE '%complement%')
   OR   (ci.nombre ILIKE '%nicho%'                    AND a.codigo = '2.2')
   OR   (ci.nombre ILIKE '%combo%' AND ci.nombre ILIKE '%básico%'   AND a.codigo = '2.3/2.4' AND a.nombre ILIKE '%básico%')
@@ -50,25 +49,25 @@ JOIN apus a ON (
   OR   (ci.nombre ILIKE '%muro%' AND ci.nombre ILIKE '%cocina%'    AND a.codigo = '3.1' AND a.nombre ILIKE '%muro%')
   OR   (ci.nombre ILIKE '%zona húmeda%'              AND a.codigo = '4.1')
   OR   (ci.nombre ILIKE '%luminaria%'                AND a.codigo = '6.1')
-  OR   (ci.nombre ILIKE '%calentador%' AND ci.nombre ILIKE '%sin%' AND a.codigo = '7.1')
-  OR   (ci.nombre ILIKE '%calentador%' AND ci.nombre ILIKE '%con%' AND a.codigo = '7.2')
+  OR   (ci.nombre ILIKE '%tubería%' AND ci.nombre ILIKE '%no incluye%' AND a.codigo = '7.1')
+  OR   (ci.nombre ILIKE '%tubería%' AND ci.nombre ILIKE '%si incluye%'  AND a.codigo = '7.2')
   OR   (ci.nombre ILIKE '%cerradura%'                AND a.codigo = '7.3')
   OR   (ci.nombre ILIKE '%gas%' AND ci.nombre ILIKE '%horno%'      AND a.codigo = '7.7')
-  OR   (ci.nombre ILIKE '%drywall%' AND ci.nombre ILIKE '%habitación%' AND a.codigo = '7.11')
+  -- 7.11 drywall habitación → SIN vincular (ítem pendiente de crear)
   OR   (ci.nombre ILIKE '%drywall%' AND ci.nombre ILIKE '%sala%'   AND a.codigo = '7.12')
-  OR   (ci.nombre ILIKE '%balcón%'                   AND a.codigo = '7.14')
+  -- 7.14 ampliación balcón  → SIN vincular (APU placeholder sin materiales)
 )
 JOIN v_apus_calculados v ON v.id = a.id
 ORDER BY a.codigo, a.nombre;
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- PASO 2: Aplicar el mapeo (correr DESPUÉS de revisar el PASO 1)
---
--- Vincula cada catalogo_item con su APU.
--- NO modifica valor_venta — eso es un paso manual separado si se desea.
+-- PASO 2: ✅ EJECUTADO — 2026-07-20
+-- 21 mappings, 22 ítems únicos vinculados (42 filas en DB, ×2 por dos catálogos)
+-- 7.11 y 7.14 excluidos intencionalmente (pendiente decisión / placeholder)
 -- ─────────────────────────────────────────────────────────────────────────────
 
+-- Para re-vincular ítems nuevos en el futuro:
 /*
 BEGIN;
 
@@ -76,14 +75,14 @@ UPDATE catalogo_items ci
 SET apu_id = a.id
 FROM apus a
 WHERE (
-       (ci.nombre ILIKE '%estuco%'                   AND a.codigo = '1.1')
+       (ci.nombre ILIKE '%estuc%'                    AND a.codigo = '1.1')
   OR   (ci.nombre ILIKE '%pintura%'                  AND a.codigo = '1.2')
   OR   (ci.nombre ILIKE '%mortero%'                  AND a.codigo = '1.3')
   OR   (ci.nombre ILIKE '%porcelanato%'              AND a.codigo = '1.4' AND a.nombre ILIKE '%porcelanato%')
   OR   (ci.nombre ILIKE '%cerámica%' AND ci.nombre ILIKE '%piso%' AND a.codigo = '1.4' AND a.nombre ILIKE '%cerámica%')
   OR   (ci.nombre ILIKE '%drywall%' AND (ci.nombre ILIKE '%baño%' OR ci.nombre ILIKE '%cocina%') AND a.codigo = '1.5')
-  OR   (ci.nombre ILIKE '%demolición%'               AND a.codigo = '2.0')
-  OR   (ci.nombre ILIKE '%enchape%' AND ci.nombre ILIKE '%baño%' AND ci.nombre NOT ILIKE '%complement%' AND a.codigo = '2.1' AND a.nombre NOT ILIKE '%complement%')
+  OR   (ci.nombre ILIKE '%demolici%'                 AND a.codigo = '2.0')
+  OR   (ci.nombre ILIKE '%enchape%' AND ci.nombre ILIKE '%baño%' AND ci.nombre NOT ILIKE '%complement%' AND ci.nombre NOT ILIKE '%demolici%' AND a.codigo = '2.1' AND a.nombre NOT ILIKE '%complement%')
   OR   (ci.nombre ILIKE '%complement%' AND ci.nombre ILIKE '%baño%' AND a.codigo = '2.1' AND a.nombre ILIKE '%complement%')
   OR   (ci.nombre ILIKE '%nicho%'                    AND a.codigo = '2.2')
   OR   (ci.nombre ILIKE '%combo%' AND ci.nombre ILIKE '%básico%'   AND a.codigo = '2.3/2.4' AND a.nombre ILIKE '%básico%')
@@ -92,20 +91,17 @@ WHERE (
   OR   (ci.nombre ILIKE '%muro%' AND ci.nombre ILIKE '%cocina%'    AND a.codigo = '3.1' AND a.nombre ILIKE '%muro%')
   OR   (ci.nombre ILIKE '%zona húmeda%'              AND a.codigo = '4.1')
   OR   (ci.nombre ILIKE '%luminaria%'                AND a.codigo = '6.1')
-  OR   (ci.nombre ILIKE '%calentador%' AND ci.nombre ILIKE '%sin%' AND a.codigo = '7.1')
-  OR   (ci.nombre ILIKE '%calentador%' AND ci.nombre ILIKE '%con%' AND a.codigo = '7.2')
+  OR   (ci.nombre ILIKE '%tubería%' AND ci.nombre ILIKE '%no incluye%' AND a.codigo = '7.1')
+  OR   (ci.nombre ILIKE '%tubería%' AND ci.nombre ILIKE '%si incluye%'  AND a.codigo = '7.2')
   OR   (ci.nombre ILIKE '%cerradura%'                AND a.codigo = '7.3')
   OR   (ci.nombre ILIKE '%gas%' AND ci.nombre ILIKE '%horno%'      AND a.codigo = '7.7')
-  OR   (ci.nombre ILIKE '%drywall%' AND ci.nombre ILIKE '%habitación%' AND a.codigo = '7.11')
   OR   (ci.nombre ILIKE '%drywall%' AND ci.nombre ILIKE '%sala%'   AND a.codigo = '7.12')
-  OR   (ci.nombre ILIKE '%balcón%'                   AND a.codigo = '7.14')
+  -- 7.11 drywall habitación → SIN vincular (ítem pendiente de crear)
+  -- 7.14 ampliación balcón  → SIN vincular (APU placeholder sin materiales)
 )
-AND ci.apu_id IS NULL;  -- solo tocar ítems sin APU asignado
+AND ci.apu_id IS NULL;
 
--- Cuántos quedaron vinculados
 SELECT COUNT(*) AS items_vinculados FROM catalogo_items WHERE apu_id IS NOT NULL;
-
--- Cuántos quedaron sin APU (los que no tienen match exacto)
 SELECT id, codigo, nombre FROM catalogo_items WHERE apu_id IS NULL ORDER BY nombre;
 
 COMMIT;
