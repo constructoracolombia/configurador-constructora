@@ -29,10 +29,49 @@ type Material = {
   orden: number;
 };
 
+type CatalogoRaw = {
+  id: string;
+  nombre: string;
+  valor_venta: number;
+  apu_id: string;
+};
+
+type ItemComparacion = {
+  nombre: string;
+  apu_id: string;
+  apu_codigo: string;
+  apu_nombre: string;
+  valor_venta: number;  // precio actual en catalogo_items (se actualiza localmente)
+  costo_apu: number;    // de v_apus_calculados, para recomputar con cualquier %
+};
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const cop = (n: number) =>
-  "$ " + Math.round(n).toLocaleString("es-CO");
+const cop = (n: number) => "$ " + Math.round(n).toLocaleString("es-CO");
+
+function deltaBadge(delta: number, deltaPct: number) {
+  if (delta === 0) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400">
+        ✓ En línea
+      </span>
+    );
+  }
+  if (delta > 0) {
+    // APU sugiere subir → naranja/rojo
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">
+        ↑ +{deltaPct.toFixed(1)}%
+      </span>
+    );
+  }
+  // APU sugiere bajar → verde
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
+      ↓ {deltaPct.toFixed(1)}%
+    </span>
+  );
+}
 
 // ─── componente ───────────────────────────────────────────────────────────────
 
@@ -58,6 +97,11 @@ export default function ApusPage() {
     valor_unitario: "",
   });
 
+  // ── catálogo — sombra ──────────────────────────────────────────────────────
+  const [catalogoRaw, setCatalogoRaw] = useState<CatalogoRaw[]>([]);
+  const [itemsComparacion, setItemsComparacion] = useState<ItemComparacion[]>([]);
+  const [actualizandoItem, setActualizandoItem] = useState<Set<string>>(new Set());
+
   // preview del % global
   const utilidadPreview = parseFloat(utilidadDraft) || utilidadPct;
   const previewActivo =
@@ -68,6 +112,35 @@ export default function ApusPage() {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
+
+  // ── recompute comparacion cuando cambian apus o catalogoRaw ───────────────
+  useEffect(() => {
+    if (!apus.length || !catalogoRaw.length) return;
+    const apuMap = new Map(apus.map((a) => [a.id, a]));
+    const seen = new Set<string>();
+    const result: ItemComparacion[] = [];
+    for (const item of catalogoRaw) {
+      const key = `${item.apu_id}::${item.nombre}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const apu = apuMap.get(item.apu_id);
+      if (!apu) continue;
+      result.push({
+        nombre: item.nombre,
+        apu_id: item.apu_id,
+        apu_codigo: apu.codigo,
+        apu_nombre: apu.nombre,
+        valor_venta: item.valor_venta,
+        costo_apu: apu.costo_apu,
+      });
+    }
+    result.sort(
+      (a, b) =>
+        a.apu_codigo.localeCompare(b.apu_codigo) ||
+        a.nombre.localeCompare(b.nombre)
+    );
+    setItemsComparacion(result);
+  }, [apus, catalogoRaw]);
 
   // ── carga inicial ──────────────────────────────────────────────────────────
 
@@ -80,12 +153,22 @@ export default function ApusPage() {
     setApus((data as ApuCalc[]) || []);
   };
 
+  const cargarCatalogo = async () => {
+    const { data } = await supabase
+      .from("catalogo_items")
+      .select("id, nombre, valor_venta, apu_id")
+      .not("apu_id", "is", null)
+      .not("nombre", "is", null);
+    setCatalogoRaw((data as CatalogoRaw[]) || []);
+  };
+
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       const [{ data: configData }] = await Promise.all([
         supabase.from("config_precios").select("utilidad_pct").single(),
         cargarApus(),
+        cargarCatalogo(),
       ]);
       if (configData) {
         const pct = Number(configData.utilidad_pct);
@@ -144,7 +227,13 @@ export default function ApusPage() {
     setMateriales((prev) =>
       prev.map((m, i) =>
         i === idx
-          ? { ...m, [campo]: campo === "nombre" || campo === "unidad" ? valor : Number(valor) }
+          ? {
+              ...m,
+              [campo]:
+                campo === "nombre" || campo === "unidad"
+                  ? valor
+                  : Number(valor),
+            }
           : m
       )
     );
@@ -175,14 +264,12 @@ export default function ApusPage() {
     if (!apuEdit) return;
     setGuardandoApu(true);
     try {
-      // 1. Actualizar MDO
       const { error: errApu } = await supabase
         .from("apus")
         .update({ mdo: parseFloat(mdo) || 0 })
         .eq("id", apuEdit.id);
       if (errApu) throw errApu;
 
-      // 2. Borrar materiales existentes y reinsertarlos
       const { error: errDel } = await supabase
         .from("apu_materiales")
         .delete()
@@ -207,11 +294,44 @@ export default function ApusPage() {
 
       showToast("✅ APU guardado");
       cerrarEditor();
-      await cargarApus();
+      await cargarApus(); // recarga apus → dispara recompute de comparacion
     } catch (err: any) {
       showToast("❌ Error: " + err.message);
     } finally {
       setGuardandoApu(false);
+    }
+  };
+
+  // ── actualizar valor_venta de un ítem desde su APU ───────────────────────
+
+  const actualizarDesdeApu = async (item: ItemComparacion, precioApu: number) => {
+    const key = `${item.apu_id}::${item.nombre}`;
+    setActualizandoItem((prev) => new Set([...prev, key]));
+    try {
+      const { error } = await supabase
+        .from("catalogo_items")
+        .update({ valor_venta: precioApu })
+        .eq("apu_id", item.apu_id)
+        .eq("nombre", item.nombre);
+      if (error) throw error;
+
+      // actualizar localmente para que el delta muestre 0 de inmediato
+      setCatalogoRaw((prev) =>
+        prev.map((r) =>
+          r.apu_id === item.apu_id && r.nombre === item.nombre
+            ? { ...r, valor_venta: precioApu }
+            : r
+        )
+      );
+      showToast(`✅ ${item.nombre.substring(0, 45)} → ${cop(precioApu)}`);
+    } catch (err: any) {
+      showToast("❌ Error: " + err.message);
+    } finally {
+      setActualizandoItem((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
   };
 
@@ -244,12 +364,16 @@ export default function ApusPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-6">
           <div>
             <h1 className="text-xl font-bold text-gray-900">APUs</h1>
-            <p className="text-xs text-gray-500">Análisis de Precios Unitarios — {apus.length} registros</p>
+            <p className="text-xs text-gray-500">
+              Análisis de Precios Unitarios — {apus.length} registros
+            </p>
           </div>
 
           {/* % utilidad global */}
           <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2">
-            <span className="text-sm font-medium text-gray-700">% Utilidad global</span>
+            <span className="text-sm font-medium text-gray-700">
+              % Utilidad global
+            </span>
             <input
               type="number"
               min={0}
@@ -273,73 +397,195 @@ export default function ApusPage() {
         {/* banner preview del % */}
         {previewActivo && (
           <div className="mx-auto mt-2 max-w-5xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
-            <strong>Preview:</strong> cambiará el % de <strong>{utilidadPct}%</strong> a{" "}
-            <strong>{utilidadPreview}%</strong>. Los presupuestos <em>ya guardados</em> no se afectan
-            (usan su snapshot). Solo afecta presupuestos nuevos y la pantalla de configurador.
+            <strong>Preview:</strong> cambiará el % de{" "}
+            <strong>{utilidadPct}%</strong> a{" "}
+            <strong>{utilidadPreview}%</strong>. Los presupuestos{" "}
+            <em>ya guardados</em> no se afectan (usan su snapshot). Solo afecta
+            presupuestos nuevos y la pantalla de configurador.
           </div>
         )}
       </div>
 
-      {/* lista de APUs */}
-      <div className="mx-auto max-w-5xl px-6 pt-6">
+      <div className="mx-auto max-w-5xl px-6 pt-6 space-y-8">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-sm text-gray-400">
             Cargando APUs…
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold text-gray-500">
-                  <th className="px-4 py-3">Cód.</th>
-                  <th className="px-4 py-3">Nombre</th>
-                  <th className="px-4 py-3 text-right">Materiales</th>
-                  <th className="px-4 py-3 text-right">MDO</th>
-                  <th className="px-4 py-3 text-right">Costo directo</th>
-                  <th className="px-4 py-3 text-right">Costo APU</th>
-                  <th className="px-4 py-3 text-right">
-                    Precio venta
-                    <span className="ml-1 font-normal text-gray-400">(+{utilidadPreview}%)</span>
-                  </th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {apus.map((apu) => {
-                  const precioVenta = Math.round(apu.costo_apu * (1 + utilidadPreview / 100));
-                  const precioActual = Math.round(apu.costo_apu * (1 + utilidadPct / 100));
-                  return (
-                    <tr key={apu.id} className="transition-colors hover:bg-gray-50/80">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-400">{apu.codigo}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{apu.nombre}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{cop(apu.costo_materiales)}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{cop(apu.mdo)}</td>
-                      <td className="px-4 py-3 text-right text-gray-600">{cop(apu.costo_directo)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900">{cop(apu.costo_apu)}</td>
-                      <td className="px-4 py-3 text-right">
-                        {previewActivo ? (
-                          <span className="flex flex-col items-end gap-0.5">
-                            <span className="text-xs text-gray-400 line-through">{cop(precioActual)}</span>
-                            <span className="font-bold text-emerald-700">{cop(precioVenta)}</span>
+          <>
+            {/* ── TABLA 1: APUs ─────────────────────────────────────────────── */}
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold text-gray-500">
+                    <th className="px-4 py-3">Cód.</th>
+                    <th className="px-4 py-3">Nombre</th>
+                    <th className="px-4 py-3 text-right">Materiales</th>
+                    <th className="px-4 py-3 text-right">MDO</th>
+                    <th className="px-4 py-3 text-right">Costo directo</th>
+                    <th className="px-4 py-3 text-right">Costo APU</th>
+                    <th className="px-4 py-3 text-right">
+                      Precio venta
+                      <span className="ml-1 font-normal text-gray-400">
+                        (+{utilidadPreview}%)
+                      </span>
+                    </th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {apus.map((apu) => {
+                    const precioVenta = Math.round(
+                      apu.costo_apu * (1 + utilidadPreview / 100)
+                    );
+                    const precioActual = Math.round(
+                      apu.costo_apu * (1 + utilidadPct / 100)
+                    );
+                    return (
+                      <tr
+                        key={apu.id}
+                        className="transition-colors hover:bg-gray-50/80"
+                      >
+                        <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                          {apu.codigo}
+                        </td>
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {apu.nombre}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {cop(apu.costo_materiales)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {cop(apu.mdo)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600">
+                          {cop(apu.costo_directo)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                          {cop(apu.costo_apu)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {previewActivo ? (
+                            <span className="flex flex-col items-end gap-0.5">
+                              <span className="text-xs text-gray-400 line-through">
+                                {cop(precioActual)}
+                              </span>
+                              <span className="font-bold text-emerald-700">
+                                {cop(precioVenta)}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="font-bold text-emerald-700">
+                              {cop(precioVenta)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => void abrirApu(apu)}
+                            className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-emerald-400 hover:text-emerald-700"
+                          >
+                            Editar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── TABLA 2: Catálogo — vista sombra ──────────────────────────── */}
+            {itemsComparacion.length > 0 && (
+              <div>
+                <div className="mb-3 flex items-baseline gap-3">
+                  <h2 className="text-sm font-semibold text-gray-700">
+                    Catálogo — comparación de precios
+                  </h2>
+                  <span className="text-xs text-gray-400">
+                    {itemsComparacion.length} ítems vinculados a APU
+                  </span>
+                  {previewActivo && (
+                    <span className="text-xs text-amber-600">
+                      · mostrando con % draft ({utilidadPreview}%)
+                    </span>
+                  )}
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-semibold text-gray-500">
+                        <th className="px-4 py-3">Ítem catálogo</th>
+                        <th className="px-4 py-3 text-gray-400 font-normal">APU</th>
+                        <th className="px-4 py-3 text-right">Valor actual</th>
+                        <th className="px-4 py-3 text-right">
+                          Precio APU
+                          <span className="ml-1 font-normal text-gray-400">
+                            (+{utilidadPreview}%)
                           </span>
-                        ) : (
-                          <span className="font-bold text-emerald-700">{cop(precioVenta)}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => void abrirApu(apu)}
-                          className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-emerald-400 hover:text-emerald-700"
-                        >
-                          Editar
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </th>
+                        <th className="px-4 py-3 text-center">Delta</th>
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {itemsComparacion.map((item) => {
+                        const precioApu = Math.round(
+                          item.costo_apu * (1 + utilidadPreview / 100)
+                        );
+                        const delta = precioApu - item.valor_venta;
+                        const deltaPct =
+                          item.valor_venta > 0
+                            ? (delta / item.valor_venta) * 100
+                            : 0;
+                        const key = `${item.apu_id}::${item.nombre}`;
+                        const cargando = actualizandoItem.has(key);
+
+                        return (
+                          <tr
+                            key={key}
+                            className="transition-colors hover:bg-gray-50/80"
+                          >
+                            <td className="px-4 py-3 font-medium text-gray-900 max-w-xs">
+                              {item.nombre}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-400">
+                              <span className="font-mono">{item.apu_codigo}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right text-gray-700">
+                              {cop(item.valor_venta)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                              {cop(precioApu)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {deltaBadge(delta, deltaPct)}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {delta === 0 ? (
+                                <span className="text-xs text-gray-300">—</span>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    void actualizarDesdeApu(item, precioApu)
+                                  }
+                                  disabled={cargando}
+                                  className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  {cargando ? "…" : "Actualizar desde APU"}
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -347,18 +593,19 @@ export default function ApusPage() {
       {apuEdit && (
         <div className="fixed inset-0 z-40 flex">
           {/* overlay */}
-          <div
-            className="flex-1 bg-black/40"
-            onClick={cerrarEditor}
-          />
+          <div className="flex-1 bg-black/40" onClick={cerrarEditor} />
 
           {/* drawer */}
           <div className="relative flex w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl">
             {/* header del drawer */}
             <div className="flex items-start justify-between border-b border-gray-200 px-6 py-4">
               <div>
-                <span className="font-mono text-xs text-gray-400">{apuEdit.codigo}</span>
-                <h2 className="text-base font-bold text-gray-900">{apuEdit.nombre}</h2>
+                <span className="font-mono text-xs text-gray-400">
+                  {apuEdit.codigo}
+                </span>
+                <h2 className="text-base font-bold text-gray-900">
+                  {apuEdit.nombre}
+                </h2>
               </div>
               <button
                 onClick={cerrarEditor}
@@ -370,7 +617,6 @@ export default function ApusPage() {
 
             {/* cuerpo */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
-
               {/* MDO */}
               <div className="mb-6">
                 <label className="mb-1.5 block text-xs font-semibold text-gray-500">
@@ -388,8 +634,12 @@ export default function ApusPage() {
               {/* materiales */}
               <div className="mb-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-500">MATERIALES</span>
-                  <span className="text-xs text-gray-400">{materiales.length} ítems</span>
+                  <span className="text-xs font-semibold text-gray-500">
+                    MATERIALES
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {materiales.length} ítems
+                  </span>
                 </div>
 
                 {materiales.length > 0 && (
@@ -410,14 +660,18 @@ export default function ApusPage() {
                           <td className="py-1.5 pr-2">
                             <input
                               value={mat.nombre}
-                              onChange={(e) => editarMaterial(idx, "nombre", e.target.value)}
+                              onChange={(e) =>
+                                editarMaterial(idx, "nombre", e.target.value)
+                              }
                               className="w-full rounded border border-transparent px-1.5 py-1 text-gray-900 hover:border-gray-200 focus:border-emerald-400 focus:outline-none"
                             />
                           </td>
                           <td className="py-1.5 pr-2">
                             <input
                               value={mat.unidad}
-                              onChange={(e) => editarMaterial(idx, "unidad", e.target.value)}
+                              onChange={(e) =>
+                                editarMaterial(idx, "unidad", e.target.value)
+                              }
                               className="w-full rounded border border-transparent px-1.5 py-1 text-gray-600 hover:border-gray-200 focus:border-emerald-400 focus:outline-none"
                             />
                           </td>
@@ -426,7 +680,9 @@ export default function ApusPage() {
                               type="number"
                               min={0}
                               value={mat.cantidad}
-                              onChange={(e) => editarMaterial(idx, "cantidad", e.target.value)}
+                              onChange={(e) =>
+                                editarMaterial(idx, "cantidad", e.target.value)
+                              }
                               className="w-full rounded border border-transparent px-1.5 py-1 text-right text-gray-900 hover:border-gray-200 focus:border-emerald-400 focus:outline-none"
                             />
                           </td>
@@ -435,7 +691,13 @@ export default function ApusPage() {
                               type="number"
                               min={0}
                               value={mat.valor_unitario}
-                              onChange={(e) => editarMaterial(idx, "valor_unitario", e.target.value)}
+                              onChange={(e) =>
+                                editarMaterial(
+                                  idx,
+                                  "valor_unitario",
+                                  e.target.value
+                                )
+                              }
                               className="w-full rounded border border-transparent px-1.5 py-1 text-right text-gray-900 hover:border-gray-200 focus:border-emerald-400 focus:outline-none"
                             />
                           </td>
@@ -458,32 +720,45 @@ export default function ApusPage() {
 
                 {/* fila de nuevo material */}
                 <div className="rounded-lg border border-dashed border-gray-200 p-3">
-                  <p className="mb-2 text-xs font-medium text-gray-400">+ Agregar material</p>
+                  <p className="mb-2 text-xs font-medium text-gray-400">
+                    + Agregar material
+                  </p>
                   <div className="flex gap-2">
                     <input
                       placeholder="Nombre"
                       value={nuevoMat.nombre}
-                      onChange={(e) => setNuevoMat((p) => ({ ...p, nombre: e.target.value }))}
+                      onChange={(e) =>
+                        setNuevoMat((p) => ({ ...p, nombre: e.target.value }))
+                      }
                       className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-gray-900 focus:border-emerald-400 focus:outline-none"
                     />
                     <input
                       placeholder="Unidad"
                       value={nuevoMat.unidad}
-                      onChange={(e) => setNuevoMat((p) => ({ ...p, unidad: e.target.value }))}
+                      onChange={(e) =>
+                        setNuevoMat((p) => ({ ...p, unidad: e.target.value }))
+                      }
                       className="w-16 rounded-lg border border-gray-200 px-2 py-1.5 text-xs text-gray-600 focus:border-emerald-400 focus:outline-none"
                     />
                     <input
                       type="number"
                       placeholder="Cant."
                       value={nuevoMat.cantidad}
-                      onChange={(e) => setNuevoMat((p) => ({ ...p, cantidad: e.target.value }))}
+                      onChange={(e) =>
+                        setNuevoMat((p) => ({ ...p, cantidad: e.target.value }))
+                      }
                       className="w-20 rounded-lg border border-gray-200 px-2 py-1.5 text-right text-xs text-gray-900 focus:border-emerald-400 focus:outline-none"
                     />
                     <input
                       type="number"
                       placeholder="Vlr."
                       value={nuevoMat.valor_unitario}
-                      onChange={(e) => setNuevoMat((p) => ({ ...p, valor_unitario: e.target.value }))}
+                      onChange={(e) =>
+                        setNuevoMat((p) => ({
+                          ...p,
+                          valor_unitario: e.target.value,
+                        }))
+                      }
                       className="w-24 rounded-lg border border-gray-200 px-2 py-1.5 text-right text-xs text-gray-900 focus:border-emerald-400 focus:outline-none"
                     />
                     <button
@@ -503,15 +778,25 @@ export default function ApusPage() {
               <div className="mb-4 grid grid-cols-3 gap-3 text-center text-xs">
                 <div className="rounded-lg border border-gray-100 bg-white p-2">
                   <div className="text-gray-400">Materiales</div>
-                  <div className="mt-0.5 font-bold text-gray-800">{cop(costoMaterialesLocal)}</div>
+                  <div className="mt-0.5 font-bold text-gray-800">
+                    {cop(costoMaterialesLocal)}
+                  </div>
                 </div>
                 <div className="rounded-lg border border-gray-100 bg-white p-2">
-                  <div className="text-gray-400">Costo APU (+{apuEdit.ai_porcentaje}% AI)</div>
-                  <div className="mt-0.5 font-bold text-gray-800">{cop(costoApuLocal)}</div>
+                  <div className="text-gray-400">
+                    Costo APU (+{apuEdit.ai_porcentaje}% AI)
+                  </div>
+                  <div className="mt-0.5 font-bold text-gray-800">
+                    {cop(costoApuLocal)}
+                  </div>
                 </div>
                 <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-2">
-                  <div className="text-emerald-600">Precio venta (+{utilidadPct}%)</div>
-                  <div className="mt-0.5 font-bold text-emerald-800">{cop(precioVentaLocal)}</div>
+                  <div className="text-emerald-600">
+                    Precio venta (+{utilidadPct}%)
+                  </div>
+                  <div className="mt-0.5 font-bold text-emerald-800">
+                    {cop(precioVentaLocal)}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-3">
