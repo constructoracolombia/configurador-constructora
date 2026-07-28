@@ -17,6 +17,7 @@ type CatalogoItem = {
   nombre: string;
   descripcion: string | null;
   valor_venta: number;
+  subcategoria_manual: string | null;
 };
 type Cliente = { nombre: string; telefono: string; proyecto: string };
 type PlanSeccion = { seccion: string; items: string[] };
@@ -54,14 +55,55 @@ const randomSuffix = () => Math.random().toString(36).substring(2, 5).toUpperCas
 const numeroCotizacion = (fecha: string) =>
   "MAN-" + fecha.replace(/-/g, "") + "-" + randomSuffix();
 
-const agruparPorCategoria = (items: CatalogoItem[]) => {
-  const orden: string[] = [];
-  const mapa: Record<string, CatalogoItem[]> = {};
-  for (const item of items) {
-    if (!mapa[item.categoria]) { orden.push(item.categoria); mapa[item.categoria] = []; }
-    mapa[item.categoria].push(item);
+// ─── subcategorías de "Adicionales" — mismo criterio que
+// app.constructoracolombia.com/alcance/catalogo/[catalogoId] (Finance), para
+// que el orden y las etiquetas coincidan entre las dos apps. Si el mapa de
+// Finance cambia, actualízalo también acá (lib/utils/planes-presupuesto.ts
+// en constructor-finance-app) — no hay tabla en Supabase que lo centralice.
+
+const normalizar = (s: string) => s.toLowerCase().trim();
+
+const SUBCATEGORIAS_ORDEN = [
+  "Preliminares", "Enchapes", "Estuco y pintura", "Drywall", "Baños",
+  "Cocina", "Carpintería", "Vidrios y espejos", "Piedras y granitos",
+  "Eléctrico", "Otros",
+] as const;
+
+const SUBCATEGORIA_POR_CATEGORIA: Record<string, (typeof SUBCATEGORIAS_ORDEN)[number]> = {
+  "demolición": "Preliminares", "ampliación": "Preliminares", "aseo": "Preliminares",
+  "general": "Preliminares", "mortero": "Preliminares",
+  "enchape": "Enchapes", "zona húmeda": "Enchapes",
+  "estucar": "Estuco y pintura", "pintura": "Estuco y pintura",
+  "drywall/pvc": "Drywall",
+  "baños": "Baños",
+  "cocina": "Cocina",
+  "carpintería": "Carpintería",
+  "vidrios y espejos": "Vidrios y espejos",
+  "granitos y piedras": "Piedras y granitos",
+  "iluminación": "Eléctrico", "puntos gas, eléctrico, agua": "Eléctrico", "seguridad": "Eléctrico",
+};
+
+function resolverSubcategoria(
+  categoria: string | null | undefined,
+  subcategoriaManual?: string | null
+): (typeof SUBCATEGORIAS_ORDEN)[number] {
+  if (subcategoriaManual && (SUBCATEGORIAS_ORDEN as readonly string[]).includes(subcategoriaManual)) {
+    return subcategoriaManual as (typeof SUBCATEGORIAS_ORDEN)[number];
   }
-  return orden.map((cat) => ({ categoria: cat, items: mapa[cat] }));
+  if (categoria) return SUBCATEGORIA_POR_CATEGORIA[normalizar(categoria)] ?? "Otros";
+  return "Otros";
+}
+
+const agruparPorSubcategoria = (items: CatalogoItem[]) => {
+  const mapa = new Map<string, CatalogoItem[]>();
+  for (const item of items) {
+    const sub = resolverSubcategoria(item.categoria, item.subcategoria_manual);
+    if (!mapa.has(sub)) mapa.set(sub, []);
+    mapa.get(sub)!.push(item);
+  }
+  return SUBCATEGORIAS_ORDEN
+    .map((sub) => ({ categoria: sub as string, items: mapa.get(sub) ?? [] }))
+    .filter((g) => g.items.length > 0);
 };
 
 // ─── precios por plan y conjunto ─────────────────────────────────────────────
@@ -198,6 +240,13 @@ export default function PresupuestoManual() {
   const [conjuntoPersonalizado, setConjuntoPersonalizado] = useState("");
   const [planBase, setPlanBase] = useState("");
   const [precioBase, setPrecioBase] = useState<number | null>(null);
+  // Precio de venta real del catálogo seleccionado (catalogos_precios.precio_venta_{basico,intermedio}),
+  // editable desde app.constructoracolombia.com/alcance/catalogo/[catalogoId]/presupuesto — es la
+  // fuente de verdad para el precio del plan, PRECIOS_PLAN solo es un respaldo si el catálogo no lo trae.
+  const [precioVentaCatalogo, setPrecioVentaCatalogo] = useState<{ basico: number | null; intermedio: number | null }>({
+    basico: null,
+    intermedio: null,
+  });
   const [itemsPlanIds, setItemsPlanIds] = useState<string[]>([]);
   const [itemsPlanEstado, setItemsPlanEstado] = useState<Record<string, EstadoItemPlan>>({});
   const [itemsOcultos, setItemsOcultos] = useState<Set<string>>(new Set());
@@ -248,14 +297,14 @@ export default function PresupuestoManual() {
     void cargar();
   }, []);
 
-  // recalcula precioBase cuando cambia plan o conjunto
+  // recalcula precioBase cuando cambia plan, conjunto o el precio real del catálogo
   useEffect(() => {
     if (!planBase) { setPrecioBase(null); return; }
     const precios = PRECIOS_PLAN[conjunto] || PRECIOS_PLAN["default"];
-    if (planBase === "Plan Básico") setPrecioBase(precios.basico);
-    else if (planBase === "Plan Intermedio Plus") setPrecioBase(precios.intermedio);
+    if (planBase === "Plan Básico") setPrecioBase(precioVentaCatalogo.basico ?? precios.basico);
+    else if (planBase === "Plan Intermedio Plus") setPrecioBase(precioVentaCatalogo.intermedio ?? precios.intermedio);
     else setPrecioBase(null);
-  }, [planBase, conjunto]);
+  }, [planBase, conjunto, precioVentaCatalogo]);
 
   // inicializa estado de ítems del plan cuando cambia planBase
   useEffect(() => {
@@ -545,16 +594,32 @@ export default function PresupuestoManual() {
 
   // auto-cargar ítems cuando cambia el catálogo seleccionado
   useEffect(() => {
-    if (!catalogoId) { setItems([]); setSeleccionados({}); return; }
+    if (!catalogoId) {
+      setItems([]);
+      setSeleccionados({});
+      setPrecioVentaCatalogo({ basico: null, intermedio: null });
+      return;
+    }
     setLoading(true);
     void (async () => {
       try {
-        const { data } = await supabase
-          .from("catalogo_items")
-          .select("id, codigo, categoria, nombre, descripcion, valor_venta")
-          .eq("catalogo_id", catalogoId)
-          .eq("activo", true)
-          .order("categoria");
+        const [{ data }, { data: precios }] = await Promise.all([
+          supabase
+            .from("catalogo_items")
+            .select("id, codigo, categoria, nombre, descripcion, valor_venta, subcategoria_manual")
+            .eq("catalogo_id", catalogoId)
+            .eq("activo", true)
+            .order("categoria"),
+          supabase
+            .from("catalogos_precios")
+            .select("precio_venta_basico, precio_venta_intermedio")
+            .eq("id", catalogoId)
+            .maybeSingle(),
+        ]);
+        setPrecioVentaCatalogo({
+          basico: precios?.precio_venta_basico ?? null,
+          intermedio: precios?.precio_venta_intermedio ?? null,
+        });
         setItemsPlanIds([]);
         setItems(data || []);
         if (pendingSeleccionadosRef.current !== null) {
@@ -580,7 +645,8 @@ export default function PresupuestoManual() {
     hasInitCategoriasRef.current = true;
     const catMap = new Map<string, boolean>();
     for (const item of items) {
-      catMap.set(item.categoria, (catMap.get(item.categoria) ?? false) || seleccionados[item.id] !== undefined);
+      const sub = resolverSubcategoria(item.categoria, item.subcategoria_manual);
+      catMap.set(sub, (catMap.get(sub) ?? false) || seleccionados[item.id] !== undefined);
     }
     const colapsadas = new Set([...catMap.entries()].filter(([, hasSel]) => !hasSel).map(([cat]) => cat));
     setCategoriasColapsadas(colapsadas);
@@ -988,7 +1054,7 @@ export default function PresupuestoManual() {
     const t = busqueda.toLowerCase();
     return i.nombre.toLowerCase().includes(t) || (i.descripcion || "").toLowerCase().includes(t);
   });
-  const grupos = agruparPorCategoria(itemsFiltrados);
+  const grupos = agruparPorSubcategoria(itemsFiltrados);
   const todasColapsadas = grupos.length > 0 && grupos.every(({ categoria }) => categoriasColapsadas.has(categoria));
   const toggleTodas = () => {
     if (todasColapsadas) {
