@@ -1068,7 +1068,7 @@ export default function PresupuestoManual() {
   return (
     <div className="min-h-screen bg-gray-50">
       {toast && (
-        <div className="fixed right-6 top-6 z-50 rounded-lg bg-gray-900 px-4 py-3 text-sm text-white shadow-lg">
+        <div className="fixed right-6 top-6 z-50 rounded-lg bg-[#1a2332] px-4 py-3 text-sm text-white shadow-lg">
           {toast}
         </div>
       )}
@@ -1090,13 +1090,13 @@ export default function PresupuestoManual() {
           </div>
           <div className="mt-4 flex gap-2">
             {[1, 2].map((n) => (
-              <div key={n} className={`h-1.5 flex-1 rounded-full transition-colors ${n <= paso ? "bg-emerald-500" : "bg-gray-200"}`} />
+              <div key={n} className={`h-1.5 flex-1 rounded-full transition-colors ${n <= paso ? "bg-[#1a2332]" : "bg-gray-200"}`} />
             ))}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               onClick={() => setMostrarGuardar(true)}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              className="rounded-lg bg-[#1a2332] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#2a3548]"
             >
               Guardar borrador
             </button>
@@ -1138,8 +1138,8 @@ export default function PresupuestoManual() {
                   {(cliente.proyecto || nombreConjuntoFinal) && <><span className="mx-2 text-gray-300">·</span><span className="text-gray-600">{cliente.proyecto || nombreConjuntoFinal}</span></>}
                   {planBase && <><span className="mx-2 text-gray-300">·</span><span className="text-gray-500">{planBase}</span></>}
                   {leadId && (
-                    <span className="ml-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Lead vinculado
+                    <span className="ml-3 inline-flex items-center gap-1 rounded-full bg-[#1a2332]/10 px-2 py-0.5 text-xs font-medium text-[#1a2332]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#1a2332]" /> Lead vinculado
                     </span>
                   )}
                 </div>
@@ -1206,8 +1206,8 @@ export default function PresupuestoManual() {
                 })()}
                 <div className="mt-2">
                   {leadId ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Lead vinculado
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1a2332]/10 px-3 py-1 text-xs font-medium text-[#1a2332]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#1a2332]" /> Lead vinculado
                     </span>
                   ) : cliente.nombre.trim() && cliente.telefono.trim() ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
@@ -1246,7 +1246,7 @@ export default function PresupuestoManual() {
                       if (e.target.value !== "Otro") setConjuntoPersonalizado("");
                       if (!cliente.proyecto.trim() && e.target.value !== "Otro") setCliente((p) => ({ ...p, proyecto: e.target.value }));
                     }}
-                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
                   >
                     <option value="">Selecciona un conjunto…</option>
                     {CONJUNTOS.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1257,7 +1257,7 @@ export default function PresupuestoManual() {
                       value={conjuntoPersonalizado}
                       onChange={(e) => setConjuntoPersonalizado(e.target.value)}
                       placeholder="Escribe el nombre del conjunto…"
-                      className="mt-2 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="mt-2 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
                     />
                   )}
                 </div>
@@ -1266,14 +1266,14 @@ export default function PresupuestoManual() {
                   <select
                     value={planBase}
                     onChange={(e) => setPlanBase(e.target.value)}
-                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
                   >
                     <option value="">(ninguno)</option>
                     <option value="Plan Básico">Plan Básico</option>
                     <option value="Plan Intermedio Plus">Plan Intermedio Plus</option>
                   </select>
                   {planBase && precioBase !== null && (
-                    <p className="mt-1 text-xs text-emerald-600">
+                    <p className="mt-1 text-xs text-[#96773f]">
                       Precio: {cop(precioBase)} — {nombreConjuntoFinal || "precio estándar"}
                     </p>
                   )}
@@ -1292,7 +1292,7 @@ export default function PresupuestoManual() {
               <select
                 value={catalogoId}
                 onChange={(e) => setCatalogoId(e.target.value)}
-                className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
               >
                 <option value="">Selecciona un catálogo…</option>
                 {catalogos.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -1387,7 +1387,7 @@ export default function PresupuestoManual() {
                                 <button
                                   type="button"
                                   onClick={() => toggleItemPlan(itemNombre)}
-                                  className={`rounded px-2 py-0.5 text-xs font-bold transition-colors ${aplica ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-600 hover:bg-red-200"}`}
+                                  className={`rounded px-2 py-0.5 text-xs font-bold transition-colors ${aplica ? "bg-[#b08d4f]/15 text-[#96773f] hover:bg-[#b08d4f]/25" : "bg-red-100 text-red-600 hover:bg-red-200"}`}
                                 >
                                   {aplica ? "SÍ" : "NO"}
                                 </button>
@@ -1438,16 +1438,16 @@ export default function PresupuestoManual() {
                       <td />
                       <td className="px-4 py-1.5 text-gray-900">
                         Tendedero abatible en zona húmeda
-                        <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">BONUS GRATIS</span>
+                        <span className="ml-2 rounded bg-[#b08d4f]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#96773f]">BONUS GRATIS</span>
                       </td>
                       <td className="px-3 py-1.5 text-center">
-                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">SÍ</span>
+                        <span className="rounded bg-[#b08d4f]/15 px-2 py-0.5 text-xs font-bold text-[#96773f]">SÍ</span>
                       </td>
                       <td className="px-3 py-1.5 text-center text-xs text-gray-700">1</td>
                       {hayDescuentos && <td />}
                     </tr>
                     {/* Total plan */}
-                    <tr className="bg-gray-900">
+                    <tr className="bg-[#1a2332]">
                       <td colSpan={hayDescuentos ? 5 : 4} className="px-4 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-white">TOTAL {planBase}</span>
@@ -1475,7 +1475,7 @@ export default function PresupuestoManual() {
                           </div>
                         </div>
                         {precioManual !== null && precioManual !== precioBase && (
-                          <div className="mt-0.5 text-right text-[10px] text-emerald-400">editado manualmente</div>
+                          <div className="mt-0.5 text-right text-[10px] text-[#b08d4f]">editado manualmente</div>
                         )}
                         {precioManual === null && ajusteTotal < 0 && (
                           <div className="mt-1 text-right text-[10px] font-semibold text-red-400">
@@ -1489,9 +1489,7 @@ export default function PresupuestoManual() {
               </div>
             )}
 
-            <div className="flex gap-6">
-              {/* columna ítems del catálogo */}
-              <div className="min-w-0 flex-1">
+            <div className="min-w-0">
                 <div className="mb-4">
                   <Input
                     value={busqueda}
@@ -1529,19 +1527,19 @@ export default function PresupuestoManual() {
                   <div key={categoria} className="mb-3">
                     <button
                       onClick={() => toggleCategoria(categoria)}
-                      className="mb-2 flex w-full items-center justify-between rounded-lg bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-100"
+                      className="mb-2 flex w-full items-center justify-between rounded-lg bg-[#b08d4f]/10 px-4 py-2 text-sm font-bold text-[#8a6d3b] transition-colors hover:bg-[#b08d4f]/20"
                     >
                       <span>{categoria}</span>
                       <span className="flex items-center gap-2">
                         {selCount > 0 && (
-                          <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                          <span className="rounded-full bg-[#1a2332] px-2 py-0.5 text-[10px] font-bold text-white">
                             {selCount} sel.
                           </span>
                         )}
                         {colapsada && (
-                          <span className="font-normal text-emerald-600 text-xs">({gItems.length} disponibles)</span>
+                          <span className="font-normal text-[#96773f] text-xs">({gItems.length} disponibles)</span>
                         )}
-                        <span className="text-emerald-500 text-xs">{colapsada ? '▶' : '▼'}</span>
+                        <span className="text-[#96773f] text-xs">{colapsada ? '▶' : '▼'}</span>
                       </span>
                     </button>
                     {!colapsada && (
@@ -1551,20 +1549,20 @@ export default function PresupuestoManual() {
                         const esDePlan = itemsPlanSet.has(item.id);
                         const precioConUtilidad = Math.round(item.valor_venta * (1 + utilidadPct / 100));
                         return (
-                          <div key={item.id} className={`rounded-lg border px-4 py-3 transition-colors ${sel ? "border-emerald-300 bg-emerald-50" : "border-gray-200 bg-white"}`}>
+                          <div key={item.id} className={`rounded-lg border px-4 py-3 transition-colors ${sel ? "border-[#b08d4f]/40 bg-[#b08d4f]/5" : "border-gray-200 bg-white"}`}>
                             <div className="flex items-start gap-3">
                               <input
                                 type="checkbox"
                                 checked={sel}
                                 onChange={(e) => toggleItem(item, e.target.checked)}
-                                className="mt-1 h-4 w-4 cursor-pointer accent-emerald-600"
+                                className="mt-1 h-4 w-4 cursor-pointer accent-[#1a2332]"
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   {item.codigo && <span className="text-xs text-gray-400">{item.codigo} · </span>}
                                   <span className="font-semibold text-gray-900">{item.nombre}</span>
                                   {esDePlan && (
-                                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">Incluido en plan</span>
+                                    <span className="rounded bg-[#b08d4f]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#96773f]">Incluido en plan</span>
                                   )}
                                 </div>
                                 {item.descripcion && <p className="mt-0.5 text-xs text-gray-500">{item.descripcion}</p>}
@@ -1576,8 +1574,8 @@ export default function PresupuestoManual() {
                                 {item.valor_venta > 0 ? (
                                   <>
                                     <span className="text-xs text-gray-400 line-through">{cop(item.valor_venta)}</span>
-                                    <span className="text-sm font-bold text-emerald-700">{cop(precioConUtilidad)}</span>
-                                    <span className="text-[10px] text-emerald-500">+{utilidadPct}% utilidad</span>
+                                    <span className="text-sm font-bold text-[#b08d4f]">{cop(precioConUtilidad)}</span>
+                                    <span className="text-[10px] text-[#96773f]">+{utilidadPct}% utilidad</span>
                                   </>
                                 ) : (
                                   <span className="text-sm font-semibold text-gray-400">A convenir</span>
@@ -1586,7 +1584,7 @@ export default function PresupuestoManual() {
                                   <input
                                     type="number" min={1} value={seleccionados[item.id]}
                                     onChange={(e) => setCantidad(item.id, e.target.value)}
-                                    className="mt-1 h-8 w-16 rounded border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="mt-1 h-8 w-16 rounded border border-gray-300 px-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
                                     style={{ color: "#111827", backgroundColor: "#fff" }}
                                   />
                                 )}
@@ -1601,66 +1599,6 @@ export default function PresupuestoManual() {
                   );
                 })}
               </div>
-
-              {/* panel lateral sticky */}
-              <div className="w-64 shrink-0">
-                <div className="sticky top-6">
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="p-5">
-                      <h3 className="mb-4 font-bold text-gray-900">Resumen</h3>
-                      <div className="mb-2 text-sm text-gray-600">
-                        Ítems: <span className="font-semibold text-gray-900">{itemsSeleccionados.length}</span>
-                      </div>
-                      <div className="mb-4 space-y-2 border-t border-gray-100 pt-4">
-                        {precioBase !== null ? (
-                          <>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Plan base</span>
-                              <span className="font-semibold text-gray-900">{cop(precioEfectivo)}</span>
-                            </div>
-                            {subtotalAdicionales > 0 && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Adicionales</span>
-                                <span className="font-semibold text-gray-900">{cop(subtotalAdicionales)}</span>
-                              </div>
-                            )}
-                            {subtotalManuales > 0 && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Personalizados</span>
-                                <span className="font-semibold text-gray-900">{cop(subtotalManuales)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between border-t border-gray-200 pt-2 text-sm">
-                              <span className="font-bold text-gray-900">TOTAL</span>
-                              <span className="font-bold text-emerald-700">{cop(totalFinal)}</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Total (+20%)</span>
-                            <span className="font-bold text-emerald-700">{cop(totalFinal)}</span>
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        className="w-full bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() => {
-                          const errores = validarParaResumen();
-                          if (errores.length > 0) {
-                            mostrarToast(`⚠️ Completa: ${errores.join(', ')}`);
-                            setDatosDesplegados(true);
-                            return;
-                          }
-                          setPaso(2);
-                        }}
-                      >
-                        Ver resumen →
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </div>
 
             {/* ITEMS MANUALES */}
             <div ref={itemsManualesRef} className="mt-6 border-t-2 border-gray-200 pt-6">
@@ -1765,6 +1703,53 @@ export default function PresupuestoManual() {
                 </div>
               )}
             </div>
+
+            {/* RESUMEN — al final de la página, no en un panel lateral */}
+            <div className="mt-6 rounded-xl bg-[#1a2332] p-5 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-bold text-white">Resumen</h3>
+                  <p className="mt-0.5 text-sm text-white/60">
+                    Ítems: <span className="font-semibold text-white">{itemsSeleccionados.length}</span>
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-white/70">
+                  {precioBase !== null ? (
+                    <>
+                      <span>Plan base <span className="font-semibold text-white">{cop(precioEfectivo)}</span></span>
+                      {subtotalAdicionales > 0 && (
+                        <span>Adicionales <span className="font-semibold text-white">{cop(subtotalAdicionales)}</span></span>
+                      )}
+                      {subtotalManuales > 0 && (
+                        <span>Personalizados <span className="font-semibold text-white">{cop(subtotalManuales)}</span></span>
+                      )}
+                    </>
+                  ) : (
+                    <span>Total (+20%)</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-xs uppercase tracking-wide text-white/50">Total</div>
+                    <div className="text-xl font-bold text-[#b08d4f]">{cop(totalFinal)}</div>
+                  </div>
+                  <Button
+                    className="shrink-0 bg-[#b08d4f] text-white hover:bg-[#96773f]"
+                    onClick={() => {
+                      const errores = validarParaResumen();
+                      if (errores.length > 0) {
+                        mostrarToast(`⚠️ Completa: ${errores.join(', ')}`);
+                        setDatosDesplegados(true);
+                        return;
+                      }
+                      setPaso(2);
+                    }}
+                  >
+                    Ver resumen →
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
             )}
           </div>
@@ -1791,7 +1776,7 @@ export default function PresupuestoManual() {
                 {precioBase !== null && planBase && secciones.length > 0 && (
                   <div className="mb-6 overflow-hidden rounded-lg border border-gray-200">
                     {/* Header negro */}
-                    <div className="bg-gray-900 px-4 py-3">
+                    <div className="bg-[#1a2332] px-4 py-3">
                       <div className="text-xs font-bold text-white">CONSTRUCTORA COLOMBIA REMODELA</div>
                       <div className="text-[11px] text-gray-400">Constructora Colombia Remodela — {nombreConjuntoFinal}</div>
                     </div>
@@ -1819,7 +1804,7 @@ export default function PresupuestoManual() {
                                   <tr key={`r3-${seccion}-${itemNombre}`} className="border-b border-gray-100">
                                     <td className="px-4 py-1.5 text-gray-900">{itemNombre}</td>
                                     <td className="px-3 py-1.5 text-center">
-                                      <span className={`rounded px-2 py-0.5 text-xs font-bold ${aplica ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                                      <span className={`rounded px-2 py-0.5 text-xs font-bold ${aplica ? "bg-[#b08d4f]/15 text-[#96773f]" : "bg-gray-100 text-gray-500"}`}>
                                         {aplica ? "SÍ" : "NO"}
                                       </span>
                                     </td>
@@ -1836,10 +1821,10 @@ export default function PresupuestoManual() {
                         <tr className="border-b border-gray-100">
                           <td className="px-4 py-1.5 text-gray-900">
                             Tendedero abatible en zona húmeda
-                            <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">BONUS GRATIS</span>
+                            <span className="ml-2 rounded bg-[#b08d4f]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#96773f]">BONUS GRATIS</span>
                           </td>
                           <td className="px-3 py-1.5 text-center">
-                            <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">SÍ</span>
+                            <span className="rounded bg-[#b08d4f]/15 px-2 py-0.5 text-xs font-bold text-[#96773f]">SÍ</span>
                           </td>
                           <td className="px-3 py-1.5 text-center text-gray-700">1</td>
                         </tr>
@@ -1857,7 +1842,7 @@ export default function PresupuestoManual() {
                             </tr>
                           ))}
                         {/* Total plan */}
-                        <tr className="bg-gray-900">
+                        <tr className="bg-[#1a2332]">
                           <td colSpan={3} className="px-4 py-2.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-bold text-white">TOTAL {planBase}</span>
@@ -1996,7 +1981,7 @@ export default function PresupuestoManual() {
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
                         <div className="relative">
                           <input type="checkbox" className="sr-only" checked={aplicaIva} onChange={(e) => setAplicaIva(e.target.checked)} />
-                          <div className={`h-5 w-9 rounded-full transition-colors ${aplicaIva ? "bg-emerald-500" : "bg-gray-300"}`} />
+                          <div className={`h-5 w-9 rounded-full transition-colors ${aplicaIva ? "bg-[#1a2332]" : "bg-gray-300"}`} />
                           <div className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${aplicaIva ? "translate-x-4" : "translate-x-0"}`} />
                         </div>
                         Aplicar IVA 19%
@@ -2006,7 +1991,7 @@ export default function PresupuestoManual() {
 
                     <div className="flex w-72 justify-between border-t border-gray-300 pt-2">
                       <span className="text-base font-bold text-gray-900">TOTAL GENERAL</span>
-                      <span className="text-base font-bold text-emerald-700">{cop(totalFinal)}</span>
+                      <span className="text-base font-bold text-[#b08d4f]">{cop(totalFinal)}</span>
                     </div>
                   </div>
                 </div>
@@ -2018,7 +2003,7 @@ export default function PresupuestoManual() {
                     onChange={(e) => setNotas(e.target.value)}
                     rows={4}
                     placeholder="Validez de la cotización, forma de pago, exclusiones, etc."
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
                   />
                 </div>
 
@@ -2088,13 +2073,13 @@ export default function PresupuestoManual() {
             <div className="flex flex-wrap items-center gap-3">
               <button onClick={() => setPaso(1)} className="text-sm text-gray-500 hover:text-gray-700">← Volver a ítems</button>
               <div className="flex-1" />
-              <Button onClick={descargarPDF} variant="outline" className="border-emerald-600 text-emerald-700 hover:bg-emerald-50">Descargar PDF</Button>
+              <Button onClick={descargarPDF} variant="outline" className="border-[#1a2332] text-[#1a2332] hover:bg-[#1a2332]/5">Descargar PDF</Button>
               {leadId && (
                 <Button onClick={guardarVersionPresupuesto} disabled={guardandoVersion} className="bg-violet-600 hover:bg-violet-700">
                   {guardandoVersion ? "Guardando…" : "Guardar como versión"}
                 </Button>
               )}
-              <Button onClick={guardarCotizacion} disabled={guardando} className="bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={guardarCotizacion} disabled={guardando} className="bg-[#1a2332] hover:bg-[#2a3548]">
                 {guardando ? "Guardando…" : "Guardar cotización"}
               </Button>
               <Button variant="ghost" onClick={() => router.push("/")} className="text-gray-600">Ver en Flujo Comercial →</Button>
@@ -2118,10 +2103,10 @@ export default function PresupuestoManual() {
                 onChange={(e) => setNombrePresupuesto(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void guardarPresupuesto()}
                 placeholder="Ej: Apto 301 Ciudadela Verde"
-                className="h-10 w-full rounded-lg border-2 border-gray-300 px-3 text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="h-10 w-full rounded-lg border-2 border-gray-300 px-3 text-gray-900 focus:border-[#b08d4f] focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
               />
             </div>
-            <div className="mb-4 rounded-lg border-l-4 border-emerald-500 bg-emerald-50 p-3 text-sm text-gray-700">
+            <div className="mb-4 rounded-lg border-l-4 border-[#b08d4f] bg-[#b08d4f]/10 p-3 text-sm text-gray-700">
               <p className="font-semibold text-gray-900">Se guardará:</p>
               <p className="text-xs">• Cliente: {cliente.nombre || '(sin nombre)'}</p>
               <p className="text-xs">• Plan: {planBase || '(no seleccionado)'}</p>
@@ -2132,7 +2117,7 @@ export default function PresupuestoManual() {
               <button
                 onClick={() => void guardarPresupuesto()}
                 disabled={cargandoPresupuesto || !nombrePresupuesto.trim()}
-                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:bg-gray-300"
+                className="flex-1 rounded-lg bg-[#1a2332] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#2a3548] disabled:bg-gray-300"
               >
                 {cargandoPresupuesto ? 'Guardando…' : 'Guardar'}
               </button>
