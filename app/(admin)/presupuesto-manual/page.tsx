@@ -196,6 +196,13 @@ const ITEMS_PLAN_INTERMEDIO = [
   "Closet principal RH", "Closet secundario RH", "Luminarias LED", "Aseo final",
 ];
 
+// Cantidad con la que arranca cada ítem del plan al seleccionarlo — la
+// mayoría parte en 1, pero algunos (como las puertas) traen más de una
+// unidad de fábrica en el plan. Si un ítem no está acá, arranca en 1.
+const CANTIDAD_DEFECTO_ITEM_PLAN: Record<string, number> = {
+  "Puerta RH": 3,
+};
+
 // ─── bonus y condiciones ─────────────────────────────────────────────────────
 
 const BONUS_ITEMS = [
@@ -315,7 +322,7 @@ export default function PresupuestoManual() {
       : [];
     const estadoInicial: Record<string, EstadoItemPlan> = {};
     listaItems.forEach((nombre) => {
-      estadoInicial[nombre] = { aplica: true, cantidad: 1, descuento: 0 };
+      estadoInicial[nombre] = { aplica: true, cantidad: CANTIDAD_DEFECTO_ITEM_PLAN[nombre] ?? 1, descuento: 0 };
     });
     setItemsPlanEstado(estadoInicial);
     setItemsOcultos(new Set());
