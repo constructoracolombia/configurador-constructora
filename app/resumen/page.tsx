@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCotizador } from "@/lib/store/cotizador";
+import type { ProductoConCantidad } from "@/lib/store/cotizador";
+import { usePreciosPlanProyecto } from "@/lib/hooks/usePreciosPlanProyecto";
 import { planesBase, proyectos, findProyecto, getNombreAdicional, getPrecioAdicional } from "@/lib/data/catalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { generarCotizacionPDF } from "@/lib/utils/pdf-generator";
@@ -68,7 +70,22 @@ export default function ResumenPage() {
     clienteNombre,
     clienteTelefono,
     clienteEmail,
+    preciosLiveAdicionales,
   } = useCotizador();
+  // Re-sincroniza los precios en vivo por si el store trae valores viejos
+  // guardados en localStorage de una visita anterior (ej. el catálogo
+  // cambió de precio desde que el cliente entró) — así lo que se envía acá
+  // nunca queda desactualizado aunque el usuario haya saltado directo a
+  // /resumen. El valor de retorno no se usa acá, solo el efecto de
+  // sincronizar el store.
+  usePreciosPlanProyecto(proyecto);
+  // Precio en vivo del catálogo si este adicional está mapeado y el
+  // catálogo del proyecto lo tiene (poblado por usePreciosPlanProyecto en
+  // /plan y /personalizar), si no, el precio dinámico por plan de siempre.
+  // Todo lo que se muestra, se manda al PDF y se guarda en la DB en esta
+  // página pasa por acá para no desincronizarse del total ya calculado.
+  const resolverPrecioAdicional = (a: ProductoConCantidad) =>
+    preciosLiveAdicionales[a.id] ?? getPrecioAdicional(a, planBase);
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [emailEnviado, setEmailEnviado] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
@@ -92,7 +109,7 @@ export default function ResumenPage() {
 
   const totalAdicionales = adicionales.reduce((sum, adicional) => {
     const qty = adicional.cantidad ?? 1;
-    return sum + getPrecioAdicional(adicional, planBase) * qty;
+    return sum + resolverPrecioAdicional(adicional) * qty;
   }, 0);
 
   const planBasicoMonto = esSanJuan ? 0 : getPrecioPlanBase();
@@ -178,7 +195,7 @@ export default function ResumenPage() {
           adicionales: adicionales.map((a) => {
             const qty = a.cantidad ?? 1;
             const nombre = getNombreItem(a.id, getNombreAdicional(a, planBase));
-            const precio = getPrecioAdicional(a, planBase);
+            const precio = resolverPrecioAdicional(a);
             return {
               nombre: qty > 1 ? `${nombre} (×${qty})` : nombre,
               precio: precio * qty,
@@ -301,7 +318,7 @@ export default function ResumenPage() {
         },
         adicionales: adicionales.map((a) => ({
           nombre: getNombreItem(a.id, getNombreAdicional(a, planBase)),
-          precio: getPrecioAdicional(a, planBase),
+          precio: resolverPrecioAdicional(a),
           cantidad: a.cantidad || 1,
         })),
         itemsManuales: itemsManuales && itemsManuales.length > 0 ? itemsManuales : [],
@@ -381,7 +398,7 @@ export default function ResumenPage() {
         },
         adicionales: adicionales.map((a) => ({
           nombre: getNombreItem(a.id, getNombreAdicional(a, planBase)),
-          precio: getPrecioAdicional(a, planBase),
+          precio: resolverPrecioAdicional(a),
           cantidad: a.cantidad || 1,
         })),
         itemsManuales: itemsManuales && itemsManuales.length > 0 ? itemsManuales : [],
@@ -722,7 +739,7 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                       const qty = adicional.cantidad ?? 1;
                       const nombreBase = getNombreAdicional(adicional, planBase);
                       const nombreMostrar = getNombreItem(adicional.id, nombreBase);
-                      const precioMostrar = getPrecioAdicional(adicional, planBase);
+                      const precioMostrar = resolverPrecioAdicional(adicional);
                       const lineTotal = precioMostrar * qty;
                       const enEdicion = itemEnEdicion === adicional.id;
                       return (

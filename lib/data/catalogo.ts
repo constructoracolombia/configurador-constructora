@@ -243,6 +243,97 @@ export async function getPreciosPlanLive(
   return { basico: data.precio_venta_basico, intermedio: data.precio_venta_intermedio };
 }
 
+const normalizarNombreCatalogo = (s: string) => s.toLowerCase().trim();
+
+// Adicionales cuyo nombre corresponde, sin ambigüedad, a un único ítem real
+// del catálogo de Finanzas (T1 — T2/T3 son copias con los mismos nombres,
+// solo cambia el precio). Verificado a mano uno por uno el 2026-07-28, NO
+// generado por match automático de texto (el auto-match producía falsos
+// positivos, ej. "Horno instalado" calzaba mejor con "Punto de gas para
+// horno" que con el horno real).
+//
+// Deliberadamente NO incluye:
+// - Adicionales con precioPorPlan que básico e intermedio difieren
+//   (complementar-enchape, combo-premium, barra-patera,
+//   barra-patera-mueble, meson-sinterizado, barra-sinterizado): Finanzas
+//   solo tiene un precio por ítem, no uno por plan — enlazarlos live
+//   perdería el descuento de intermedio silenciosamente.
+// - Los 11 ítems "NUEVOS PRODUCTOS (Plan Básico / San Juan)" y sus
+//   contrapartes originales con el mismo nombre pero id distinto
+//   (meson-granito/meson-granito-cocina, barra-soporte/barra-granito-soporte,
+//   etc.) — son duplicados internos del propio arreglo `adicionales` de
+//   cuando existía San Juan de la Cuesta, con precios distintos para el
+//   mismo concepto. Cuál de los dos IDs debe quedar activo es una decisión
+//   de producto, no de datos.
+// - salpicadero-sinterizado: no existe ningún ítem equivalente en el
+//   catálogo de Finanzas todavía.
+export const ADICIONAL_A_NOMBRE_CATALOGO: Record<string, string> = {
+  "estuco": "Estucar muros y techo",
+  "pintura": "3 manos pintura",
+  "mortero": "Mortero de nivelación impermeabilizado",
+  "drywall": "1.5 Drywall en baños y cocina",
+  "ceramica-piso": "Enchape cerámica (40 mil/m2) piso general con guardaescobas + balcón",
+  "porcelanato": "Enchape porcelanato (60 mil/m2) piso general con guardaescobas + balcón",
+  "enchape-bano-principal": "Enchape completo con cerámica en baño",
+  "salpicadero": "Enchape cerámica salpicadero",
+  "zona-humeda": "Enchapar zona húmeda",
+  "nicho": "Nicho iluminado",
+  "combo-basico": "Instalación Combo básico",
+  "torre-ducha": "Torre ducha negra instalda",
+  "ducha-cuadrada": "Ducha elegante cuadrada metalica (negra)",
+  "barra-soporte": "Barra Granito san gabriel/Quarztone blanco con soporte o sobre mueble",
+  "estufa": "Estufa plateada challenger/haceb/mabe/abba instalada",
+  "estufa-vidrio": "Estufa de vidrio instalda",
+  "horno": "Horno challenger/haceb/mabe/abba instalado",
+  "lavaplatos": "Lavaplatos acero inoxidable instalado",
+  "griferia-cocina": "Grifería cocina tradicional instalada",
+  "closet-principal": "Closet habitación principal melamina RH",
+  "closet-espaldar": "Closet en espaldar de cama habitación principal",
+  "closet-secundario": "Closet habitación secundaria/tercero melamina RH",
+  "mueble-barra-lamparas": "Mueble sobre barra pared-techo con lamparas o luz led",
+  "mueble-barra-vinera": "Mueble superior con vinera",
+  "mueble-lavamanos": "Mueble bajo lavamanos",
+  "mueble-bajo-barra": "Mueble bajo barra",
+  "meson-lavamanos-cuadrado": "Mesón Granito san gabriel/Quarztone blanco bajo lavamanos cuadrado",
+  "meson-guitarra": "Mesón Granito san gabriel/Quarztone blanco guitarra bajo lavamanos",
+  "division-vidrio-bano": "División de vidrio",
+  "luminarias": "Luminarias Led",
+  "cerradura-inteligente": "Cerradura inteligente con enchape de madera interno",
+  "malla-seguridad": "Malla de seguridad en balcón y habitaciones",
+  "tendedero": "Tendedero abatible",
+};
+
+/**
+ * Precios en vivo de los adicionales mapeados, para el catálogo del
+ * proyecto actual. Devuelve solo las entradas que sí matchearon — el
+ * llamador debe caer a getPrecioAdicional() para todo lo demás (adicional
+ * no mapeado, catálogo inexistente, o nombre no encontrado en ese
+ * catálogo puntual).
+ */
+export async function getPreciosAdicionalesLive(
+  proyectoId: string | null
+): Promise<Record<string, number>> {
+  const catalogoId = getCatalogoIdPorProyecto(proyectoId);
+  if (!catalogoId) return {};
+
+  const { data, error } = await supabase
+    .from("catalogo_items")
+    .select("nombre, valor_venta")
+    .eq("catalogo_id", catalogoId)
+    .eq("activo", true);
+
+  if (error || !data) return {};
+
+  const porNombre = new Map(data.map((it) => [normalizarNombreCatalogo(it.nombre), it.valor_venta]));
+
+  const resultado: Record<string, number> = {};
+  for (const [adicionalId, nombreCatalogo] of Object.entries(ADICIONAL_A_NOMBRE_CATALOGO)) {
+    const valor = porNombre.get(normalizarNombreCatalogo(nombreCatalogo));
+    if (valor != null) resultado[adicionalId] = valor;
+  }
+  return resultado;
+}
+
 // ═══════════════════════════════════════
 // PRODUCTO Y ADICIONALES (54 ítems)
 // ═══════════════════════════════════════

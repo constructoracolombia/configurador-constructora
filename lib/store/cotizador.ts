@@ -25,6 +25,14 @@ interface CotizadorState {
   clienteTelefono: string;
   clienteEmail: string;
   _hasHydrated: boolean;
+  // Precios en vivo del catálogo de Finanzas (Supabase) para el proyecto
+  // actual — poblados por usePreciosPlanProyecto. null/{} = todavía no
+  // cargaron o el proyecto no tiene catálogo asignado; los getters caen al
+  // precio hardcodeado de lib/data/catalogo.ts en ese caso. Sin esto, cada
+  // página (plan, personalizar, resumen) podía terminar mostrando o
+  // enviando un precio distinto para el mismo proyecto.
+  preciosLivePlan: { basico: number; intermedio: number } | null;
+  preciosLiveAdicionales: Record<string, number>;
 }
 
 interface CotizadorActions {
@@ -39,6 +47,10 @@ interface CotizadorActions {
   clearAdicionales: () => void;
   setItemsManuales: (items: ItemManual[]) => void;
   setHasHydrated: (state: boolean) => void;
+  setPreciosLive: (
+    plan: { basico: number; intermedio: number } | null,
+    adicionales: Record<string, number>
+  ) => void;
   setClienteInfo: (nombre: string, telefono: string, email: string) => void;
   reset: () => void;
   getPrecioPlanBase: () => number;
@@ -61,6 +73,8 @@ export const useCotizador = create<CotizadorStore>()(
       clienteTelefono: "",
       clienteEmail: "",
       _hasHydrated: false,
+      preciosLivePlan: null,
+      preciosLiveAdicionales: {},
 
       // Acciones
       setProyecto: (proyecto) => {
@@ -167,6 +181,9 @@ export const useCotizador = create<CotizadorStore>()(
 
       setHasHydrated: (state) => set({ _hasHydrated: state }),
 
+      setPreciosLive: (plan, adicionales) =>
+        set({ preciosLivePlan: plan, preciosLiveAdicionales: adicionales }),
+
       setClienteInfo: (nombre, telefono, email) => {
         if (process.env.NODE_ENV === "development") {
           console.log("👤 Datos del cliente guardados:", { nombre, telefono, email });
@@ -197,41 +214,42 @@ export const useCotizador = create<CotizadorStore>()(
       getPrecioPlanBase: () => {
         const state = get();
         if (!state.planBase) return 0;
-        // Llamada directa a la función del catálogo con el proyecto actual
-        const precios = getPreciosPlanPorProyecto(state.proyecto);
+        // Precio en vivo del catálogo de Finanzas si ya cargó (ver
+        // usePreciosPlanProyecto); si no, el hardcodeado de siempre.
+        const precios = state.preciosLivePlan ?? getPreciosPlanPorProyecto(state.proyecto);
         const precio = state.planBase === "basico" ? precios.basico : precios.intermedio;
         if (process.env.NODE_ENV === "development") {
-          console.log("💰 getPrecioPlanBase:", { proyecto: state.proyecto, plan: state.planBase, precio });
+          console.log("💰 getPrecioPlanBase:", { proyecto: state.proyecto, plan: state.planBase, precio, live: !!state.preciosLivePlan });
         }
         return precio;
       },
 
       getPrecioAdicionales: () => {
         const state = get();
-        
+
         // Bonos gratis que NO suman al total
         const bonusGratis = ["nicho iluminado", "tendedero", "ducha elegante"];
-        
+
         // Filtrar adicionales que NO son bonos gratis
         const adicionalesQueSeCobran = state.adicionales.filter((item) => {
           const nombreLower = item.nombre.toLowerCase();
           return !bonusGratis.some((b) => nombreLower.includes(b));
         });
-        
+
         return adicionalesQueSeCobran.reduce((sum, item) => {
-          // Usar precio dinámico según el plan seleccionado
-          const precioItem = getPrecioAdicional(item, state.planBase);
+          // Precio en vivo del catálogo (si este adicional está mapeado y
+          // el catálogo lo tiene), si no, el precio dinámico por plan de
+          // siempre.
+          const precioLive = state.preciosLiveAdicionales[item.id];
+          const precioItem = precioLive ?? getPrecioAdicional(item, state.planBase);
           return sum + precioItem * (item.cantidad ?? 1);
         }, 0);
       },
 
       getTotal: () => {
         const state = get();
-        // Calcular directamente sin depender de métodos encadenados
         if (!state.planBase) return 0;
-        const precios = getPreciosPlanPorProyecto(state.proyecto);
-        const precioBase = state.planBase === "basico" ? precios.basico : precios.intermedio;
-        return precioBase + state.getPrecioAdicionales();
+        return state.getPrecioPlanBase() + state.getPrecioAdicionales();
       },
 
       getCantidadAdicionales: () => {

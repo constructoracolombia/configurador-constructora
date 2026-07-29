@@ -171,9 +171,14 @@ export default function PersonalizarPage() {
                 const tieneMultiples = producto.permiteMultiples;
                 const maxCantidad = producto.maxCantidad || 2;
                 
-                // Obtener nombre y precio según el plan seleccionado
+                // Obtener nombre y precio según el plan seleccionado — precio
+                // en vivo del catálogo si este adicional está mapeado y el
+                // catálogo del proyecto lo tiene (ver usePreciosPlanProyecto),
+                // si no, el precio dinámico por plan de siempre.
                 const nombreMostrar = getNombreAdicional(producto, store.planBase);
-                const precioMostrar = getPrecioAdicional(producto, store.planBase);
+                const precioMostrar =
+                  store.preciosLiveAdicionales[producto.id] ??
+                  getPrecioAdicional(producto, store.planBase);
 
                 return (
                   <Card

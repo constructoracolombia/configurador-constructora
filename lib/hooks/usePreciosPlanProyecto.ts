@@ -3,19 +3,26 @@ import {
   getCatalogoIdPorProyecto,
   getPreciosPlanLive,
   getPreciosPlanPorProyecto,
+  getPreciosAdicionalesLive,
 } from "@/lib/data/catalogo";
+import { useCotizador } from "@/lib/store/cotizador";
 
-// Un solo hook para /plan y /personalizar: evita que las dos páginas
-// muestren precios distintos para el mismo proyecto (una con el precio en
-// vivo y otra con el fallback hardcodeado desincronizado).
+// Un solo hook para /plan, /personalizar y /resumen: evita que las tres
+// páginas (incluida la que arma la cotización final que se envía) muestren
+// precios distintos para el mismo proyecto. Además de devolver el precio
+// del plan para mostrarlo, sincroniza TODOS los precios en vivo (plan +
+// adicionales mapeados) en el store — es lo que leen store.getPrecioPlanBase(),
+// getPrecioAdicionales() y getTotal(), usados por /resumen y por el envío
+// real de la cotización.
 //
 // Empieza en el fallback (instantáneo, sin parpadeo de "cargando" para
 // proyectos sin catálogo — la mayoría hoy) y, si el proyecto tiene
-// catálogo asignado en Finanzas, lo reemplaza por el precio real de
-// catalogos_precios en cuanto llega.
+// catálogo asignado en Finanzas, lo reemplaza por el precio real en cuanto
+// llega.
 export function usePreciosPlanProyecto(proyectoId: string | null) {
   const catalogoId = getCatalogoIdPorProyecto(proyectoId);
   const fallback = getPreciosPlanPorProyecto(proyectoId);
+  const setPreciosLive = useCotizador((s) => s.setPreciosLive);
 
   const [precios, setPrecios] = useState(fallback);
   const [cargando, setCargando] = useState(!!catalogoId);
@@ -25,14 +32,19 @@ export function usePreciosPlanProyecto(proyectoId: string | null) {
     if (!catalogoId) {
       setPrecios(getPreciosPlanPorProyecto(proyectoId));
       setCargando(false);
+      setPreciosLive(null, {});
       return;
     }
     setCargando(true);
-    getPreciosPlanLive(proyectoId).then((live) => {
-      if (cancelado) return;
-      setPrecios(live ?? getPreciosPlanPorProyecto(proyectoId));
-      setCargando(false);
-    });
+    Promise.all([getPreciosPlanLive(proyectoId), getPreciosAdicionalesLive(proyectoId)]).then(
+      ([live, adicionalesLive]) => {
+        if (cancelado) return;
+        const resuelto = live ?? getPreciosPlanPorProyecto(proyectoId);
+        setPrecios(resuelto);
+        setCargando(false);
+        setPreciosLive(live, adicionalesLive);
+      }
+    );
     return () => {
       cancelado = true;
     };
