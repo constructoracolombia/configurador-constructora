@@ -192,10 +192,10 @@ export function getPreciosPlanPorProyecto(proyectoId: string | null): {
 // Cada catálogo de Finanzas (app.constructoracolombia.com/alcance/catalogo)
 // agrupa varios conjuntos que comparten el mismo precio de plan. Un
 // proyecto que no aparezca acá usa el precio hardcodeado de
-// getPreciosPlanPorProyecto (fallback) — hoy es el caso de "Solei", que
-// tiene su propio catálogo pendiente de crear (T3).
+// getPreciosPlanPorProyecto (fallback).
 export const T1_CATALOGO_ID = "0b414ae4-ba21-4591-9c81-b42cc93b2940"; // CV, Fiore, Beltramonto, MDV, Montebello, Alto Tramonti, Fontana Sierra
 export const T2_CATALOGO_ID = "f962d869-7fc6-4169-ad13-66ab8a9bb275"; // Parque Oriente, Azafrán
+export const T3_CATALOGO_ID = "0bf75cce-ed56-47ad-89c3-6c38cfd99d5c"; // Parque Oriente Solei
 
 export const PROYECTO_A_CATALOGO: Record<string, string> = {
   "ciudadela-verde": T1_CATALOGO_ID,
@@ -207,6 +207,7 @@ export const PROYECTO_A_CATALOGO: Record<string, string> = {
   "fontana-de-la-sierra": T1_CATALOGO_ID,
   "parque-oriente": T2_CATALOGO_ID,
   "azafran": T2_CATALOGO_ID,
+  "solei": T3_CATALOGO_ID,
 };
 
 /**
