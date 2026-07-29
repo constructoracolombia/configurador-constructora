@@ -3,17 +3,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Check } from "lucide-react";
-import { 
-  categorias, 
-  proyectos,
+import {
+  categorias,
   findProyecto,
   adicionalesFiltrados,
   adicionalesOcultosPorPlan,
   getNombreAdicional,
   getPrecioAdicional,
-  getPreciosPlanPorProyecto,
 } from "@/lib/data/catalogo";
 import type { Producto } from "@/lib/data/catalogo";
+import { usePreciosPlanProyecto } from "@/lib/hooks/usePreciosPlanProyecto";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { ImagenOptimizada } from "@/components/ImagenOptimizada";
@@ -76,8 +75,9 @@ export default function PersonalizarPage() {
     ? (findProyecto(store.proyecto)?.nombre ?? "tu proyecto")
     : "tu proyecto";
 
-  // Precios dinámicos por proyecto (cálculo directo, no depende del store getter)
-  const preciosDinamicos = getPreciosPlanPorProyecto(store.proyecto);
+  // Precios dinámicos por proyecto — mismo hook que /plan, así los dos
+  // páginas siempre muestran el mismo precio para el mismo proyecto.
+  const { precios: preciosDinamicos } = usePreciosPlanProyecto(store.proyecto);
   const precioBase = store.planBase ? preciosDinamicos[store.planBase] : 0;
 
   // Total = precio base del plan + adicionales

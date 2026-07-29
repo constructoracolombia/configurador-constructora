@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabase/client";
+
 // ═══════════════════════════════════════
 // PROYECTOS (para landing y flujo)
 // ═══════════════════════════════════════
@@ -9,13 +11,6 @@ export const proyectos = [
     precioIntermedioEspecial: true,
     imagen: "/proyectos/ciudadela-verde.jpg",
     tipo: "vis_remodelacion",
-  },
-  {
-    id: "san-juan-cuesta",
-    nombre: "San Juan de la Cuesta",
-    ubicacion: "Piedecuesta, Santander",
-    imagen: "/proyectos/san-juan-cuesta.jpg",
-    tipo: "acabados_premium",
   },
   {
     id: "beltramonto",
@@ -188,6 +183,63 @@ export function getPreciosPlanPorProyecto(proyectoId: string | null): {
   }
 
   return { basico: 16_900_000, intermedio: 32_900_000 };
+}
+
+// ═══════════════════════════════════════
+// PRECIOS EN VIVO — catálogo de Finanzas (Supabase)
+// ═══════════════════════════════════════
+
+// Cada catálogo de Finanzas (app.constructoracolombia.com/alcance/catalogo)
+// agrupa varios conjuntos que comparten el mismo precio de plan. Un
+// proyecto que no aparezca acá usa el precio hardcodeado de
+// getPreciosPlanPorProyecto (fallback) — hoy es el caso de "Solei", que
+// tiene su propio catálogo pendiente de crear (T3).
+export const T1_CATALOGO_ID = "0b414ae4-ba21-4591-9c81-b42cc93b2940"; // CV, Fiore, Beltramonto, MDV, Montebello, Alto Tramonti, Fontana Sierra
+export const T2_CATALOGO_ID = "f962d869-7fc6-4169-ad13-66ab8a9bb275"; // Parque Oriente, Azafrán
+
+export const PROYECTO_A_CATALOGO: Record<string, string> = {
+  "ciudadela-verde": T1_CATALOGO_ID,
+  "fiore": T1_CATALOGO_ID,
+  "beltramonto": T1_CATALOGO_ID,
+  "morada-del-viento": T1_CATALOGO_ID,
+  "montebello": T1_CATALOGO_ID,
+  "alto-tramonti": T1_CATALOGO_ID,
+  "fontana-de-la-sierra": T1_CATALOGO_ID,
+  "parque-oriente": T2_CATALOGO_ID,
+  "azafran": T2_CATALOGO_ID,
+};
+
+/**
+ * Catálogo de Finanzas (si existe) para un proyecto dado.
+ */
+export function getCatalogoIdPorProyecto(proyectoId: string | null): string | undefined {
+  const proyecto = findProyecto(proyectoId);
+  return proyecto ? PROYECTO_A_CATALOGO[proyecto.id] : undefined;
+}
+
+/**
+ * Precios de plan en vivo desde Supabase (catalogos_precios), para
+ * proyectos que ya tienen catálogo asignado en Finanzas. Devuelve null si
+ * el proyecto no tiene catálogo, si la consulta falla, o si el catálogo
+ * no tiene los precios configurados — en cualquiera de esos casos el
+ * llamador debe caer al fallback de getPreciosPlanPorProyecto.
+ */
+export async function getPreciosPlanLive(
+  proyectoId: string | null
+): Promise<{ basico: number; intermedio: number } | null> {
+  const catalogoId = getCatalogoIdPorProyecto(proyectoId);
+  if (!catalogoId) return null;
+
+  const { data, error } = await supabase
+    .from("catalogos_precios")
+    .select("precio_venta_basico, precio_venta_intermedio")
+    .eq("id", catalogoId)
+    .single();
+
+  if (error || !data || data.precio_venta_basico == null || data.precio_venta_intermedio == null) {
+    return null;
+  }
+  return { basico: data.precio_venta_basico, intermedio: data.precio_venta_intermedio };
 }
 
 // ═══════════════════════════════════════

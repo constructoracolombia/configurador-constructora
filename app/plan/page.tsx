@@ -4,7 +4,8 @@ import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check } from "lucide-react";
-import { proyectos, findProyecto, planesBase, getPreciosPlanPorProyecto } from "@/lib/data/catalogo";
+import { findProyecto, planesBase } from "@/lib/data/catalogo";
+import { usePreciosPlanProyecto } from "@/lib/hooks/usePreciosPlanProyecto";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -15,12 +16,6 @@ function getProyectoNombre(proyectoId: string | null): string {
   if (!proyectoId) return "";
   const proyecto = findProyecto(proyectoId);
   return proyecto?.nombre ?? proyectoId;
-}
-
-function tieneDescuento(proyectoId: string | null): boolean {
-  if (!proyectoId) return false;
-  const precios = getPreciosPlanPorProyecto(proyectoId);
-  return precios.intermedio < planesBase.intermedio.precio;
 }
 
 function PlanPageContent() {
@@ -63,8 +58,8 @@ function PlanPageContent() {
     }
   }, [proyectoId, router]);
 
-  const precios = getPreciosPlanPorProyecto(proyectoId);
-  const mostrarAhorro = tieneDescuento(proyectoId);
+  const { precios, cargando: cargandoPrecios } = usePreciosPlanProyecto(proyectoId);
+  const mostrarAhorro = precios.intermedio < planesBase.intermedio.precio;
   const ahorro = planesBase.intermedio.precio - precios.intermedio;
 
   const handleElegirPlan = (plan: "basico" | "intermedio") => {
@@ -118,7 +113,11 @@ function PlanPageContent() {
                 Básico Esencial
               </Badge>
               <p className="mt-2 text-3xl font-bold text-brand-primary">
-                {formatoPrecio(precios.basico)}
+                {cargandoPrecios ? (
+                  <span className="inline-block h-8 w-40 animate-pulse rounded bg-brand-border align-middle" />
+                ) : (
+                  formatoPrecio(precios.basico)
+                )}
               </p>
               <p className="text-sm text-brand-textSecondary">
                 {planesBase.basico.subtitulo}
@@ -169,9 +168,13 @@ function PlanPageContent() {
                 Más Popular
               </Badge>
               <p className="mt-2 text-3xl font-bold text-brand-primary">
-                {formatoPrecio(precios.intermedio)}
+                {cargandoPrecios ? (
+                  <span className="inline-block h-8 w-40 animate-pulse rounded bg-brand-border align-middle" />
+                ) : (
+                  formatoPrecio(precios.intermedio)
+                )}
               </p>
-              {mostrarAhorro && (
+              {!cargandoPrecios && mostrarAhorro && (
                 <p className="text-sm font-medium text-green-500">
                   Ahorra {formatoPrecio(ahorro)}
                 </p>

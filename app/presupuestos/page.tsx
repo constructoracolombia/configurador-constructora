@@ -18,10 +18,13 @@ function PresupuestosContent() {
   const handleProyectoClick = (proyecto: (typeof proyectos)[number]) => {
     setLoading(true);
     setProyectoCargando(proyecto.nombre);
+    // "acabados_premium" ya no existe en ningún proyecto activo de la
+    // galería (era exclusivo de San Juan de la Cuesta), pero se compara
+    // como string suelto — no contra el tipo inferido del array — para que
+    // esto siga compilando si algún proyecto futuro vuelve a usarlo.
+    const tipoDelProyecto = "tipo" in proyecto ? (proyecto.tipo as string) : undefined;
     const tipoProyecto =
-      "tipo" in proyecto && proyecto.tipo === "acabados_premium"
-        ? "acabados_premium"
-        : "vis_remodelacion";
+      tipoDelProyecto === "acabados_premium" ? "acabados_premium" : "vis_remodelacion";
 
     localStorage.setItem("proyecto_seleccionado", proyecto.nombre);
     localStorage.setItem("proyecto_tipo", tipoProyecto);
