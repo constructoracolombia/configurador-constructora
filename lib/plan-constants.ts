@@ -74,4 +74,14 @@ export const CONDICIONES = [
   "Precio de enchape estimado: $40.000 el m².",
 ];
 
+// El Básico entrega en 39 días hábiles, el Intermedio Plus en 59 — la
+// primera línea de CONDICIONES es fija y solo sirve para el Básico.
+export function getDiasEntrega(planBase: string): number {
+  return planBase === "Plan Básico" ? 39 : 59;
+}
+
+export function getCondiciones(planBase: string): string[] {
+  return [`Tiempo de entrega: ${getDiasEntrega(planBase)} días hábiles.`, CONDICIONES[1], CONDICIONES[2]];
+}
+
 export const WA_EMPRESA = "573175639674";

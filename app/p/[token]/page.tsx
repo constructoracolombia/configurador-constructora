@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import {
   SECCIONES_POR_PLAN,
   BONUS_ITEMS,
-  CONDICIONES,
+  getCondiciones,
   WA_EMPRESA,
   type PlanSeccion,
 } from "@/lib/plan-constants";
@@ -402,7 +402,7 @@ export default function PresupuestoPublicoPage() {
           <p style={{ color: GOLD, fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
             Condiciones
           </p>
-          {CONDICIONES.map((c, i) => (
+          {getCondiciones(ppto.plan_base).map((c, i) => (
             <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <span style={{ color: GOLD, fontSize: 14, flexShrink: 0 }}>·</span>
               <span style={{ color: TEXT2, fontSize: 13 }}>{c}</span>
