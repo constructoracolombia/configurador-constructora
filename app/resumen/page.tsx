@@ -89,6 +89,12 @@ export default function ResumenPage() {
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [emailEnviado, setEmailEnviado] = useState(false);
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  // Mientras se genera el PDF/se guarda/se manda el correo, no se muestra
+  // esta página en absoluto — solo una pantalla de carga — porque el
+  // destino real es /p/[token]. Si algo falla y no hay token para
+  // redirigir, se cae a mostrar esta página completa como respaldo (así
+  // el cliente no se queda varado sin nada).
+  const [estadoAuto, setEstadoAuto] = useState<"preparando" | "error">("preparando");
   const [itemsEditados, setItemsEditados] = useState<Record<string, string>>({});
   const [itemEnEdicion, setItemEnEdicion] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState('');
@@ -358,15 +364,23 @@ export default function ResumenPage() {
 
           // El cliente aterriza en /p/[token] — la misma página de
           // resultado que ya usa el presupuesto manual. /resumen sigue
-          // existiendo (queda como historial / respaldo si algo falla acá
-          // abajo), pero deja de ser el destino final del flujo.
+          // existiendo en el código (queda como respaldo si algo de lo de
+          // arriba falla), pero el cliente nunca la ve — mientras esto
+          // corre solo se muestra una pantalla de carga.
           if (dbResult.tokenPublico) {
             router.replace(`/p/${dbResult.tokenPublico}`);
+            return;
           }
         }
       }
+      // No se pudo generar el token — no hay a dónde redirigir, se cae al
+      // respaldo mostrando esta página completa (con su propio botón de
+      // WhatsApp) en vez de dejar al cliente en una pantalla de carga
+      // que nunca avanza.
+      setEstadoAuto("error");
     } catch (error) {
       console.error("Error enviando presupuesto automático:", error);
+      setEstadoAuto("error");
     } finally {
       setEnviandoEmail(false);
     }
@@ -380,6 +394,20 @@ export default function ResumenPage() {
 
   if (!planBase || !proyecto || !planData) {
     return null;
+  }
+
+  // El destino real del flujo automático es /p/[token] — esta página no
+  // se le muestra al cliente mientras se prepara (PDF, guardado, correo),
+  // solo si algo falla y no queda más remedio que caer al respaldo de
+  // abajo (con su propio WhatsApp) en vez de dejarlo sin nada.
+  if (estadoAuto === "preparando") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4 text-center">
+        <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-amber-500" />
+        <p className="text-lg font-semibold text-gray-900">Preparando tu presupuesto...</p>
+        <p className="mt-1 text-sm text-gray-500">Esto toma solo unos segundos</p>
+      </div>
+    );
   }
 
   const generarYCompartirPDF = async (tipo: "whatsapp" | "reserva") => {
