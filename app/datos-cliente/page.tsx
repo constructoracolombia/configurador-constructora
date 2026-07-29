@@ -177,9 +177,9 @@ export default function DatosClientePage() {
   if (!proyectoData) {
     console.error('❌ DATOS-CLIENTE: proyectoData es null. proyecto en store:', JSON.stringify(proyecto));
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-brand-dark p-4 text-center">
-        <p className="mb-4 text-xl text-brand-text">No se encontró el proyecto</p>
-        <p className="mb-6 text-sm text-brand-textSecondary">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4 text-center">
+        <p className="mb-4 text-xl text-gray-900">No se encontró el proyecto</p>
+        <p className="mb-6 text-sm text-gray-500">
           Valor en store: &quot;{proyecto || 'null'}&quot;
         </p>
         <Button onClick={() => router.push("/presupuestos")} className="bg-brand-primary text-black hover:bg-brand-secondary">
@@ -190,25 +190,25 @@ export default function DatosClientePage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-dark via-black to-brand-dark p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-50 p-4">
       {/* Efectos de fondo animados */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute left-1/4 top-1/4 h-96 w-96 animate-pulse rounded-full bg-brand-primary/5 blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-1/4 h-96 w-96 animate-pulse rounded-full bg-brand-secondary/5 blur-3xl delay-1000"></div>
+        <div className="absolute left-1/4 top-1/4 h-96 w-96 animate-pulse rounded-full bg-brand-primary/[0.06] blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 h-96 w-96 animate-pulse rounded-full bg-brand-secondary/[0.06] blur-3xl delay-1000"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-2xl">
         {/* Progress bar */}
         <div className="mb-8">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm text-brand-textSecondary">
+            <span className="text-sm text-gray-500">
               Paso {currentStep + 1} de {steps.length}
             </span>
-            <span className="text-sm font-bold text-brand-primary">
+            <span className="text-sm font-bold text-amber-600">
               {Math.round(progress)}% completado
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-brand-card">
+          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
             <motion.div
               className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary"
               initial={{ width: 0 }}
@@ -226,7 +226,7 @@ export default function DatosClientePage() {
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="border-2 border-brand-primary/30 bg-brand-card shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] backdrop-blur-sm">
+          <Card className="border-2 border-brand-primary/30 bg-white shadow-[0_10px_40px_-12px_rgba(255,184,0,0.25)]">
             <CardContent className="p-8 md:p-12">
               {/* Header del formulario */}
               <div className="mb-8 text-center">
@@ -239,17 +239,17 @@ export default function DatosClientePage() {
                   <IconComponent className="h-10 w-10 text-black" />
                 </motion.div>
 
-                <h1 className="mb-3 text-3xl font-bold text-brand-text md:text-4xl">
+                <h1 className="mb-3 text-3xl font-bold text-gray-900 md:text-4xl">
                   {currentStepData.label}
                 </h1>
 
-                <p className="text-brand-textSecondary">
+                <p className="text-gray-500">
                   {currentStepData.subtitle ? (
                     <>{currentStepData.subtitle}</>
                   ) : (
                     <>
                       Para preparar tu cotización personalizada de{" "}
-                      <span className="font-semibold text-brand-primary">
+                      <span className="font-semibold text-amber-600">
                         {proyectoData.nombre}
                       </span>
                     </>
@@ -267,14 +267,14 @@ export default function DatosClientePage() {
                     onKeyDown={handleKeyDown}
                     placeholder={currentStepData.placeholder}
                     autoFocus
-                    className="h-16 rounded-xl border-2 border-brand-border bg-brand-dark px-6 text-lg text-brand-text transition-all focus:border-brand-primary"
+                    className="h-16 rounded-xl border-2 border-gray-300 bg-white px-6 text-lg text-gray-900 transition-all focus:border-brand-primary"
                   />
                 </div>
                 {telefonoError && currentStep === 1 && (
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 flex items-center gap-2 text-sm text-red-400"
+                    className="mt-2 flex items-center gap-2 text-sm text-red-600"
                   >
                     <AlertCircle className="h-4 w-4" />
                     {telefonoError}
@@ -284,7 +284,7 @@ export default function DatosClientePage() {
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 flex items-center gap-2 text-sm text-red-400"
+                    className="mt-2 flex items-center gap-2 text-sm text-red-600"
                   >
                     <AlertCircle className="h-4 w-4" />
                     {emailError}
@@ -293,15 +293,15 @@ export default function DatosClientePage() {
 
                 {/* Pasos completados */}
                 {currentStep > 0 && (
-                  <div className="space-y-2 rounded-xl bg-brand-dark/50 p-4">
+                  <div className="space-y-2 rounded-xl bg-gray-50 p-4">
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="flex items-center gap-3 text-sm"
                     >
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <User className="h-4 w-4 text-brand-primary" />
-                      <span className="text-brand-textSecondary">{nombre}</span>
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <User className="h-4 w-4 text-amber-600" />
+                      <span className="text-gray-700">{nombre}</span>
                     </motion.div>
                     {currentStep > 1 && (
                       <motion.div
@@ -309,9 +309,9 @@ export default function DatosClientePage() {
                         animate={{ opacity: 1, y: 0 }}
                         className="flex items-center gap-3 text-sm"
                       >
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        <Phone className="h-4 w-4 text-brand-primary" />
-                        <span className="text-brand-textSecondary">{telefono}</span>
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <Phone className="h-4 w-4 text-amber-600" />
+                        <span className="text-gray-700">{telefono}</span>
                       </motion.div>
                     )}
                   </div>
@@ -349,7 +349,7 @@ export default function DatosClientePage() {
                 </Button>
 
                 {/* Texto motivacional */}
-                <p className="text-center text-xs text-brand-textSecondary">
+                <p className="text-center text-xs text-gray-500">
                   🔒 Tu información está segura • ⚡ Proceso rápido en 3 minutos
                 </p>
               </div>
@@ -367,7 +367,7 @@ export default function DatosClientePage() {
                   ? "w-8 bg-brand-primary"
                   : idx < currentStep
                     ? "w-2 bg-green-500"
-                    : "w-2 bg-brand-border"
+                    : "w-2 bg-gray-300"
               }`}
               animate={{ scale: idx === currentStep ? [1, 1.2, 1] : 1 }}
               transition={{
