@@ -201,6 +201,15 @@ export default function ResumenPage() {
               precio: precio * qty,
             };
           }),
+          // Precio unitario y cantidad por separado (a diferencia de
+          // `adicionales` arriba) — arma la fila real en `presupuestos`,
+          // la misma tabla que lee /p/[token] y el generador de contrato.
+          items_manuales: adicionales.map((a) => ({
+            id: a.id,
+            nombre: getNombreItem(a.id, getNombreAdicional(a, planBase)),
+            precio: resolverPrecioAdicional(a),
+            cantidad: a.cantidad ?? 1,
+          })),
           presupuesto_estimado: inversionTotal,
           fuente: "WEB",
           origen:
@@ -227,9 +236,9 @@ export default function ResumenPage() {
         throw new Error(errData.error ?? "Error al guardar cotización");
       }
 
-      const result = await res.json() as { cotizacion_id: string };
+      const result = await res.json() as { cotizacion_id: string; token_publico: string | null };
       console.log("✅ Cotización guardada en DB:", result.cotizacion_id);
-      return { success: true };
+      return { success: true, tokenPublico: result.token_publico };
     } catch (error) {
       console.error("❌ Error:", error);
       return { success: false, error };
@@ -345,6 +354,14 @@ export default function ResumenPage() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ numero_cotizacion: numeroCotizacion, estado_crm: "CORREO_ENVIADO" }),
             });
+          }
+
+          // El cliente aterriza en /p/[token] — la misma página de
+          // resultado que ya usa el presupuesto manual. /resumen sigue
+          // existiendo (queda como historial / respaldo si algo falla acá
+          // abajo), pero deja de ser el destino final del flujo.
+          if (dbResult.tokenPublico) {
+            router.replace(`/p/${dbResult.tokenPublico}`);
           }
         }
       }

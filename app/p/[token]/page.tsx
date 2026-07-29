@@ -145,10 +145,16 @@ export default function PresupuestoPublicoPage() {
   });
   const refNum = `V${ppto.version_num} · ${new Date(ppto.created_at).toISOString().split("T")[0]!.replace(/-/g, "")}`;
 
-  const waMsg = encodeURIComponent(
-    `Hola, vi mi presupuesto (${refNum}) por ${cop(totalFinal)} y quiero avanzar con la remodelación. 🏠`
+  // CTA de reserva — mismo mensaje/tono que el botón "Reservar Mi Cupo
+  // Ahora" de /resumen (CierreVentaExpress), reconstruido acá con los
+  // datos del presupuesto en vez de los del store del cliente.
+  const waMsgReserva = encodeURIComponent(
+    `Hola! Vengo de la web de Constructora Colombia.\n\n` +
+      `Ya tengo mi presupuesto listo para *${ppto.conjunto || ppto.nombre_proyecto}* (${refNum}) por ${cop(totalFinal)}.\n\n` +
+      `Quiero asegurar mi precio actual antes de que suban los insumos. ¿Sigue disponible el cupo de reserva por $500.000 para este mes?\n\n` +
+      `*DATOS DE CONTACTO:*\nNombre: ${ppto.nombre_cliente}\nTelefono: ${ppto.telefono_cliente || "Por WhatsApp"}`
   );
-  const waUrl = `https://wa.me/${WA_EMPRESA}?text=${waMsg}`;
+  const waUrlReserva = `https://wa.me/${WA_EMPRESA}?text=${waMsgReserva}`;
 
   const copiarLink = () => {
     void navigator.clipboard.writeText(window.location.href);
@@ -425,15 +431,59 @@ export default function PresupuestoPublicoPage() {
       {/* ── BOTONES DE ACCIÓN (excluidos del PDF) ── */}
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 16px 40px" }}>
 
-        {/* CTA WHATSAPP */}
+        {/* ── ALTA DEMANDA ── */}
+        <div style={{
+          display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10,
+          background: "#FEF2F2", border: "1px solid rgba(220,38,38,0.2)", borderRadius: 12,
+          padding: "12px 16px", marginBottom: 16,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ position: "relative", display: "inline-flex", width: 10, height: 10 }}>
+              <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#DC2626", opacity: 0.6, animation: "pulse-ppto 1.6s cubic-bezier(0.4,0,0.6,1) infinite" }} />
+              <span style={{ position: "relative", width: 10, height: 10, borderRadius: "50%", background: "#DC2626" }} />
+            </span>
+            <span style={{ fontWeight: 700, color: TEXT, fontSize: 13 }}>Alta demanda</span>
+            <span style={{ color: TEXT2, fontSize: 13 }}>· Solo quedan 3 cupos este mes</span>
+          </div>
+        </div>
+        <style>{`@keyframes pulse-ppto { 0%,100% { transform: scale(1); opacity: .6; } 70% { transform: scale(2.2); opacity: 0; } }`}</style>
+
+        {/* ── GARANTÍA DE FLEXIBILIDAD ── */}
+        <div style={{ background: CARD, borderRadius: 16, padding: 20, marginBottom: 16, border: `1px solid rgba(176,137,79,0.2)`, boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}>
+          <p style={{ color: TEXT, fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, textAlign: "center", margin: "0 0 4px" }}>
+            Garantía de Flexibilidad Total
+          </p>
+          <p style={{ color: TEXT2, fontSize: 12, textAlign: "center", margin: "0 0 16px" }}>
+            ¿Quieres cambiar algo después? No te preocupes.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, textAlign: "center" }}>
+            <div>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>🛡️</div>
+              <div style={{ color: TEXT, fontSize: 11, fontWeight: 700 }}>Precio Congelado</div>
+              <div style={{ color: TEXT2, fontSize: 10, marginTop: 2 }}>Protegido contra inflación</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>📅</div>
+              <div style={{ color: TEXT, fontSize: 11, fontWeight: 700 }}>Fecha Garantizada</div>
+              <div style={{ color: TEXT2, fontSize: 10, marginTop: 2 }}>Inicio asegurado este mes</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>✅</div>
+              <div style={{ color: TEXT, fontSize: 11, fontWeight: 700 }}>100% Modificable</div>
+              <div style={{ color: TEXT2, fontSize: 10, marginTop: 2 }}>Ajusta después sin costo</div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA WHATSAPP — reservar cupo */}
         <a
-          href={waUrl}
+          href={waUrlReserva}
           target="_blank"
           rel="noopener noreferrer"
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
             background: "#25D366", color: "#fff", borderRadius: 16,
-            padding: "18px 24px", marginBottom: 12, textDecoration: "none",
+            padding: "18px 24px", marginBottom: 10, textDecoration: "none",
             fontWeight: 700, fontSize: 17, boxShadow: "0 4px 20px rgba(37,211,102,0.35)",
           }}
         >
@@ -441,8 +491,20 @@ export default function PresupuestoPublicoPage() {
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
             <path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.561 4.14 1.534 5.874L.057 23.57a.5.5 0 00.614.614l5.696-1.477A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.015-1.375l-.36-.213-3.734.978.993-3.63-.233-.374A9.818 9.818 0 1112 21.818z"/>
           </svg>
-          Quiero avanzar con mi remodelación
+          Reservar Mi Cupo Ahora
         </a>
+
+        {/* AGENDA UNA REUNIÓN GRATUITA */}
+        <div style={{ background: "#EFF6FF", border: "1px solid rgba(37,99,235,0.15)", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+          <p style={{ color: TEXT, fontSize: 12.5, margin: "0 0 6px" }}>
+            💬 ¿No estás seguro? Agenda una reunión gratuita de 30 min
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, color: "#2563EB", fontSize: 11.5 }}>
+            <span>✓ 30 minutos</span>
+            <span>✓ Virtual/presencial</span>
+            <span>✓ Sin compromiso</span>
+          </div>
+        </div>
 
         {/* COPIAR LINK */}
         <button
@@ -471,6 +533,41 @@ export default function PresupuestoPublicoPage() {
         >
           {descargandoPDF ? "⏳ Generando PDF…" : "📄 Descargar cotización"}
         </button>
+
+        {/* ── TESTIMONIOS ── */}
+        <div style={{ marginTop: 24 }}>
+          <p style={{ color: TEXT, fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700, textAlign: "center", margin: "0 0 2px" }}>
+            Lo que dicen nuestros clientes
+          </p>
+          <p style={{ color: TEXT2, fontSize: 12, textAlign: "center", margin: "0 0 16px" }}>
+            Más de 100 familias ya confían en nosotros
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              { nombre: "Michael Correa", inicial: "MC", texto: "Excelente trabajo, muy profesionales. Mi apartamento quedó hermoso y lo entregaron en el tiempo prometido." },
+              { nombre: "Liliana Sánchez", inicial: "LS", texto: "La mejor inversión que hice. El equipo fue muy atento y el resultado superó mis expectativas." },
+              { nombre: "Alexandra Pimiento", inicial: "AP", texto: "Todo el proceso fue transparente desde el inicio. Recomiendo 100% sus servicios." },
+            ].map((t) => (
+              <div key={t.nombre} style={{ background: CARD, border: `1px solid rgba(176,137,79,0.2)`, borderRadius: 14, padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                    background: `linear-gradient(135deg, ${GOLD}, #7c611f)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontWeight: 700, fontSize: 13,
+                  }}>
+                    {t.inicial}
+                  </div>
+                  <div>
+                    <div style={{ color: TEXT, fontWeight: 700, fontSize: 13 }}>{t.nombre}</div>
+                    <div style={{ color: GOLD, fontSize: 11 }}>★★★★★</div>
+                  </div>
+                </div>
+                <p style={{ color: TEXT2, fontSize: 12.5, fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>&quot;{t.texto}&quot;</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
       </div>
     </div>
