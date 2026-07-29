@@ -13,7 +13,6 @@ import {
   Mail,
   Phone,
   Sparkles,
-  CheckCircle2,
   AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -21,7 +20,7 @@ import { motion } from "framer-motion";
 export default function DatosClientePage() {
   const router = useRouter();
   const { proyecto, setClienteInfo, clienteNombre, clienteTelefono, clienteEmail } = useCotizador();
-  
+
   const proyectoData = findProyecto(proyecto);
 
   // DEBUG - Diagnóstico de pantalla negra
@@ -31,39 +30,16 @@ export default function DatosClientePage() {
     todosLosIds: proyectos.map(p => p.id),
   });
 
+  // Nombre y teléfono llegan precargados (ya sea de una visita anterior o
+  // del chatbot Mateo en constructoracolombia.com/cotiza, ver /plan) — el
+  // cliente solo tiene que confirmarlos/editarlos y escribir el correo.
   const [nombre, setNombre] = useState(clienteNombre || "");
   const [telefono, setTelefono] = useState(clienteTelefono || "");
   const [email, setEmail] = useState(clienteEmail || "");
+  const [nombreError, setNombreError] = useState("");
   const [telefonoError, setTelefonoError] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [currentStep, setCurrentStep] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
-
-  const steps = [
-    {
-      field: "nombre",
-      icon: User,
-      label: "¿Cómo te llamas?",
-      placeholder: "Ej: María González",
-      type: "text",
-    },
-    {
-      field: "telefono",
-      icon: Phone,
-      label: "¿Cuál es tu número de teléfono?",
-      placeholder: "Ej: 3001234567 (solo números)",
-      type: "tel",
-      subtitle: "Para contactarte sobre tu presupuesto",
-    },
-    {
-      field: "email",
-      icon: Mail,
-      label: "¿Cuál es tu correo electrónico?",
-      placeholder: "Ej: maria@email.com",
-      type: "email",
-      subtitle: "Aquí te enviaremos tu presupuesto detallado en PDF",
-    },
-  ];
 
   const planBase = useCotizador((s) => s.planBase);
 
@@ -88,18 +64,35 @@ export default function DatosClientePage() {
   };
 
   const handleContinue = () => {
-    if (!isCurrentStepValid()) return;
-
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+    let ok = true;
+    if (!nombre.trim()) {
+      setNombreError("El nombre es obligatorio");
+      ok = false;
     } else {
-      setIsValidating(true);
-      setTimeout(() => {
-        const telefonoLimpio = telefono.replace(/\D/g, "");
-        setClienteInfo(nombre, telefonoLimpio, email);
-        router.push("/resumen");
-      }, 800);
+      setNombreError("");
     }
+    if (!validateTelefono(telefono)) {
+      setTelefonoError(
+        telefono.trim() ? "Ingresa entre 10 y 15 dígitos (solo números)" : "El teléfono es obligatorio"
+      );
+      ok = false;
+    } else {
+      setTelefonoError("");
+    }
+    if (!validateEmail(email)) {
+      setEmailError(email.trim() ? "Ingresa un correo válido" : "El correo es obligatorio");
+      ok = false;
+    } else {
+      setEmailError("");
+    }
+    if (!ok) return;
+
+    setIsValidating(true);
+    setTimeout(() => {
+      const telefonoLimpio = telefono.replace(/\D/g, "");
+      setClienteInfo(nombre, telefonoLimpio, email);
+      router.push("/resumen");
+    }, 800);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -107,72 +100,6 @@ export default function DatosClientePage() {
       handleContinue();
     }
   };
-
-  const getCurrentValue = () => {
-    switch (currentStep) {
-      case 0:
-        return nombre;
-      case 1:
-        return telefono;
-      case 2:
-        return email;
-      default:
-        return "";
-    }
-  };
-
-  const setCurrentValue = (value: string) => {
-    switch (currentStep) {
-      case 0:
-        setNombre(value);
-        break;
-      case 1:
-        setTelefono(value);
-        setTelefonoError("");
-        break;
-      case 2:
-        setEmail(value);
-        setEmailError("");
-        break;
-    }
-  };
-
-  const isCurrentStepValid = () => {
-    const value = getCurrentValue();
-
-    if (currentStep === 1) {
-      const soloNumeros = value.replace(/\D/g, "");
-      if (!soloNumeros) {
-        setTelefonoError("El teléfono es obligatorio");
-        return false;
-      }
-      if (soloNumeros.length < 10 || soloNumeros.length > 15) {
-        setTelefonoError("Ingresa entre 10 y 15 dígitos (solo números)");
-        return false;
-      }
-      setTelefonoError("");
-      return true;
-    }
-
-    if (currentStep === 2) {
-      if (!value.trim()) {
-        setEmailError("El correo es obligatorio");
-        return false;
-      }
-      if (!validateEmail(value)) {
-        setEmailError("Ingresa un correo válido");
-        return false;
-      }
-      setEmailError("");
-      return true;
-    }
-
-    return value.trim().length > 0;
-  };
-
-  const currentStepData = steps[currentStep];
-  const IconComponent = currentStepData.icon;
-  const progress = ((currentStep + 1) / steps.length) * 100;
 
   if (!proyectoData) {
     console.error('❌ DATOS-CLIENTE: proyectoData es null. proyecto en store:', JSON.stringify(proyecto));
@@ -197,136 +124,110 @@ export default function DatosClientePage() {
         <div className="absolute bottom-1/4 right-1/4 h-96 w-96 animate-pulse rounded-full bg-brand-secondary/[0.06] blur-3xl delay-1000"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-2xl">
-        {/* Progress bar */}
-        <div className="mb-8">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm text-gray-500">
-              Paso {currentStep + 1} de {steps.length}
-            </span>
-            <span className="text-sm font-bold text-amber-600">
-              {Math.round(progress)}% completado
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-            <motion.div
-              className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
-        </div>
-
-        {/* Card principal */}
+      <div className="relative z-10 w-full max-w-md">
         <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
         >
           <Card className="border-2 border-brand-primary/30 bg-white shadow-[0_10px_40px_-12px_rgba(255,184,0,0.25)]">
-            <CardContent className="p-8 md:p-12">
-              {/* Header del formulario */}
-              <div className="mb-8 text-center">
+            <CardContent className="p-8 md:p-10">
+              {/* Header */}
+              <div className="mb-7 text-center">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", duration: 0.5 }}
-                  className="mb-6 inline-block rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary p-4"
+                  className="mb-5 inline-block rounded-2xl bg-gradient-to-br from-brand-primary to-brand-secondary p-4"
                 >
-                  <IconComponent className="h-10 w-10 text-black" />
+                  <Sparkles className="h-9 w-9 text-black" />
                 </motion.div>
 
-                <h1 className="mb-3 text-3xl font-bold text-gray-900 md:text-4xl">
-                  {currentStepData.label}
+                <h1 className="mb-2 text-2xl font-bold text-gray-900 md:text-3xl">
+                  Ya casi tienes tu presupuesto
                 </h1>
 
-                <p className="text-gray-500">
-                  {currentStepData.subtitle ? (
-                    <>{currentStepData.subtitle}</>
-                  ) : (
-                    <>
-                      Para preparar tu cotización personalizada de{" "}
-                      <span className="font-semibold text-amber-600">
-                        {proyectoData.nombre}
-                      </span>
-                    </>
-                  )}
+                <p className="text-sm text-gray-500 md:text-base">
+                  Para preparar tu cotización personalizada de{" "}
+                  <span className="font-semibold text-amber-600">
+                    {proyectoData.nombre}
+                  </span>
                 </p>
               </div>
 
-              {/* Input con animación */}
-              <div className="space-y-6">
-                <div className="relative">
+              {/* Los 3 campos, en un solo paso */}
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <User className="h-3.5 w-3.5 text-amber-600" />
+                    Nombre completo
+                  </label>
                   <Input
-                    type={currentStepData.type}
-                    value={getCurrentValue()}
-                    onChange={(e) => setCurrentValue(e.target.value)}
+                    type="text"
+                    value={nombre}
+                    onChange={(e) => { setNombre(e.target.value); setNombreError(""); }}
                     onKeyDown={handleKeyDown}
-                    placeholder={currentStepData.placeholder}
-                    autoFocus
-                    className="h-16 rounded-xl border-2 border-gray-300 bg-white px-6 text-lg text-gray-900 transition-all focus:border-brand-primary"
+                    placeholder="Ej: María González"
+                    className="h-12 rounded-xl border-2 border-gray-300 bg-white px-4 text-base text-gray-900 transition-all focus:border-brand-primary"
                   />
+                  {nombreError && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-600">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {nombreError}
+                    </p>
+                  )}
                 </div>
-                {telefonoError && currentStep === 1 && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 flex items-center gap-2 text-sm text-red-600"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                    {telefonoError}
-                  </motion.p>
-                )}
-                {emailError && currentStep === 2 && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 flex items-center gap-2 text-sm text-red-600"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                    {emailError}
-                  </motion.p>
-                )}
 
-                {/* Pasos completados */}
-                {currentStep > 0 && (
-                  <div className="space-y-2 rounded-xl bg-gray-50 p-4">
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-center gap-3 text-sm"
-                    >
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <User className="h-4 w-4 text-amber-600" />
-                      <span className="text-gray-700">{nombre}</span>
-                    </motion.div>
-                    {currentStep > 1 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-3 text-sm"
-                      >
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <Phone className="h-4 w-4 text-amber-600" />
-                        <span className="text-gray-700">{telefono}</span>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <Phone className="h-3.5 w-3.5 text-amber-600" />
+                    Teléfono
+                  </label>
+                  <Input
+                    type="tel"
+                    value={telefono}
+                    onChange={(e) => { setTelefono(e.target.value); setTelefonoError(""); }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ej: 3001234567"
+                    className="h-12 rounded-xl border-2 border-gray-300 bg-white px-4 text-base text-gray-900 transition-all focus:border-brand-primary"
+                  />
+                  {telefonoError && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-600">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {telefonoError}
+                    </p>
+                  )}
+                </div>
 
-                {/* Botón de continuar */}
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <Mail className="h-3.5 w-3.5 text-amber-600" />
+                    Correo electrónico
+                  </label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ej: maria@email.com"
+                    autoFocus={!clienteNombre && !clienteTelefono}
+                    className="h-12 rounded-xl border-2 border-gray-300 bg-white px-4 text-base text-gray-900 transition-all focus:border-brand-primary"
+                  />
+                  {emailError ? (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-600">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {emailError}
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-gray-400">
+                      Aquí te enviaremos tu presupuesto detallado en PDF
+                    </p>
+                  )}
+                </div>
+
                 <Button
                   onClick={handleContinue}
-                  disabled={
-                    (currentStep === 0 && !nombre.trim()) ||
-                    (currentStep === 1 && !validateTelefono(telefono)) ||
-                    (currentStep === 2 &&
-                      (!email.trim() || !validateEmail(email))) ||
-                    isValidating
-                  }
+                  disabled={isValidating}
                   className="h-14 w-full rounded-xl bg-gradient-to-r from-brand-primary via-yellow-400 to-brand-primary text-lg font-bold text-black shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] transition-all hover:scale-[1.02] hover:from-brand-secondary hover:via-yellow-500 hover:to-brand-secondary hover:shadow-[0_10px_40px_0_rgba(255,184,0,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isValidating ? (
@@ -334,49 +235,22 @@ export default function DatosClientePage() {
                       <div className="mr-2 h-5 w-5 animate-spin rounded-full border-b-2 border-black"></div>
                       Preparando tu cotización...
                     </>
-                  ) : currentStep === steps.length - 1 ? (
+                  ) : (
                     <>
                       <Sparkles className="mr-2 h-5 w-5" />
                       Ver mi presupuesto
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </>
-                  ) : (
-                    <>
-                      Continuar
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </>
                   )}
                 </Button>
 
-                {/* Texto motivacional */}
                 <p className="text-center text-xs text-gray-500">
-                  🔒 Tu información está segura • ⚡ Proceso rápido en 3 minutos
+                  🔒 Tu información está segura • ⚡ Proceso rápido en 1 minuto
                 </p>
               </div>
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Indicadores de pasos */}
-        <div className="mt-6 flex justify-center gap-2">
-          {steps.map((_, idx) => (
-            <motion.div
-              key={idx}
-              className={`h-2 rounded-full transition-all ${
-                idx === currentStep
-                  ? "w-8 bg-brand-primary"
-                  : idx < currentStep
-                    ? "w-2 bg-green-500"
-                    : "w-2 bg-gray-300"
-              }`}
-              animate={{ scale: idx === currentStep ? [1, 1.2, 1] : 1 }}
-              transition={{
-                repeat: idx === currentStep ? Infinity : 0,
-                duration: 1.5,
-              }}
-            />
-          ))}
-        </div>
       </div>
     </div>
   );
