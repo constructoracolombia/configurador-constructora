@@ -134,7 +134,8 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       const FTR_H = 12;   // footer reserved space
       let y = 0;
 
-      const lh = (sz: number) => sz * 0.3528 * 1.38;
+      const lh = (sz: number) => sz * 0.3528 * 1.45;
+      const NAVY: [number, number, number] = [11, 52, 110];
 
       // ── Header (repeated on every page) ──────────────────────────────────────
       const drawHeader = () => {
@@ -158,7 +159,7 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         // right — company
         doc.setFont("helvetica", "bold");
         doc.setFontSize(8);
-        doc.setTextColor(11, 52, 110);
+        doc.setTextColor(...NAVY);
         doc.text("CONSTRUCTORA COLOMBIA", W - mR, 5.5, { align: "right" });
         doc.setFont("helvetica", "normal");
         doc.setFontSize(6.5);
@@ -210,6 +211,27 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         y += h;
       };
 
+      // Título de cláusula: en negrita, separado del cuerpo, con su propio
+      // respiro — así cada cláusula se lee como bloque propio en vez de
+      // fundirse con el párrafo siguiente.
+      const addClauseTitle = (text: string, after = 2) => addPara(text, 9.5, "bold", "left", after);
+
+      // Ítem numerado con sangría francesa: el número queda fijo a la
+      // izquierda y las líneas que envuelven se alinean bajo el texto,
+      // no bajo el número — así se ve como una lista formal, no un párrafo
+      // con un número pegado adelante.
+      const addNumbered = (num: number, text: string, sz = 9, after = 2.5) => {
+        const indent = 6;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(sz);
+        const lines = doc.splitTextToSize(text, cW - indent) as string[];
+        const h = lines.length * lh(sz) + after;
+        checkPage(h);
+        doc.text(`${num}.`, mL, y);
+        doc.text(lines, mL + indent, y);
+        y += h;
+      };
+
       // ── Page 1 ───────────────────────────────────────────────────────────────
       drawHeader();
       y = HDR_H + 5;
@@ -254,15 +276,15 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
           ],
           [
             { content: "Lugar de ejecución o de\nubicación del inmueble", styles: { fontStyle: "bold", cellWidth: 52 } },
-            { content: lugar, styles: { fontStyle: "bold", textColor: [0, 0, 180] as [number, number, number] } },
+            { content: lugar, styles: { fontStyle: "bold", textColor: NAVY } },
           ],
           [
             { content: "Valor total", styles: { fontStyle: "bold", cellWidth: 52 } },
-            { content: valorLetras, styles: { fontStyle: "bold", textColor: [0, 0, 180] as [number, number, number] } },
+            { content: valorLetras, styles: { fontStyle: "bold", textColor: NAVY } },
           ],
           [
             { content: "Modalidad de pago", styles: { fontStyle: "bold", cellWidth: 52 } },
-            { content: `Los pagos se realizarán de conformidad con los siguientes hitos:\n${hitosText}`, styles: { textColor: [0, 0, 180] as [number, number, number] } },
+            { content: `Los pagos se realizarán de conformidad con los siguientes hitos:\n${hitosText}`, styles: { fontStyle: "bold", textColor: NAVY } },
           ],
           [
             { content: "Cláusula penal", styles: { fontStyle: "bold", cellWidth: 52 } },
@@ -272,7 +294,7 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
             { content: "Fecha de ejecución", styles: { fontStyle: "bold", cellWidth: 52 } },
             {
               content: `${form.duracion_dias} días hábiles contados a partir de la firma del acta de inicio indicado en el parágrafo primero de la cláusula primera`,
-              styles: { textColor: [0, 0, 180] as [number, number, number] },
+              styles: { fontStyle: "bold", textColor: NAVY },
             },
           ],
           [
@@ -289,12 +311,13 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       y = ((doc as any).lastAutoTable?.finalY ?? y) + 4;
 
       // ── CLÁUSULA PRIMERA ─────────────────────────────────────────────────────
+      addClauseTitle("CLÁUSULA PRIMERA: OBJETO.");
       addPara(
-        "CLÁUSULA PRIMERA: OBJETO. EL CONTRATISTA se obliga para con EL CONTRATANTE a cumplir con el objeto " +
+        "EL CONTRATISTA se obliga para con EL CONTRATANTE a cumplir con el objeto " +
         "indicado en las CONDICIONES CONTRACTUALES, así como aquellas actividades inherentes al desarrollo de este. " +
         "De igual manera EL CONTRATISTA debe cumplir con la propuesta técnico-económica de la obra presentada, la " +
         "cual hace parte integral del presente contrato. Así mismo, deberá cumplir con los diseños técnicos y " +
-        "especificaciones técnicas entregados por EL CONTRATANTE.", 9
+        "especificaciones técnicas entregados por EL CONTRATANTE.", 9, "normal", "left", 5
       );
       addPara(
         "PARÁGRAFO PRIMERO: ACTA DE INICIO. Una vez suscrito el presente contrato, EL CONTRATISTA iniciará la " +
@@ -315,8 +338,9 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       );
 
       // ── CLÁUSULA SEGUNDA ─────────────────────────────────────────────────────
+      addClauseTitle("CLÁUSULA SEGUNDA: ALCANCE DE LA OBRA A EJECUTAR");
       addPara(
-        "CLÁUSULA SEGUNDA: ALCANCE DE LA OBRA A EJECUTAR POR EL CONTRATISTA ejecutará las actividades que se " +
+        "POR EL CONTRATISTA ejecutará las actividades que se " +
         "describen a continuación, de conformidad con los metros cuadrados y unidades indicadas a continuación:",
         9, "normal", "left", 3
       );
@@ -391,28 +415,30 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       addPara("* Te enviamos avances semanales de tu apartamento por Whatsapp.", 8, "italic", "left", 1);
       addPara("* Se realiza esta cotización con precio de enchape de 40 mil pesos el metro cuadrado.", 8, "italic", "left", 4);
 
-      addPara("PARÁGRAFO PRIMERO: Las obras a ejecutar serán las establecidas en esta cláusula, en el evento que EL CONTRATISTA, requiera obras adicionales deberá notificarlo por escrito AL CONTRATATANTE con el fin de establecer el costo y tiempo de ejecución, todo lo cual deberá realizarse mediante otrosí al presente contrato.", 9, "normal", "left", 2);
-      addPara("PARÁGRAFO SEGUNDO: Se deja la acotación que el enchape cotizado y al que hace referencia la presente CLÁUSULA corresponde a la cerámica por valor de CUARENTA MIL PESOS MCTE ($40.000) M2 en el evento que EL CONTRATISTA, solicite la instalación de un enchape por encima de este valor deberá notificarlo por escrito y pagar los dineros adicionales que esto conlleve.", 9, "normal", "left", 2);
-      addPara("PARÁGRAFO TERCERO: Los ítems de ejecución que hayan sido cotizados, aprobados y cuantificados en metros cuadrados (M2), deberán ser debidamente sustentados por el CONTRATISTA respecto de su ejecución real para la facturación. En caso de requerir la ejecución de Metros cuadrados adicionales a los aquí contemplados, el CONTRATISTA deberá presentar un informe técnico para solicitar autorización por escrito a LA CONTRATANTE, para su ejecución y posterior facturación.", 9, "normal", "left", 4);
+      addPara("PARÁGRAFO PRIMERO: Las obras a ejecutar serán las establecidas en esta cláusula, en el evento que EL CONTRATISTA, requiera obras adicionales deberá notificarlo por escrito AL CONTRATATANTE con el fin de establecer el costo y tiempo de ejecución, todo lo cual deberá realizarse mediante otrosí al presente contrato.", 9, "normal", "left", 2.5);
+      addPara("PARÁGRAFO SEGUNDO: Se deja la acotación que el enchape cotizado y al que hace referencia la presente CLÁUSULA corresponde a la cerámica por valor de CUARENTA MIL PESOS MCTE ($40.000) M2 en el evento que EL CONTRATISTA, solicite la instalación de un enchape por encima de este valor deberá notificarlo por escrito y pagar los dineros adicionales que esto conlleve.", 9, "normal", "left", 2.5);
+      addPara("PARÁGRAFO TERCERO: Los ítems de ejecución que hayan sido cotizados, aprobados y cuantificados en metros cuadrados (M2), deberán ser debidamente sustentados por el CONTRATISTA respecto de su ejecución real para la facturación. En caso de requerir la ejecución de Metros cuadrados adicionales a los aquí contemplados, el CONTRATISTA deberá presentar un informe técnico para solicitar autorización por escrito a LA CONTRATANTE, para su ejecución y posterior facturación.", 9, "normal", "left", 5);
 
       // ── CLÁUSULA TERCERA ─────────────────────────────────────────────────────
-      addPara("CLÁUSULA TERCERA: DURACIÓN. LAS PARTES han definido que la duración del presente contrato será la indicada en las CONDICIONES CONTRACTUALES, y tendrá su inicio real de acuerdo con la fecha que las partes registren en el acta de inicio. El contrato podrá ser renovado o prorrogado por mutuo acuerdo entre las partes. En este caso, las partes deberán acordar si la renovación o prorroga será por períodos iguales o diferentes a la inicial, siempre y cuando estas modificaciones consten por otrosí suscrito por ambas partes. En caso de no renovarse, el presente contrato se tendrá por terminado al vencimiento del plazo pactado sin necesidad de formalidad alguna por cualquiera de las Partes.", 9);
+      addClauseTitle("CLÁUSULA TERCERA: DURACIÓN.");
+      addPara("LAS PARTES han definido que la duración del presente contrato será la indicada en las CONDICIONES CONTRACTUALES, y tendrá su inicio real de acuerdo con la fecha que las partes registren en el acta de inicio. El contrato podrá ser renovado o prorrogado por mutuo acuerdo entre las partes. En este caso, las partes deberán acordar si la renovación o prorroga será por períodos iguales o diferentes a la inicial, siempre y cuando estas modificaciones consten por otrosí suscrito por ambas partes. En caso de no renovarse, el presente contrato se tendrá por terminado al vencimiento del plazo pactado sin necesidad de formalidad alguna por cualquiera de las Partes.", 9, "normal", "left", 5);
       addPara("PARÁGRAFO PRIMERO: En caso de presentarse retrasos en la entrega de materiales por circunstancias relacionadas con asuntos no atribuibles AL CONTRATISTA, o que estén enmarcadas en aquellos eventos relacionados con causales de fuerza mayor o caso fortuito y/o Cualquier novedad relacionada con la entrega de materiales que pueda afectar los cronogramas de trabajo pactados en el acta de inicio, será informada de manera inmediata por el medio más expedito. En dado caso, LAS PARTES estarán en la obligación de revisar en un término máximo de dos (2) días los ajustes al cronograma de trabajo, sin que tal situación implique incumplimiento al contrato.", 9, "normal", "left", 2);
       addPara("PARÁGRAFO SEGUNDO: SUSPENSIÓN. El plazo para la ejecución del objeto del presente contrato podrá ser suspendido por mutuo acuerdo entre las partes. Unilateralmente, sólo podrá suspenderse por causa extraña, fuerza mayor y caso fortuito conforme a lo estipulado en la CLÁUSULA DÉCIMA SEXTA. En caso de reanudación de la ejecución del objeto del presente contrato, los plazos indicados en este contrato se prorrogarán por un tiempo igual al de la suspensión. En caso de no poder superarse esta causal dentro de un plazo superior a 30 días calendario, se configurará la terminación de este contrato, sin que dicha terminación genere indemnización a favor de ninguna de las partes.", 9, "normal", "left", 4);
 
       // ── CLÁUSULA CUARTA ──────────────────────────────────────────────────────
       // NIT usa EMP.nit directo (901.590.706-1) — no se transforma
+      addClauseTitle("CLÁUSULA CUARTA: VALOR DEL CONTRATO Y FORMA DE PAGO.");
       addPara(
-        `CLÁUSULA CUARTA: VALOR DEL CONTRATO Y FORMA DE PAGO. LA CONTRATANTE pagará a EL CONTRATISTA la suma ` +
+        `LA CONTRATANTE pagará a EL CONTRATISTA la suma ` +
         `indicada en las CONDICIONES CONTRACTUALES a la cuenta de ahorros No. ${EMP.cuenta} del Banco ${EMP.banco} ` +
         `a nombre de ${EMP.nombre} con Nit. ${EMP.nit} por los servicios descritos en el presente ` +
         `contrato en la forma y plazos allí acordados, una vez hayan sido efectivamente prestados y hayan sido recibidos ` +
-        `a satisfacción por EL CONTRATANTE.`, 9
+        `a satisfacción por EL CONTRATANTE.`, 9, "normal", "left", 2.5
       );
-      addPara("El valor indicado en las condiciones contractuales podrá estar sujeto a cambios conforme a las variaciones abruptas del mercado, lo cual deberá ser sustentado por EL CONTRATISTA y notificado con antelación AL CONTRATANTE, con el fin de aceptar el incremento propuesto.", 9, "normal", "left", 4);
+      addPara("El valor indicado en las condiciones contractuales podrá estar sujeto a cambios conforme a las variaciones abruptas del mercado, lo cual deberá ser sustentado por EL CONTRATISTA y notificado con antelación AL CONTRATANTE, con el fin de aceptar el incremento propuesto.", 9, "normal", "left", 5);
 
       // ── CLÁUSULA QUINTA ──────────────────────────────────────────────────────
-      addPara("CLÁUSULA QUINTA. OBLIGACIONES DEL CONTRATISTA:", 9, "bold", "left", 2);
+      addClauseTitle("CLÁUSULA QUINTA. OBLIGACIONES DEL CONTRATISTA:");
       const obligC = [
         "DISPONIBILIDAD Y CONTINUIDAD EN LA PRESTACIÓN DEL SERVICIO: EL CONTRATISTA se obliga a garantizar, durante la duración del contrato, la disponibilidad necesaria para la prestación del servicio, y a establecer planes de contingencia y continuidad del servicio que le permitan garantizar su continuidad y capacidad de retorno a la operación normal ante eventos imprevistos, salvo por aquellas circunstancias que constituyan fuerza mayor o caso fortuito.",
         "GARANTÍAS: EL CONTRATISTA se obliga a constituir las garantías indicadas en las CONDICIONES CONTRACTUALES, mantenerlas vigentes durante todo el tiempo de ejecución del contrato, incluyendo los períodos de reactivación posteriores a la suspensión si es que a ello hubiera lugar y a adecuar los montos en caso de que resulte procedente.",
@@ -420,34 +446,35 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         "INFORMES: EL CONTRATISTA se compromete a suministrar la información solicitada por EL CONTRATANTE, así como aquellos hechos o circunstancias, previstas o imprevistas, sobrevinientes o no, que dada su importancia deban ser conocida por LA CONTRATANTE, así como aquella que pueda influir negativa o positivamente en el desarrollo y ejecución del objeto del presente contrato. Mantener informado a LA CONTRATANTE del desarrollo del trabajo encomendado, asistir a las reuniones a las que sea convocado, y en general, rendir los informes, aclararlos, adicionarlos y complementarlos de manera oportuna.",
         "GESTION DE LA OBRA: Retirar a la terminación de las labores sus equipos; efectuar la remoción de escombros, desperdicios y materiales sobrantes, disponiéndolos en los botaderos legalmente autorizados; hacer la limpieza general del sitio de los trabajos para entregar las instalaciones despejadas y dejar los espacios que ocupó en el mismo estado de conservación y limpieza que los recibió.",
       ];
-      for (let i = 0; i < obligC.length; i++) addPara(`${i + 1}. ${obligC[i]!}`, 9, "normal", "left", 2);
+      for (let i = 0; i < obligC.length; i++) addNumbered(i + 1, obligC[i]!);
       y += 2;
 
       // ── CLÁUSULA SEXTA ───────────────────────────────────────────────────────
-      addPara("CLÁUSULA SEXTA: OBLIGACIONES DE LA CONTRATANTE.", 9, "bold", "left", 2);
+      addClauseTitle("CLÁUSULA SEXTA: OBLIGACIONES DE LA CONTRATANTE.");
       const obligT = [
         "PAGO DE LOS HONORARIOS: LA CONTRATANTE se obliga a pagar de manera puntual y en la forma establecida el valor indicado en las CONDICIONES CONTRACTUALES.",
         "SUMINISTRO DE INFORMACIÓN: proveer toda la información, diseños, especificaciones técnicas y colaboración que requiera EL CONTRATISTA, para la realización de la labor encomendada. La documentación que se encuentre en su poder y se requiera para el correcto desarrollo del objeto, deberá ser entregada en los tiempos pactados con el CONTRATISTA.",
         "REPORTE DE DEFICIENCIAS EN EL SERVICIO: Reportar a EL CONTRATISTA en forma oportuna, las deficiencias o anomalías que detecte en el desarrollo del objeto contractual, así como las sugerencias que estime convenientes sobre los servicios prestados y sobre posibles mejoras al mismo, siempre y cuando consten en la oferta técnico comercial presentada por el CONTRATISTA y/o en los diseños y especificaciones técnicas que hayan sido entregadas.",
         "COMUNICACIONES: Atender con diligencia las inquietudes que presente EL CONTRATISTA y comunicar los procesos establecidos para garantizar la prestación de los servicios.",
       ];
-      for (let i = 0; i < obligT.length; i++) addPara(`${i + 1}. ${obligT[i]!}`, 9, "normal", "left", 2);
+      for (let i = 0; i < obligT.length; i++) addNumbered(i + 1, obligT[i]!);
       y += 2;
 
       // ── CLÁUSULAS 7–17 ───────────────────────────────────────────────────────
-      addPara("CLÁUSULA SEPTIMA: INDEPENDENCIA DE LAS PARTES. En ejecución del presente contrato, ambas partes actuarán por su propia cuenta, con absoluta autonomía e independencia técnica administrativa y directiva. De esta manera, ninguna de ellas, ni sus empleados, contratistas o subcontratistas estarán sujeta a subordinación laboral alguna en virtud del presente contrato.", 9, "normal", "left", 4);
+      addClauseTitle("CLÁUSULA SEPTIMA: INDEPENDENCIA DE LAS PARTES.");
+      addPara("En ejecución del presente contrato, ambas partes actuarán por su propia cuenta, con absoluta autonomía e independencia técnica administrativa y directiva. De esta manera, ninguna de ellas, ni sus empleados, contratistas o subcontratistas estarán sujeta a subordinación laboral alguna en virtud del presente contrato.", 9, "normal", "left", 5);
 
-      addPara("CLÁUSULA OCTAVA: TERMINACIÓN DEL CONTRATO. El contrato podrá terminarse por cualquiera de las siguientes causales:", 9, "bold", "left", 2);
+      addClauseTitle("CLÁUSULA OCTAVA: TERMINACIÓN DEL CONTRATO. El contrato podrá terminarse por cualquiera de las siguientes causales:");
       const causales = [
         "Por finalización del término contractual inicial.",
         "Por presentarse la inejecución total, ejecución parcial o la ejecución tardía o defectuosa, o el incumplimiento de las obligaciones pactadas en este contrato y sus anexos. Por mutuo acuerdo entre LAS PARTES.",
         "Por la alteración o manipulación no autorizada de equipos y/o información de EL CONTRATANTE por parte del personal de EL CONTRATISTA.",
         "Adicional a las causales anteriores, cualquiera de las partes podrá dar por terminado el presente contrato en cualquier tiempo, dando previo aviso con 30 días calendario de antelación, sin justificar el porqué de su decisión. Esta terminación no dará lugar a indemnización alguna a favor del CONTRATISTA, y solo se le pagará el valor de los trabajos ejecutados a satisfacción de EL CONTRATANTE hasta la fecha de terminación, basado el valor en las tarifas pactadas. Adicionalmente, le serán pagados los gastos en que razonablemente haya incurrido para la ejecución del contrato, así como el costo de los materiales y elementos que haya adquirido para la ejecución de las labores y que fueran indispensables para la obra, independientemente de la etapa o porcentaje de ejecución. En caso de terminación anticipada de los servicios de que trata este contrato, independientemente del motivo, EL CONTRATISTA se compromete a transferir ordenadamente a EL CONTRATANTE los servicios, funciones, materiales adquiridos y operaciones ejecutados por él bajo este contrato, ya sea a otro proveedor de servicios o a LA CONTRATANTE mismo.",
       ];
-      for (let i = 0; i < causales.length; i++) addPara(`${i + 1}. ${causales[i]!}`, 9, "normal", "left", 2);
+      for (let i = 0; i < causales.length; i++) addNumbered(i + 1, causales[i]!);
       y += 2;
 
-      addPara("CLÁUSULA NOVENA: CAMBIOS Y/O ADICIONES EN LAS OBRAS.", 9, "bold", "left", 2);
+      addClauseTitle("CLÁUSULA NOVENA: CAMBIOS Y/O ADICIONES EN LAS OBRAS.");
       const cambios = [
         "Durante la ejecución de la obra EL CONTRATANTE podrá ordenar los cambios que considere necesarios. Si por estos cambios se afecta el tiempo de ejecución y/o la cantidad de la obra, las partes deberán acordar los términos de dichos cambios, antes de ordenarlos y dejar constancia escrita del acuerdo entre las partes, la cual deberá ir firmada por las Partes del presente Contrato. EL CONTRATANTE no efectuará pagos por concepto de cambios de obra o trabajos adicionales que no estén debidamente diligenciados y aprobados por las partes.",
         "Las obras adicionales (mayores cantidades de obra), en caso de requerirse deberán ser aprobadas por LA CONTRATANTE de manera previa a su ejecución; las obras extras para su ejecución en obra y su pago deberán ser aprobadas por EL CONTRATANTE de manera previa. EL CONTRATISTA expedirá una factura acompañada de su respectiva Acta de soporte aprobada. Las obras extras o adicionales realizadas sin previa aprobación serán ejecutadas por cuenta y riesgo de EL CONTRATISTA sin que LA CONTRATANTE se obligue a su pago.",
@@ -458,20 +485,35 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
         "Las obras adicionales se pagarán de acuerdo con los precios unitarios establecidos en el contrato original. En caso de variación de precios en el mercado, se tomará como base para el reconocimiento el valor indicado en cotizaciones previas presentadas por el CONTRATISTA.",
         "Las obras extras serán cotizadas por EL CONTRATISTA mediante análisis de precios sustentados con precios de mercado, desperdicios razonables y cotizaciones ciertas, susceptibles de ser confrontados por EL CONTRATANTE con análisis y cotizaciones similares (mínimo 2) antes de llegar a un acuerdo. El costo directo convenido para cada ítem será afectado por el factor AIU (Administración, Imprevistos y Utilidad) del contrato.",
       ];
-      for (let i = 0; i < cambios.length; i++) addPara(`${i + 1}. ${cambios[i]!}`, 9, "normal", "left", 2);
+      for (let i = 0; i < cambios.length; i++) addNumbered(i + 1, cambios[i]!);
       y += 2;
 
-      addPara("CLÁUSULA DÉCIMA: CLÁUSULA PENAL. En caso de incumplimiento de todas o alguna de las obligaciones por cualquiera de LAS PARTES, la parte incumplida pagará a la otra parte que ha cumplido o se ha allanado a cumplir, a título de sanción, el valor indicado en las CONDICIONES CONTRACTUALES, sin que esto conlleve a entender extinguida la obligación principal ni la posibilidad de solicitar y acreditar perjuicios, la cual puede ser exigida sin necesidad de requerimiento judicial ni extrajudicial alguno y sin perjuicio de la exigibilidad de la garantía por incumplimiento del contrato o las multas adicionales a que haya lugar, lo que no priva a que cualquiera de las partes pretenda el cobro de los perjuicios que en tal evento se causaren.", 9, "normal", "left", 4);
+      addClauseTitle("CLÁUSULA DÉCIMA: CLÁUSULA PENAL.");
+      addPara("En caso de incumplimiento de todas o alguna de las obligaciones por cualquiera de LAS PARTES, la parte incumplida pagará a la otra parte que ha cumplido o se ha allanado a cumplir, a título de sanción, el valor indicado en las CONDICIONES CONTRACTUALES, sin que esto conlleve a entender extinguida la obligación principal ni la posibilidad de solicitar y acreditar perjuicios, la cual puede ser exigida sin necesidad de requerimiento judicial ni extrajudicial alguno y sin perjuicio de la exigibilidad de la garantía por incumplimiento del contrato o las multas adicionales a que haya lugar, lo que no priva a que cualquiera de las partes pretenda el cobro de los perjuicios que en tal evento se causaren.", 9, "normal", "left", 5);
 
-      addPara("CLÁUSULA DÉCIMA PRIMERA: SOLUCIÓN DE PROBLEMAS. Cualquier situación relacionada con este contrato se intentará solucionar por la vía del arreglo directo entre LAS PARTES, en un plazo no mayor a 30 días calendario, en caso de no lograrlo, serán libres de acudir ante la justicia ordinaria de la República de Colombia u otro Mecanismo Alternativo de Solución de Conflictos.", 9, "normal", "left", 4);
-      addPara("CLÁUSULA DÉCIMA SEGUNDA. LEY APLICABLE: La ley aplicable al presente contrato será la colombiana.", 9, "normal", "left", 4);
-      addPara("CLÁUSULA DÉCIMA TERCERA: MÉRITO EJECUTIVO. El presente contrato constituye título de recaudo ejecutivo, ya que se trata de una obligación clara, expresa y exigible.", 9, "normal", "left", 4);
-      addPara("CLÁUSULA DÉCIMA CUARTA. Si cualquier disposición de este contrato fuere declarada nula, inexistente, ilegal o ineficaz, la parte restante del Acuerdo permanecerá vigente, salvo disposición legal en contrario o en el caso de que dicha disposición nula, inexistente, ilegal o ineficaz afecte la naturaleza y obligaciones esenciales del presente Acuerdo, caso en el cual las Partes se comprometen a celebrar un nuevo Acuerdo en términos y condiciones similares.", 9, "normal", "left", 4);
-      addPara("CLÁUSULA DÉCIMA QUINTA: INDEPENDENCIA DE LAS PARTES. En ejecución del presente contrato, ambas partes actuarán por su propia cuenta, con absoluta autonomía e independencia técnica administrativa y directiva. De esta manera, ninguna de ellas estará sujeta a subordinación laboral alguna en virtud del presente contrato.", 9, "normal", "left", 4);
-      addPara(
-        "CLÁUSULA DÉCIMA SEXTA: TRATAMIENTO DE CAUSA EXTRAÑA. Ninguna de las PARTES estará en mora de cumplir lo pactado cuando el incumplimiento, total o parcial, se deba a causas o circunstancias constitutivas de fuerza mayor o caso fortuito, o actos de terceros. En el evento que sobrevengan hechos, actos o circunstancias extraordinarias, irresistibles e imprevisibles ajenas a la voluntad de las partes, y todas aquellas situaciones posteriores a la celebración del contrato, que modifiquen o alteren el equilibrio económico del cumplimiento del contrato o que generen pérdida para el negocio acordado; eventos tales como: alta devaluación del peso Colombiano frente al dólar americano, fijación de controles cambiarios por parte de la autoridad competente que conduzca a variaciones en la tasa de cambio, eventuales restricciones a las importaciones, fijación, incremento y aprobación de aranceles e impuestos para la importación y comercialización de los productos en el territorio, escasez o restricciones para el aprovisionamiento y transporte del producto, entre otros; las partes deberán notificarse mediante comunicación escrita por el medio más expedito y/o al medio de notificación elegido por la PARTE, la cual deberá ser enviada por la parte afectada con la finalidad de plantear y dar inicio a una etapa de renegociación de las condiciones del contrato que permita restablecer el equilibrio del mismo. Dicha etapa de renegociación de condiciones comerciales tendrá un plazo máximo de un (1) mes contado desde su inicio, plazo que una vez finalizado sin acuerdo alguno entre las partes, dará lugar a la terminación del contrato sin cobro de sanción y/o indemnización, ni tampoco facultará a estas a hacer efectivas las pólizas tomadas por el contratista para respaldar el cumplimiento de este contrato, debiendo las partes reconocer las obligaciones que fueron ejecutadas hasta ese momento, y realizar los actos que se encuentran pendientes con relación a las obligaciones ya adquiridas y que pudiesen ejecutarse sin alteración alguna. Todas estas acciones deben de llevarse a cabo en un plazo que no exceda 30 días calendario a la fecha efectiva de terminación establecida de común acuerdo por las partes bajo la causal acaecida indicada en la presente CLÁUSULA, con la finalidad de que se puedan extender los paz y salvos recíprocos efectivos entre los intervinientes.",
-        9, "normal", "left", 4
-      );
+      addClauseTitle("CLÁUSULA DÉCIMA PRIMERA: SOLUCIÓN DE PROBLEMAS.");
+      addPara("Cualquier situación relacionada con este contrato se intentará solucionar por la vía del arreglo directo entre LAS PARTES, en un plazo no mayor a 30 días calendario, en caso de no lograrlo, serán libres de acudir ante la justicia ordinaria de la República de Colombia u otro Mecanismo Alternativo de Solución de Conflictos.", 9, "normal", "left", 5);
+
+      addClauseTitle("CLÁUSULA DÉCIMA SEGUNDA. LEY APLICABLE:");
+      addPara("La ley aplicable al presente contrato será la colombiana.", 9, "normal", "left", 5);
+
+      addClauseTitle("CLÁUSULA DÉCIMA TERCERA: MÉRITO EJECUTIVO.");
+      addPara("El presente contrato constituye título de recaudo ejecutivo, ya que se trata de una obligación clara, expresa y exigible.", 9, "normal", "left", 5);
+
+      addClauseTitle("CLÁUSULA DÉCIMA CUARTA.");
+      addPara("Si cualquier disposición de este contrato fuere declarada nula, inexistente, ilegal o ineficaz, la parte restante del Acuerdo permanecerá vigente, salvo disposición legal en contrario o en el caso de que dicha disposición nula, inexistente, ilegal o ineficaz afecte la naturaleza y obligaciones esenciales del presente Acuerdo, caso en el cual las Partes se comprometen a celebrar un nuevo Acuerdo en términos y condiciones similares.", 9, "normal", "left", 5);
+
+      addClauseTitle("CLÁUSULA DÉCIMA QUINTA: INDEPENDENCIA DE LAS PARTES.");
+      addPara("En ejecución del presente contrato, ambas partes actuarán por su propia cuenta, con absoluta autonomía e independencia técnica administrativa y directiva. De esta manera, ninguna de ellas estará sujeta a subordinación laboral alguna en virtud del presente contrato.", 9, "normal", "left", 5);
+
+      // Cláusula 16 — texto largo de fuerza mayor: se separa en sus oraciones
+      // naturales (mismo texto, sin recortes) en vez de un solo bloque, que
+      // era lo que se veía "apretado" en el PDF.
+      addClauseTitle("CLÁUSULA DÉCIMA SEXTA: TRATAMIENTO DE CAUSA EXTRAÑA.");
+      addPara("Ninguna de las PARTES estará en mora de cumplir lo pactado cuando el incumplimiento, total o parcial, se deba a causas o circunstancias constitutivas de fuerza mayor o caso fortuito, o actos de terceros.", 9, "normal", "left", 2);
+      addPara("En el evento que sobrevengan hechos, actos o circunstancias extraordinarias, irresistibles e imprevisibles ajenas a la voluntad de las partes, y todas aquellas situaciones posteriores a la celebración del contrato, que modifiquen o alteren el equilibrio económico del cumplimiento del contrato o que generen pérdida para el negocio acordado; eventos tales como: alta devaluación del peso Colombiano frente al dólar americano, fijación de controles cambiarios por parte de la autoridad competente que conduzca a variaciones en la tasa de cambio, eventuales restricciones a las importaciones, fijación, incremento y aprobación de aranceles e impuestos para la importación y comercialización de los productos en el territorio, escasez o restricciones para el aprovisionamiento y transporte del producto, entre otros; las partes deberán notificarse mediante comunicación escrita por el medio más expedito y/o al medio de notificación elegido por la PARTE, la cual deberá ser enviada por la parte afectada con la finalidad de plantear y dar inicio a una etapa de renegociación de las condiciones del contrato que permita restablecer el equilibrio del mismo.", 9, "normal", "left", 2);
+      addPara("Dicha etapa de renegociación de condiciones comerciales tendrá un plazo máximo de un (1) mes contado desde su inicio, plazo que una vez finalizado sin acuerdo alguno entre las partes, dará lugar a la terminación del contrato sin cobro de sanción y/o indemnización, ni tampoco facultará a estas a hacer efectivas las pólizas tomadas por el contratista para respaldar el cumplimiento de este contrato, debiendo las partes reconocer las obligaciones que fueron ejecutadas hasta ese momento, y realizar los actos que se encuentran pendientes con relación a las obligaciones ya adquiridas y que pudiesen ejecutarse sin alteración alguna.", 9, "normal", "left", 2);
+      addPara("Todas estas acciones deben de llevarse a cabo en un plazo que no exceda 30 días calendario a la fecha efectiva de terminación establecida de común acuerdo por las partes bajo la causal acaecida indicada en la presente CLÁUSULA, con la finalidad de que se puedan extender los paz y salvos recíprocos efectivos entre los intervinientes.", 9, "normal", "left", 5);
 
       // ── CLÁUSULA 17 ──────────────────────────────────────────────────────────
       const DIAS_ES = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve", "treinta", "treinta y uno"];
@@ -481,8 +523,9 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       const diaStr = DIAS_ES[diaNum] ?? String(diaNum);
       const mesStr = MESES_ES[fd.getMonth()]!;
 
+      addClauseTitle("CLÁUSULA DÉCIMA SEPTIMA: ESTIPULACIONES CONTRACTUALES ANTERIORES.");
       addPara(
-        `CLÁUSULA DÉCIMA SEPTIMA ESTIPULACIONES CONTRACTUALES ANTERIORES. Las partes manifiestan que no reconocerán validez a estipulaciones verbales relacionadas y anteriores con el presente contrato, el cual constituye el acuerdo completo e íntegro entre ellas y reemplaza sin dejar efecto alguno cualquier otro acuerdo verbal o escrito celebrado con anterioridad. Con la firma del presente documento se reemplaza cualquier otro acuerdo verbal o escrito. Para constancia y en señal de aceptación, LAS PARTES suscriben el presente documento en la ciudad de Bucaramanga el día ${diaStr} (${diaNum}) de ${mesStr} de ${fd.getFullYear()}.`,
+        `Las partes manifiestan que no reconocerán validez a estipulaciones verbales relacionadas y anteriores con el presente contrato, el cual constituye el acuerdo completo e íntegro entre ellas y reemplaza sin dejar efecto alguno cualquier otro acuerdo verbal o escrito celebrado con anterioridad. Con la firma del presente documento se reemplaza cualquier otro acuerdo verbal o escrito. Para constancia y en señal de aceptación, LAS PARTES suscriben el presente documento en la ciudad de Bucaramanga el día ${diaStr} (${diaNum}) de ${mesStr} de ${fd.getFullYear()}.`,
         9, "normal", "left", 8
       );
 
@@ -499,7 +542,7 @@ export function ContratoModal({ leadId, leadNombre, presupuestoId, onClose }: Co
       // contratante
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.setTextColor(11, 52, 110);
+      doc.setTextColor(...NAVY);
       doc.text(form.nombre_contratante.toUpperCase(), mL + colW2 / 2, sigY + 10, { align: "center" });
       doc.text(`C.C. ${form.cedula_contratante} DE ${EMP.ciudad.toUpperCase()}`, mL + colW2 / 2, sigY + 15, { align: "center" });
       doc.setTextColor(0, 0, 0);
