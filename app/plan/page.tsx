@@ -28,6 +28,22 @@ function PlanPageContent() {
 
   const setProyecto = useCotizador((s) => s.setProyecto);
   const setPlanBase = useCotizador((s) => s.setPlanBase);
+  const setClienteInfo = useCotizador((s) => s.setClienteInfo);
+  const clienteEmail = useCotizador((s) => s.clienteEmail);
+
+  // Nombre/teléfono ya capturados por Mateo (chatbot de cotiza en
+  // constructoracolombia.com) llegan como querystring — se precargan en
+  // el store para que /datos-cliente no vuelva a pedirlos, solo el email
+  // (que Mateo no pregunta). El email existente en el store (si lo hay)
+  // no se toca.
+  useEffect(() => {
+    const nombreUrl = searchParams.get("nombre");
+    const telefonoUrl = searchParams.get("telefono");
+    if (nombreUrl || telefonoUrl) {
+      setClienteInfo(nombreUrl || "", telefonoUrl || "", clienteEmail);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Leer proyecto pre-seleccionado desde localStorage (desde brochure)
   useEffect(() => {
