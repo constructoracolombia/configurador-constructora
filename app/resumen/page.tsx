@@ -33,7 +33,7 @@ function TestimonialCard({
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className="rounded-xl bg-brand-dark p-6">
+    <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
       <div className="mb-4 flex items-center gap-4">
         <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary">
           {imgError ? (
@@ -48,11 +48,11 @@ function TestimonialCard({
           )}
         </div>
         <div>
-          <h4 className="font-bold text-brand-text">{nombre}</h4>
-          <div className="text-sm text-brand-primary">★★★★★</div>
+          <h4 className="font-bold text-gray-900">{nombre}</h4>
+          <div className="text-sm text-amber-500">★★★★★</div>
         </div>
       </div>
-      <p className="text-sm italic text-brand-textSecondary">&quot;{texto}&quot;</p>
+      <p className="text-sm italic text-gray-600">&quot;{texto}&quot;</p>
     </div>
   );
 }
@@ -508,22 +508,22 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
   };
 
   return (
-    <main className="min-h-screen bg-brand-dark pb-20">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
+    <main className="min-h-screen bg-gray-50 pb-20">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:space-y-8 md:py-8">
         {/* Header con breadcrumb */}
         <div>
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="mb-4 text-brand-textSecondary hover:text-brand-text"
+            className="mb-3 text-gray-500 hover:bg-gray-100 hover:text-gray-900 md:mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
-          <h1 className="mb-2 text-4xl font-bold text-brand-text">
+          <h1 className="mb-1 text-2xl font-bold text-gray-900 md:mb-2 md:text-4xl">
             Resumen de tu Cotización
           </h1>
-          <p className="text-brand-textSecondary">
+          <p className="text-sm text-gray-500 md:text-base">
             Revisa el detalle completo de tu remodelación
           </p>
         </div>
@@ -533,17 +533,17 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-xl border-2 border-green-500 bg-gradient-to-r from-green-900/30 to-emerald-900/30 p-4"
+            className="mb-6 rounded-xl border-2 border-green-300 bg-green-50 p-4"
           >
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-400" />
+              <CheckCircle2 className="mt-0.5 h-6 w-6 flex-shrink-0 text-green-600" />
               <div className="flex-1">
-                <h3 className="mb-1 font-bold text-brand-text">
+                <h3 className="mb-1 font-bold text-gray-900">
                   ✅ ¡Presupuesto enviado a tu correo!
                 </h3>
-                <p className="text-sm text-brand-textSecondary">
+                <p className="text-sm text-gray-600">
                   Ya tienes el presupuesto detallado en{" "}
-                  <span className="font-semibold text-brand-primary">
+                  <span className="font-semibold text-amber-600">
                     {clienteEmail}
                   </span>{" "}
                   para que lo revises con calma.
@@ -554,56 +554,56 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
         )}
 
         {enviandoEmail && !emailEnviado && (
-          <div className="mb-6 rounded-xl border-2 border-blue-500 bg-blue-900/20 p-4">
+          <div className="mb-6 rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
             <div className="flex items-center gap-3">
-              <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-brand-primary"></div>
-              <p className="text-sm text-brand-textSecondary">
+              <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-amber-500"></div>
+              <p className="text-sm text-gray-600">
                 Enviando presupuesto a tu correo...
               </p>
             </div>
           </div>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
           {/* Columna principal - Resumen expandido */}
           <div className="space-y-6 lg:col-span-2">
             {/* Info del proyecto */}
-            <Card className="border-brand-border bg-brand-card">
+            <Card className="border-gray-200 bg-white shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-brand-text">
-                  <CheckCircle2 className="h-6 w-6 text-brand-primary" />
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <CheckCircle2 className="h-6 w-6 text-amber-500" />
                   Información del Proyecto
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <p className="mb-1 text-sm text-brand-textSecondary">
+                    <p className="mb-1 text-sm text-gray-500">
                       Proyecto
                     </p>
-                    <p className="text-lg font-bold text-brand-text">
+                    <p className="text-lg font-bold text-gray-900">
                       {proyectoData?.nombre}
                     </p>
-                    <p className="text-sm text-brand-textSecondary">
+                    <p className="text-sm text-gray-500">
                       {proyectoData?.ubicacion}
                     </p>
                   </div>
                   <div>
-                    <p className="mb-1 text-sm text-brand-textSecondary">
+                    <p className="mb-1 text-sm text-gray-500">
                       Plan seleccionado
                     </p>
                     {esSanJuan ? (
-                      <p className="text-lg font-bold text-brand-primary">
+                      <p className="text-lg font-bold text-amber-600">
                         Sin Plan Básico
                       </p>
                     ) : (
                       <>
-                        <p className="text-lg font-bold text-brand-primary">
+                        <p className="text-lg font-bold text-amber-600">
                           {planData.nombre}
                         </p>
                         <div className="mt-1 flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-brand-textSecondary" />
-                          <span className="text-sm text-brand-textSecondary">
+                          <Clock className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-500">
                             {planData.tiempoEntrega} días hábiles
                           </span>
                         </div>
@@ -616,26 +616,26 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
 
             {/* Desglose del plan - EXPANDIDO */}
             {!esSanJuan ? (
-              <Card className="border-brand-border bg-brand-card">
+              <Card className="border-gray-200 bg-white shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-brand-text">
+                  <CardTitle className="text-gray-900">
                     ¿Qué incluye el Plan {planData.nombre}?
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="rounded-lg bg-brand-dark p-4">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div className="mb-4 flex items-center justify-between">
-                      <span className="text-brand-textSecondary">
+                      <span className="text-gray-500">
                         Precio del Plan
                       </span>
-                      <span className="text-2xl font-bold text-brand-primary">
+                      <span className="text-2xl font-bold text-amber-600">
                         {formatoPrecio(getPrecioPlanBase())}
                       </span>
                     </div>
-                    <Separator className="mb-4 bg-brand-border" />
+                    <Separator className="mb-4 bg-gray-200" />
 
                     <div className="space-y-3">
-                      <p className="mb-3 text-sm font-semibold text-brand-text">
+                      <p className="mb-3 text-sm font-semibold text-gray-900">
                         Todas las actividades incluidas:
                       </p>
                       <div className="grid gap-2">
@@ -644,8 +644,8 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                             key={index}
                             className="flex items-start gap-3"
                           >
-                            <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-primary" />
-                            <span className="text-sm text-brand-textSecondary">
+                            <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" />
+                            <span className="text-sm text-gray-600">
                               {item}
                             </span>
                           </div>
@@ -655,30 +655,30 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                   </div>
 
                   {/* BONUS GRATIS - Ajustado */}
-                  <div className="bg-gradient-to-br from-green-900 to-green-800 border-2 border-green-600 rounded-2xl p-6">
+                  <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-6">
                     <div className="flex items-center gap-3 mb-4">
                       <span className="text-3xl">⭐</span>
-                      <h3 className="text-xl font-bold text-white">
+                      <h3 className="text-xl font-bold text-green-800">
                         BONUS GRATIS INCLUIDOS:
                       </h3>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex items-start gap-3">
-                        <div className="text-green-400 text-lg">✓</div>
-                        <span className="text-white">
+                        <div className="text-green-600 text-lg">✓</div>
+                        <span className="text-green-900">
                           Recorrido virtual 360°
                         </span>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="text-green-400 text-lg">✓</div>
-                        <span className="text-white">
+                        <div className="text-green-600 text-lg">✓</div>
+                        <span className="text-green-900">
                           Supervisión profesional
                         </span>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="text-green-400 text-lg">✓</div>
-                        <span className="text-white">
+                        <div className="text-green-600 text-lg">✓</div>
+                        <span className="text-green-900">
                           Garantía de calidad
                         </span>
                       </div>
@@ -687,28 +687,28 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                 </CardContent>
               </Card>
             ) : (
-              <div className="bg-gradient-to-br from-green-900 to-green-800 border-2 border-green-600 rounded-2xl p-6">
+              <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-3xl">⭐</span>
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-green-800">
                     BONUS GRATIS INCLUIDOS:
                   </h3>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-start gap-3">
-                    <div className="text-green-400 text-lg">✓</div>
-                    <span className="text-white">Recorrido virtual 360°</span>
+                    <div className="text-green-600 text-lg">✓</div>
+                    <span className="text-green-900">Recorrido virtual 360°</span>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="text-green-400 text-lg">✓</div>
-                    <span className="text-white">
+                    <div className="text-green-600 text-lg">✓</div>
+                    <span className="text-green-900">
                       Supervisión profesional
                     </span>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="text-green-400 text-lg">✓</div>
-                    <span className="text-white">Garantía de calidad</span>
+                    <div className="text-green-600 text-lg">✓</div>
+                    <span className="text-green-900">Garantía de calidad</span>
                   </div>
                 </div>
               </div>
@@ -716,14 +716,14 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
 
             {/* Adicionales si hay */}
             {adicionales.length > 0 && (
-              <Card className="border-brand-border bg-brand-card">
+              <Card className="border-gray-200 bg-white shadow-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between text-brand-text">
+                  <CardTitle className="flex items-center justify-between text-gray-900">
                     <span>Adicionales Seleccionados</span>
                     {Object.keys(itemsEditados).length > 0 && (
                       <button
                         onClick={resetearNombres}
-                        className="text-xs font-normal text-blue-400 underline hover:text-blue-300"
+                        className="text-xs font-normal text-blue-600 underline hover:text-blue-700"
                       >
                         Restaurar nombres originales
                       </button>
@@ -731,7 +731,7 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="mb-3 text-xs text-brand-textSecondary">
+                  <p className="mb-3 text-xs text-gray-500">
                     💡 Haz click en cualquier nombre para personalizarlo en el presupuesto.
                   </p>
                   <div className="space-y-3">
@@ -745,7 +745,7 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                       return (
                         <div
                           key={index}
-                          className="flex items-center justify-between border-b border-brand-border py-2 last:border-0"
+                          className="flex items-center justify-between border-b border-gray-100 py-2 last:border-0"
                         >
                           <div className="flex-1 pr-4">
                             {enEdicion ? (
@@ -769,7 +769,7 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                                 </button>
                                 <button
                                   onClick={cancelarEdicion}
-                                  className="h-8 rounded bg-gray-500 px-3 text-xs font-medium text-white hover:bg-gray-600"
+                                  className="h-8 rounded bg-gray-400 px-3 text-xs font-medium text-white hover:bg-gray-500"
                                 >
                                   ✕
                                 </button>
@@ -777,17 +777,17 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                             ) : (
                               <button
                                 onClick={() => iniciarEdicion(adicional.id, nombreMostrar)}
-                                className="group flex items-center gap-1 text-left text-brand-textSecondary hover:text-brand-primary"
+                                className="group flex items-center gap-1 text-left text-gray-600 hover:text-amber-600"
                               >
                                 <span>{nombreMostrar}</span>
                                 {qty > 1 && (
-                                  <span className="text-brand-primary">×{qty}</span>
+                                  <span className="text-amber-600">×{qty}</span>
                                 )}
                                 <span className="opacity-0 transition-opacity group-hover:opacity-100">✏️</span>
                               </button>
                             )}
                           </div>
-                          <span className="shrink-0 font-semibold text-brand-primary">
+                          <span className="shrink-0 font-semibold text-amber-600">
                             {formatoPrecio(lineTotal)}
                           </span>
                         </div>
@@ -802,7 +802,7 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
           {/* Columna lateral - Total sticky */}
           <div className="lg:col-span-1">
             <div className="sticky top-4 space-y-6">
-              <Card className="border-0 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl shadow-xl">
+              <Card className="border-0 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-center text-black/80">
                     Inversión Total
@@ -831,24 +831,24 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
                     )}
                   </div>
 
-                  <Separator className="bg-brand-border" />
+                  <Separator className="bg-black/15" />
 
                   {!esSanJuan && (
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-brand-textSecondary">
+                        <span className="text-black/70">
                           Plan {planData.nombre}
                         </span>
-                        <span className="text-brand-text">
+                        <span className="text-black/90">
                           {formatoPrecio(planBasicoMonto)}
                         </span>
                       </div>
                       {adicionales.length > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-brand-textSecondary">
+                          <span className="text-black/70">
                             Adicionales
                           </span>
-                          <span className="text-brand-text">
+                          <span className="text-black/90">
                             {formatoPrecio(totalAdicionales)}
                           </span>
                         </div>
@@ -868,12 +868,12 @@ ${clienteEmail ? `Email: ${clienteEmail}` : ""}`;
         />
 
         {/* Testimonios al final de la página */}
-        <Card className="mt-8 border-brand-border bg-brand-card">
+        <Card className="mt-8 border-gray-200 bg-white shadow-sm">
           <CardHeader>
-            <CardTitle className="text-center text-2xl text-brand-text">
+            <CardTitle className="text-center text-2xl text-gray-900">
               Lo Que Dicen Nuestros Clientes
             </CardTitle>
-            <p className="text-center text-brand-textSecondary">
+            <p className="text-center text-gray-500">
               Más de 100 familias ya confían en nosotros
             </p>
           </CardHeader>
