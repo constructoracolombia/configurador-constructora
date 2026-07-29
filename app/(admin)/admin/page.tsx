@@ -289,13 +289,6 @@ Es GRATIS y recibes tu PDF al instante.
               Dashboard
             </Button>
             <Button
-              onClick={() => router.push("/crm")}
-              className="bg-white font-semibold text-black hover:bg-gray-200"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              CRM Kanban
-            </Button>
-            <Button
               onClick={() => window.open("/presupuestos", "_blank")}
               className="bg-white font-semibold text-black hover:bg-gray-200"
             >
