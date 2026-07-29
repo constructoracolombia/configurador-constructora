@@ -52,6 +52,22 @@ const COLORS = {
 
 const formatPrice = (price: number): string => `$${price.toLocaleString("es-CO")}`;
 
+// Check vectorial en vez de texto "✓" — la fuente estándar de jsPDF
+// (helvetica, WinAnsiEncoding) no tiene el glifo U+2713 y lo renderiza como
+// un caracter roto (una comilla suelta en el PDF). Dibujar el check con
+// líneas evita depender de la fuente por completo.
+function drawCheck(doc: jsPDF, x: number, yBaseline: number, color: [number, number, number]) {
+  doc.setDrawColor(...color);
+  doc.setLineCap("round");
+  doc.setLineJoin("round");
+  doc.setLineWidth(0.5);
+  const y0 = yBaseline - 0.8;
+  const y1 = yBaseline;
+  const y2 = yBaseline - 2.6;
+  doc.line(x, y0, x + 1.1, y1);
+  doc.line(x + 1.1, y1, x + 3, y2);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // ACTIVIDADES POR PLAN
 // ═══════════════════════════════════════════════════════════════
@@ -153,10 +169,7 @@ function renderActividadesEnGrid(doc: jsPDF, actividades: string[], margin: numb
 
   actividades.forEach((actividad, index) => {
     // Check dorado
-    doc.setTextColor(...COLORS.gold);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("✓", x, y);
+    drawCheck(doc, x, y, COLORS.gold);
 
     // Texto actividad
     doc.setTextColor(...COLORS.textSecondary);
@@ -502,9 +515,9 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   doc.setFont("helvetica", "normal");
 
   bonos.forEach((bono) => {
-    doc.setTextColor(...COLORS.success);
-    doc.text("✓", margin + 5, bonoY);
+    drawCheck(doc, margin + 5, bonoY, COLORS.success);
     doc.setTextColor(...COLORS.textSecondary);
+    doc.setFont("helvetica", "normal");
     doc.text(bono, margin + 10, bonoY);
     bonoY += 5.2;
   });
@@ -611,8 +624,7 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   doc.setFontSize(8);
 
   garantias.forEach((garantia) => {
-    doc.setTextColor(...COLORS.success);
-    doc.text("✓", margin + 6, garantiaY);
+    drawCheck(doc, margin + 6, garantiaY, COLORS.success);
     doc.setTextColor(...COLORS.white);
     doc.setFont("helvetica", "normal");
     doc.text(garantia, margin + 12, garantiaY);

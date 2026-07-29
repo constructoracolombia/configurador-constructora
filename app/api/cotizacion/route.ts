@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         aplica_iva: false,
         notas: "Generado automáticamente desde el configurador web (sin intervención de un asesor).",
         precios_snapshot: {},
-        pdf_url: null,
+        pdf_url: pdf_url ?? null,
         token_publico,
       });
       if (pptoError) {
