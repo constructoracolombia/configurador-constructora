@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Check, Flame } from "lucide-react";
+import { Plus, Check, Flame, BadgeCheck } from "lucide-react";
 import {
   categorias,
   findProyecto,
@@ -158,9 +158,9 @@ export default function PersonalizarPage() {
             // catálogo del proyecto lo tiene (ver usePreciosPlanProyecto),
             // si no, el precio dinámico por plan de siempre.
             const nombreMostrar = getNombreAdicional(producto, store.planBase);
-            const precioMostrar =
-              store.preciosLiveAdicionales[producto.id] ??
-              getPrecioAdicional(producto, store.planBase);
+            const precioEnVivo = store.preciosLiveAdicionales[producto.id];
+            const precioMostrar = precioEnVivo ?? getPrecioAdicional(producto, store.planBase);
+            const tienePrecioDeCatalogo = precioEnVivo != null;
 
             return (
               <Card
@@ -196,6 +196,14 @@ export default function PersonalizarPage() {
                   </p>
                   <p className="text-xl font-bold text-amber-600 sm:text-2xl">
                     {formatoPrecio(precioMostrar)}
+                    {tienePrecioDeCatalogo && (
+                      <BadgeCheck
+                        className="ml-1 inline h-3.5 w-3.5 align-middle text-emerald-600/60"
+                        aria-label="Precio ya asignado en el catálogo de Finanzas"
+                      >
+                        <title>Precio ya asignado en el catálogo de Finanzas</title>
+                      </BadgeCheck>
+                    )}
                     {tieneMultiples && cantidad > 1 && (
                       <span className="ml-2 text-sm text-gray-500 sm:text-base">
                         × {cantidad} = {formatoPrecio(precioMostrar * cantidad)}
