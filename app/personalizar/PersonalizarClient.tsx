@@ -51,12 +51,12 @@ export default function PersonalizarClient() {
   // esto, rompían el agrupamiento por categoría en la vista "Todas".
   const productosDisponibles = useMemo(() => {
     if (!store.planBase) return [];
-    const todos = [...adicionalesFiltrados(store.planBase), ...productosCustom];
+    const todos = [...adicionalesFiltrados(store.planBase, catalogoIdActual), ...productosCustom];
     return todos.sort(
       (a, b) => categorias.indexOf(a.categoria as (typeof categorias)[number]) -
         categorias.indexOf(b.categoria as (typeof categorias)[number])
     );
-  }, [store.planBase, productosCustom]);
+  }, [store.planBase, productosCustom, catalogoIdActual]);
 
   // Filtrar por categoría si está seleccionada
   const productosFiltrados = categoriaSeleccionada

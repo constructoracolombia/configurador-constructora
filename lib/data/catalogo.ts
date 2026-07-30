@@ -857,13 +857,31 @@ export const adicionalesOcultosPorPlan = {
 };
 
 /**
- * Lista de adicionales visibles en /personalizar según el plan elegido.
- * Filtra los items que ya vienen incluidos en cada plan.
- * @param planTipo "basico" o "intermedio"
+ * Adicionales a ocultar para un catálogo/proyecto específico — para
+ * tipos de apto que no tienen todos los espacios del plan estándar (ej.
+ * Solei solo tiene 1 baño, así que "demoler/complementar el baño
+ * auxiliar" no aplica ni siquiera como upgrade en el plan básico).
+ * adicionalesOcultosPorPlan ya cubre lo que aplica a TODOS los
+ * catálogos; esto es solo para excepciones puntuales de un proyecto.
  */
-export const adicionalesFiltrados = (planTipo: "basico" | "intermedio") => {
+export const adicionalesExcluidosPorCatalogo: Record<
+  string,
+  Partial<Record<"basico" | "intermedio", string[]>>
+> = {
+  [T3_CATALOGO_ID]: { basico: ["enchape-bano-aux", "complementar-enchape"] }, // Solei — apto de 1 solo baño
+};
+
+/**
+ * Lista de adicionales visibles en /personalizar según el plan elegido.
+ * Filtra los items que ya vienen incluidos en cada plan, y opcionalmente
+ * los excluidos para el catálogo de este proyecto en particular.
+ * @param planTipo "basico" o "intermedio"
+ * @param catalogoId catálogo del proyecto actual (ver getCatalogoIdPorProyecto)
+ */
+export const adicionalesFiltrados = (planTipo: "basico" | "intermedio", catalogoId?: string) => {
   const ocultos = adicionalesOcultosPorPlan[planTipo] || [];
-  return adicionales.filter((item) => !ocultos.includes(item.id));
+  const ocultosCatalogo = catalogoId ? adicionalesExcluidosPorCatalogo[catalogoId]?.[planTipo] || [] : [];
+  return adicionales.filter((item) => !ocultos.includes(item.id) && !ocultosCatalogo.includes(item.id));
 };
 
 /**
