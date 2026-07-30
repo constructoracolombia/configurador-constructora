@@ -10,9 +10,11 @@ import {
   adicionalesOcultosPorPlan,
   getNombreAdicional,
   getPrecioAdicional,
+  getCatalogoIdPorProyecto,
 } from "@/lib/data/catalogo";
 import type { Producto } from "@/lib/data/catalogo";
 import { usePreciosPlanProyecto } from "@/lib/hooks/usePreciosPlanProyecto";
+import { useProductosCustomCatalogo } from "@/lib/hooks/useProductosCustomCatalogo";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { ImagenOptimizada } from "@/components/ImagenOptimizada";
@@ -29,11 +31,17 @@ export default function PersonalizarPage() {
   // CRÍTICO: Usar el store directamente - NO destructurar para máxima reactividad
   const store = useCotizador();
 
+  // Productos creados dinámicamente desde Finanzas para este catálogo
+  // (tabla personalizar_items_custom) — se muestran siempre, sin importar
+  // el plan, ya que no forman parte de ningún plan base.
+  const catalogoIdActual = getCatalogoIdPorProyecto(store.proyecto);
+  const productosCustom = useProductosCustomCatalogo(catalogoIdActual);
+
   // Obtener productos filtrados según el plan seleccionado
   const productosDisponibles = useMemo(() => {
     if (!store.planBase) return [];
-    return adicionalesFiltrados(store.planBase);
-  }, [store.planBase]);
+    return [...adicionalesFiltrados(store.planBase), ...productosCustom];
+  }, [store.planBase, productosCustom]);
 
   // Filtrar por categoría si está seleccionada
   const productosFiltrados = categoriaSeleccionada
