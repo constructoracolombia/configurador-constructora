@@ -304,11 +304,6 @@ export interface Producto {
   };
 }
 
-// Helper para generar placeholders SVG embebidos (sin depender de que exista el archivo en `public/`).
-const generarPlaceholder = (nombre: string) => {
-  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23111827' width='400' height='300'/%3E%3Crect fill='%23EAB308' x='0' y='280' width='400' height='20'/%3E%3Ctext fill='%23FFFFFF' font-size='14' font-family='Arial' x='50%25' y='45%25' text-anchor='middle'%3E${encodeURIComponent(nombre)}%3C/text%3E%3Ctext fill='%23EAB308' font-size='12' font-family='Arial' x='50%25' y='60%25' text-anchor='middle'%3EImagen pr%C3%B3ximamente%3C/text%3E%3C/svg%3E`;
-};
-
 export const adicionales: Producto[] = [
   // PRELIMINARES
   {
@@ -715,78 +710,6 @@ export const adicionales: Producto[] = [
     precio: 480_000,
     categoria: "Carpintería",
     imagen: "/productos/73. Mueble bajo lavamanos.jpg",
-  },
-  // NUEVOS PRODUCTOS (Plan Básico / San Juan)
-  {
-    id: "demolicion-enchape-bano-aux",
-    nombre: "Demolición + Enchape baño aux",
-    descripcion:
-      "Demolición de enchapes existentes e instalación de nuevos enchapes en baño auxiliar",
-    categoria: "Baños",
-    precio: 1_800_000,
-    imagen: generarPlaceholder("Demolición + Enchape baño aux"),
-    unidad: "servicio",
-    disponible: true,
-  },
-  {
-    id: "complementar-enchape-bano-aux",
-    nombre: "Complementar enchape baño Aux",
-    descripcion: "Complemento de enchapes en baño auxiliar hasta techo",
-    categoria: "Baños",
-    precio: 950_000,
-    imagen: generarPlaceholder("Complementar enchape baño Aux"),
-    unidad: "servicio",
-    disponible: true,
-  },
-  {
-    id: "meson-granito-cocina",
-    nombre: "Mesón granito cocina",
-    descripcion: "Mesón en granito natural para cocina",
-    categoria: "Granitos",
-    precio: 1_200_000,
-    imagen: generarPlaceholder("Mesón granito cocina"),
-    unidad: "metro lineal",
-    disponible: true,
-  },
-  {
-    id: "barra-granito-soporte",
-    nombre: "Barra granito con soporte",
-    descripcion: "Barra desayunador en granito con soporte metálico",
-    categoria: "Granitos",
-    precio: 850_000,
-    imagen: generarPlaceholder("Barra granito con soporte"),
-    unidad: "unidad",
-    disponible: true,
-  },
-  {
-    id: "mueble-bajo-barra",
-    nombre: "Mueble bajo barra",
-    descripcion: "Mueble bajo barra desayunador en melamina",
-    categoria: "Carpintería",
-    precio: 1_200_000,
-    imagen: generarPlaceholder("Mueble bajo barra"),
-    unidad: "unidad",
-    disponible: true,
-  },
-  {
-    id: "division-vidrio-bano",
-    nombre: "División vidrio baño",
-    descripcion: "División en vidrio templado para zona de ducha",
-    categoria: "Baños",
-    precio: 850_000,
-    imagen: generarPlaceholder("División vidrio baño"),
-    unidad: "unidad",
-    disponible: true,
-  },
-  {
-    id: "espejo-cuadrado-led",
-    nombre: "Espejo cuadrado LED",
-    descripcion: "Espejo cuadrado con iluminación LED integrada",
-    categoria: "Baños",
-    precio: 380_000,
-    imagen: generarPlaceholder("Espejo cuadrado LED"),
-    unidad: "unidad",
-    disponible: true,
   },
   // VIDRIOS Y ESPEJOS
   {
