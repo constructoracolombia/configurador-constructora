@@ -32,7 +32,9 @@ export function useProductosCustomCatalogo(
     }
     supabase
       .from("personalizar_items_custom")
-      .select("id, nombre, descripcion, categoria, imagen_url, incluido_en_planes")
+      .select(
+        "id, nombre, descripcion, categoria, imagen_url, incluido_en_planes, permite_multiples, max_cantidad"
+      )
       .eq("catalogo_id", catalogoId)
       .then(({ data, error }) => {
         if (cancelado || error || !data) return;
@@ -48,6 +50,8 @@ export function useProductosCustomCatalogo(
               // Sin foto todavía (imagen_url null) -> ImagenOptimizada cae
               // a su placeholder de placehold.co con el nombre del ítem.
               imagen: r.imagen_url || "",
+              permiteMultiples: r.permite_multiples || false,
+              maxCantidad: r.max_cantidad || 2,
             }))
         );
       });

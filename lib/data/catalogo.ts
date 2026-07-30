@@ -827,6 +827,7 @@ export const adicionalesOcultosPorPlan = {
     "meson-sinterizado",   // Mejorar a mesón sinterizado cocina
     "mueble-cocina",       // Mueble cocina RH completo
     "closet-principal",    // Closet habitación principal
+    "closet-secundario",   // Closet habitación secundaria/tercero melamina RH
     "division-vidrio",     // División de vidrio
   ],
   intermedio: [
