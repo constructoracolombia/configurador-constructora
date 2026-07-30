@@ -32,7 +32,9 @@ export function useProductosCustomCatalogo(catalogoId: string | undefined): Prod
             descripcion: r.descripcion || "",
             precio: 0,
             categoria: r.categoria,
-            imagen: r.imagen_url,
+            // Sin foto todavía (imagen_url null) -> ImagenOptimizada cae
+            // a su placeholder de placehold.co con el nombre del ítem.
+            imagen: r.imagen_url || "",
           }))
         );
       });
