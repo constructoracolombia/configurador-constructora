@@ -37,10 +37,18 @@ export default function PersonalizarPage() {
   const catalogoIdActual = getCatalogoIdPorProyecto(store.proyecto);
   const productosCustom = useProductosCustomCatalogo(catalogoIdActual);
 
-  // Obtener productos filtrados según el plan seleccionado
+  // Obtener productos filtrados según el plan seleccionado, ordenados por
+  // categoría (mismo orden que los chips de filtro: Preliminares,
+  // Enchapes, Baños...) — necesario porque los productos creados desde
+  // Finanzas (productosCustom) se agregan al final del arreglo y, sin
+  // esto, rompían el agrupamiento por categoría en la vista "Todas".
   const productosDisponibles = useMemo(() => {
     if (!store.planBase) return [];
-    return [...adicionalesFiltrados(store.planBase), ...productosCustom];
+    const todos = [...adicionalesFiltrados(store.planBase), ...productosCustom];
+    return todos.sort(
+      (a, b) => categorias.indexOf(a.categoria as (typeof categorias)[number]) -
+        categorias.indexOf(b.categoria as (typeof categorias)[number])
+    );
   }, [store.planBase, productosCustom]);
 
   // Filtrar por categoría si está seleccionada
