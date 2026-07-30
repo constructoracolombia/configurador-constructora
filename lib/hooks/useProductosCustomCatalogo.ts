@@ -10,6 +10,22 @@ import type { Producto } from "@/lib/data/catalogo";
 // /personalizar. El precio real lo sigue resolviendo
 // preciosLiveAdicionales (adicional_ppto_id = id de esta tabla), acá solo
 // se arma la tarjeta (nombre/categoría/imagen).
+//
+// El nombre se lee EN VIVO de catalogo_items.nombre (join por FK
+// catalogo_item_id) en vez de la columna `nombre` propia de esta tabla —
+// así, si Javier renombra el ítem en Finanzas, /personalizar lo refleja
+// sin ningún paso extra. `nombre` sigue existiendo en la tabla solo como
+// respaldo por si el ítem de catálogo se borra (catalogo_item_id queda
+// null).
+type FilaCustom = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  categoria: string;
+  imagen_url: string | null;
+  catalogo_items: { nombre: string } | { nombre: string }[] | null;
+};
+
 export function useProductosCustomCatalogo(catalogoId: string | undefined): Producto[] {
   const [productos, setProductos] = useState<Producto[]>([]);
 
@@ -21,21 +37,24 @@ export function useProductosCustomCatalogo(catalogoId: string | undefined): Prod
     }
     supabase
       .from("personalizar_items_custom")
-      .select("id, nombre, descripcion, categoria, imagen_url")
+      .select("id, nombre, descripcion, categoria, imagen_url, catalogo_items(nombre)")
       .eq("catalogo_id", catalogoId)
       .then(({ data, error }) => {
         if (cancelado || error || !data) return;
         setProductos(
-          data.map((r) => ({
-            id: r.id,
-            nombre: r.nombre,
-            descripcion: r.descripcion || "",
-            precio: 0,
-            categoria: r.categoria,
-            // Sin foto todavía (imagen_url null) -> ImagenOptimizada cae
-            // a su placeholder de placehold.co con el nombre del ítem.
-            imagen: r.imagen_url || "",
-          }))
+          (data as FilaCustom[]).map((r) => {
+            const catalogoItem = Array.isArray(r.catalogo_items) ? r.catalogo_items[0] : r.catalogo_items;
+            return {
+              id: r.id,
+              nombre: catalogoItem?.nombre || r.nombre,
+              descripcion: r.descripcion || "",
+              precio: 0,
+              categoria: r.categoria,
+              // Sin foto todavía (imagen_url null) -> ImagenOptimizada cae
+              // a su placeholder de placehold.co con el nombre del ítem.
+              imagen: r.imagen_url || "",
+            };
+          })
         );
       });
     return () => {
