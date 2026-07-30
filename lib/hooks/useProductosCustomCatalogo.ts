@@ -23,7 +23,7 @@ type FilaCustom = {
   descripcion: string | null;
   categoria: string;
   imagen_url: string | null;
-  catalogo_items: { nombre: string } | { nombre: string }[] | null;
+  catalogo_items: { nombre: string; codigo: string | null } | { nombre: string; codigo: string | null }[] | null;
 };
 
 export function useProductosCustomCatalogo(catalogoId: string | undefined): Producto[] {
@@ -37,16 +37,22 @@ export function useProductosCustomCatalogo(catalogoId: string | undefined): Prod
     }
     supabase
       .from("personalizar_items_custom")
-      .select("id, nombre, descripcion, categoria, imagen_url, catalogo_items(nombre)")
+      .select("id, nombre, descripcion, categoria, imagen_url, catalogo_items(nombre, codigo)")
       .eq("catalogo_id", catalogoId)
       .then(({ data, error }) => {
         if (cancelado || error || !data) return;
         setProductos(
           (data as FilaCustom[]).map((r) => {
             const catalogoItem = Array.isArray(r.catalogo_items) ? r.catalogo_items[0] : r.catalogo_items;
+            const nombreBase = catalogoItem?.nombre || r.nombre;
+            // Prefijo con el código de catálogo (ej. "42 · Mesón granito
+            // cocina") para poder cruzar con Finanzas de un vistazo — solo
+            // aplica a estos productos custom, los únicos con un código
+            // de catálogo vinculado en vivo.
+            const nombre = catalogoItem?.codigo ? `${catalogoItem.codigo} · ${nombreBase}` : nombreBase;
             return {
               id: r.id,
-              nombre: catalogoItem?.nombre || r.nombre,
+              nombre,
               descripcion: r.descripcion || "",
               precio: 0,
               categoria: r.categoria,
