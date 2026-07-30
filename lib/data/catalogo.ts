@@ -835,6 +835,7 @@ export const adicionalesOcultosPorPlan = {
     "mueble-cocina",       // Mueble cocina RH completo
     "closet-principal",    // Closet habitación principal
     "closet-secundario",   // Closet habitación secundaria
+    "closet-espaldar",     // Closet espaldar cama
     "division-vidrio",     // División vidrio baño
   ],
 };

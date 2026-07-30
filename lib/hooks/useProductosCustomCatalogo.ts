@@ -14,8 +14,14 @@ import type { Producto } from "@/lib/data/catalogo";
 // custom) y preciosLiveAdicionales respectivamente, ambos keyed por
 // `id`/`adicional_ppto_id`. Acá solo se arma el resto de la tarjeta
 // (categoría/imagen/nombre de respaldo si el ítem de catálogo llegó a
-// borrarse).
-export function useProductosCustomCatalogo(catalogoId: string | undefined): Producto[] {
+// borrarse) y se excluyen los que ya vienen incluidos en el plan
+// seleccionado (incluido_en_planes, marcado desde Finanzas) — mismo
+// criterio que adicionalesOcultosPorPlan aplica a los productos
+// estáticos.
+export function useProductosCustomCatalogo(
+  catalogoId: string | undefined,
+  planBase: "basico" | "intermedio" | null
+): Producto[] {
   const [productos, setProductos] = useState<Producto[]>([]);
 
   useEffect(() => {
@@ -26,27 +32,29 @@ export function useProductosCustomCatalogo(catalogoId: string | undefined): Prod
     }
     supabase
       .from("personalizar_items_custom")
-      .select("id, nombre, descripcion, categoria, imagen_url")
+      .select("id, nombre, descripcion, categoria, imagen_url, incluido_en_planes")
       .eq("catalogo_id", catalogoId)
       .then(({ data, error }) => {
         if (cancelado || error || !data) return;
         setProductos(
-          data.map((r) => ({
-            id: r.id,
-            nombre: r.nombre,
-            descripcion: r.descripcion || "",
-            precio: 0,
-            categoria: r.categoria,
-            // Sin foto todavía (imagen_url null) -> ImagenOptimizada cae
-            // a su placeholder de placehold.co con el nombre del ítem.
-            imagen: r.imagen_url || "",
-          }))
+          data
+            .filter((r) => !planBase || !(r.incluido_en_planes || []).includes(planBase))
+            .map((r) => ({
+              id: r.id,
+              nombre: r.nombre,
+              descripcion: r.descripcion || "",
+              precio: 0,
+              categoria: r.categoria,
+              // Sin foto todavía (imagen_url null) -> ImagenOptimizada cae
+              // a su placeholder de placehold.co con el nombre del ítem.
+              imagen: r.imagen_url || "",
+            }))
         );
       });
     return () => {
       cancelado = true;
     };
-  }, [catalogoId]);
+  }, [catalogoId, planBase]);
 
   return productos;
 }

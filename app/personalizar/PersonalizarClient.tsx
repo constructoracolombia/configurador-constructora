@@ -36,7 +36,7 @@ export default function PersonalizarClient() {
   // (tabla personalizar_items_custom) — se muestran siempre, sin importar
   // el plan, ya que no forman parte de ningún plan base.
   const catalogoIdActual = getCatalogoIdPorProyecto(store.proyecto);
-  const productosCustom = useProductosCustomCatalogo(catalogoIdActual);
+  const productosCustom = useProductosCustomCatalogo(catalogoIdActual, store.planBase);
 
   // Nombre/código en vivo de CUALQUIER producto (estático o custom) ya
   // vinculado a un catalogo_item en Finanzas — cubre tanto los creados
