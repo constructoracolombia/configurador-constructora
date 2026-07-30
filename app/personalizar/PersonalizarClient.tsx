@@ -15,6 +15,7 @@ import {
 import type { Producto } from "@/lib/data/catalogo";
 import { usePreciosPlanProyecto } from "@/lib/hooks/usePreciosPlanProyecto";
 import { useProductosCustomCatalogo } from "@/lib/hooks/useProductosCustomCatalogo";
+import { useCatalogoInfoLive } from "@/lib/hooks/useCatalogoInfoLive";
 import { formatoPrecio } from "@/lib/utils/format";
 import { useCotizador } from "@/lib/store/cotizador";
 import { ImagenOptimizada } from "@/components/ImagenOptimizada";
@@ -36,6 +37,12 @@ export default function PersonalizarClient() {
   // el plan, ya que no forman parte de ningún plan base.
   const catalogoIdActual = getCatalogoIdPorProyecto(store.proyecto);
   const productosCustom = useProductosCustomCatalogo(catalogoIdActual);
+
+  // Nombre/código en vivo de CUALQUIER producto (estático o custom) ya
+  // vinculado a un catalogo_item en Finanzas — cubre tanto los creados
+  // con "Crear en Personalizar" como los ~54 estáticos que ya estaban
+  // vinculados desde antes (ej. "Mejorar a porcelanato" -> código 3.1).
+  const catalogoInfoPorId = useCatalogoInfoLive(catalogoIdActual);
 
   // Obtener productos filtrados según el plan seleccionado, ordenados por
   // categoría (mismo orden que los chips de filtro: Preliminares,
@@ -173,7 +180,9 @@ export default function PersonalizarClient() {
             // en vivo del catálogo si este adicional está mapeado y el
             // catálogo del proyecto lo tiene (ver usePreciosPlanProyecto),
             // si no, el precio dinámico por plan de siempre.
-            const nombreMostrar = getNombreAdicional(producto, store.planBase);
+            const infoLive = catalogoInfoPorId.get(producto.id);
+            const nombreBase = infoLive?.nombre || getNombreAdicional(producto, store.planBase);
+            const nombreMostrar = infoLive?.codigo ? `${infoLive.codigo} · ${nombreBase}` : nombreBase;
             const precioEnVivo = store.preciosLiveAdicionales[producto.id];
             const precioMostrar = precioEnVivo ?? getPrecioAdicional(producto, store.planBase);
             const tienePrecioDeCatalogo = precioEnVivo != null;
