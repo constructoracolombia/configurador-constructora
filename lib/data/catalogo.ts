@@ -797,8 +797,12 @@ export const adicionalesPorCategoria = (categoria: string) => {
 
 /**
  * Adicionales a OCULTAR según el plan seleccionado.
- * - BÁSICO: Oculta 11 items que ya vienen incluidos en el plan básico.
- * - INTERMEDIO: Oculta 18 items (los 11 del básico + 7 adicionales del intermedio).
+ * - BÁSICO: 11 items que ya vienen incluidos + 9 "Mejorar a..." que no
+ *   aplican sin la base de granito/cocina/closets que solo trae el plan
+ *   intermedio (no tiene sentido ofrecer un upgrade de algo que el
+ *   cliente de básico ni siquiera tiene).
+ * - INTERMEDIO: 11 del básico + 9 adicionales que ya vienen incluidos en
+ *   el intermedio.
  */
 export const adicionalesOcultosPorPlan = {
   basico: [
@@ -813,6 +817,17 @@ export const adicionalesOcultosPorPlan = {
     "nicho",               // Nicho iluminado
     "combo-basico",        // Combo básico baño
     "luminarias",          // Luminarias LED
+    // "Mejorar a..." de granito/cocina/closets — no aplican sin la base
+    // que solo trae el plan intermedio.
+    "meson-granito",       // Mesón Granito san gabriel/Quarztone blanco cocina
+    "barra-mueble",        // Mejorar a barra con mueble bajo barra RH
+    "barra-patera",        // Mejorar a Barra Granito con patera doble 1m alto
+    "barra-patera-mueble", // Mejorar a Barra con patera + mueble
+    "barra-sinterizado",   // Mejorar a Barra con patera sinterizado + mueble
+    "meson-sinterizado",   // Mejorar a mesón sinterizado cocina
+    "mueble-cocina",       // Mueble cocina RH completo
+    "closet-principal",    // Closet habitación principal
+    "division-vidrio",     // División de vidrio
   ],
   intermedio: [
     // Todo lo del plan básico
