@@ -1522,26 +1522,48 @@ function CentroOperacionesDashboard() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => router.push("/no-cerrados")}
-                className="flex shrink-0 items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-700 transition-colors hover:bg-red-100"
-              >
-                <span className="text-lg">📁</span>
-                <div className="text-left">
-                  <div className="text-sm font-semibold">Ver No Cerrados</div>
-                  <div className="text-xs text-red-600">
-                    {
-                      leads.filter((l) =>
-                        ["PERDIDO", "DESCALIFICADO"].includes(
-                          normalizarEtapa(l.etapa)
-                        )
-                      ).length
-                    }{" "}
-                    archivados
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.push("/no-cerrados")}
+                  className="flex shrink-0 items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-700 transition-colors hover:bg-red-100"
+                >
+                  <span className="text-lg">📁</span>
+                  <div className="text-left">
+                    <div className="text-sm font-semibold">Ver No Cerrados</div>
+                    <div className="text-xs text-red-600">
+                      {
+                        leads.filter((l) =>
+                          ["PERDIDO", "DESCALIFICADO"].includes(
+                            normalizarEtapa(l.etapa)
+                          )
+                        ).length
+                      }{" "}
+                      archivados
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => router.push("/entrega-2027")}
+                  className="flex shrink-0 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-amber-700 transition-colors hover:bg-amber-100"
+                >
+                  <span className="text-lg">📅</span>
+                  <div className="text-left">
+                    <div className="text-sm font-semibold">Entrega 2027</div>
+                    <div className="text-xs text-amber-600">
+                      {
+                        leads.filter((l) => {
+                          const f = l.fecha_entrega_apartamento;
+                          return !!f && f >= "2027-01-01" && f < "2028-01-01";
+                        }).length
+                      }{" "}
+                      leads
+                    </div>
+                  </div>
+                </button>
+              </div>
             </div>
 
             <DragDropContext onDragEnd={handleDragEnd}>
