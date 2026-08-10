@@ -192,6 +192,17 @@ export default function PresupuestoPublicoPage() {
       const clienteSlug = ppto.nombre_cliente.split(" ")[0]!.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
       const fecha = ppto.created_at.slice(0, 10).replace(/-/g, "");
       pdf.save(`Presupuesto-${clienteSlug}-V${ppto.version_num}-${fecha}.pdf`);
+    } catch (err) {
+      // Bug real corregido 2026-08-10: este bloque no tenía catch, solo
+      // finally — si html2canvas o jsPDF fallaban (canvas "tainted" por
+      // protecciones anti-fingerprinting del navegador, error de memoria en
+      // el render a scale:2, etc.), el error quedaba como una promesa
+      // rechazada sin manejar, invisible para quien hace clic: el botón
+      // volvía a la normalidad sin descargar nada y sin ningún aviso.
+      console.error("Error generando el PDF de la cotización:", err);
+      alert(
+        "No se pudo generar el PDF. Si usas Brave u otro navegador con bloqueo de huella digital (fingerprinting) activado, prueba desactivando los Shields para este sitio y vuelve a intentar. Si el problema sigue, avísale a soporte con el error de la consola (F12)."
+      );
     } finally {
       setDescargandoPDF(false);
     }
