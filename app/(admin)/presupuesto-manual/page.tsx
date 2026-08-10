@@ -313,11 +313,32 @@ export default function PresupuestoManual() {
     else setPrecioBase(null);
   }, [planBase, conjunto, precioVentaCatalogo]);
 
-  // inicializa estado de ítems del plan cuando cambia planBase
-  useEffect(() => {
-    const listaItems = planBase === "Plan Básico"
+  // resetea precio manual al cambiar plan o conjunto
+  useEffect(() => { setPrecioManual(null); }, [planBase, conjunto]);
+
+  const mostrarToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // Bug real corregido 2026-08-10 (reportado por Javier): esta inicialización
+  // vivía antes en un useEffect(..., [planBase]) — el problema es que
+  // cargarDesdeVersion() y cargarPresupuestoGuardado() TAMBIÉN llaman
+  // setPlanBase() al cargar un borrador ya guardado, lo cual disparaba este
+  // mismo efecto y sobrescribía el items_plan_estado recién cargado con el
+  // default "todo aplica" — perdiendo silenciosamente qué ítems del plan
+  // estándar (básico/intermedio) Javier había marcado como "no aplica" en
+  // esa versión. Los adicionales y personalizados nunca se veían afectados
+  // porque ningún efecto los tocaba. Fix: esta lógica deja de ser reactiva a
+  // "planBase cambió" (sin poder distinguir el motivo) y pasa a ser un
+  // manejador explícito, llamado ÚNICAMENTE desde el <select> de Plan base
+  // cuando Javier lo cambia a mano — cargar una versión guardada nunca la
+  // dispara.
+  const handleCambiarPlanBase = (nuevoPlan: string) => {
+    setPlanBase(nuevoPlan);
+    const listaItems = nuevoPlan === "Plan Básico"
       ? ITEMS_PLAN_BASICO
-      : planBase === "Plan Intermedio Plus"
+      : nuevoPlan === "Plan Intermedio Plus"
       ? ITEMS_PLAN_INTERMEDIO
       : [];
     const estadoInicial: Record<string, EstadoItemPlan> = {};
@@ -326,14 +347,6 @@ export default function PresupuestoManual() {
     });
     setItemsPlanEstado(estadoInicial);
     setItemsOcultos(new Set());
-  }, [planBase]);
-
-  // resetea precio manual al cambiar plan o conjunto
-  useEffect(() => { setPrecioManual(null); }, [planBase, conjunto]);
-
-  const mostrarToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3500);
   };
 
   const toggleItemPlan = (nombre: string) => {
@@ -1272,7 +1285,7 @@ export default function PresupuestoManual() {
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">Plan base (opcional)</label>
                   <select
                     value={planBase}
-                    onChange={(e) => setPlanBase(e.target.value)}
+                    onChange={(e) => handleCambiarPlanBase(e.target.value)}
                     className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#b08d4f]"
                   >
                     <option value="">(ninguno)</option>
