@@ -166,7 +166,16 @@ export default function PresupuestoPublicoPage() {
     if (!pdfContentRef.current || !ppto) return;
     setDescargandoPDF(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      // Bug real corregido 2026-08-10: "html2canvas" (sin el sufijo -pro) no
+      // sabe parsear los colores CSS modernos oklch()/lab() que usa
+      // Tailwind CSS v4 en el resto del sitio — tira "Attempting to parse an
+      // unsupported color function 'lab'" y aborta la captura por completo,
+      // incluso cuando esta página en concreto solo usa colores hex/rgb
+      // inline (el color problemático viene heredado del CSS global de
+      // Tailwind). Reproducido igual en Chrome DevTools, no era un tema de
+      // Brave Shields. "html2canvas-pro" es un fork mantenido, mismo import
+      // y API, que sí soporta color()/lab()/lch()/oklab()/oklch().
+      const html2canvas = (await import("html2canvas-pro")).default;
       const { jsPDF } = await import("jspdf");
 
       const canvas = await html2canvas(pdfContentRef.current, {
