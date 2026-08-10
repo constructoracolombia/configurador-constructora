@@ -145,7 +145,14 @@ export async function POST(request: NextRequest) {
         items_ocultos: [],
         items_manuales: items_manuales ?? [],
         aplica_iva: false,
-        notas: "Generado automáticamente desde el configurador web (sin intervención de un asesor).",
+        // Antes se guardaba acá "Generado automáticamente desde el
+        // configurador web (sin intervención de un asesor)." — `notas` es
+        // el mismo campo "Notas y condiciones" que ve el cliente en /p/[token]
+        // y en el PDF (lo edita un asesor a mano en presupuesto-manual), no
+        // un marcador interno; ese texto solo restaba profesionalismo frente
+        // al cliente sin cumplir ninguna función real. Bug real reportado
+        // por Javier 2026-08-10.
+        notas: "",
         precios_snapshot: {},
         pdf_url: pdf_url ?? null,
         token_publico,
