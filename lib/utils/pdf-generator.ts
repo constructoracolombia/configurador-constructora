@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { BONUS_ITEMS } from "@/lib/plan-constants";
 
 interface CotizacionData {
   numeroConsecutivo: string;
@@ -661,6 +662,479 @@ export async function generarCotizacionPDF(data: CotizacionData): Promise<Blob> 
   doc.text("Horario: Lun-Vie 8am-6pm | Sáb 9am-1pm  •  Respuesta: <5 min", pageWidth / 2, currentY + buttonHeight + 4, { align: "center" });
 
   // FOOTER FINAL
+  renderFooter(doc, margin, pageWidth, pageHeight);
+
+  return doc.output("blob");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GENERADOR DEL PRESUPUESTO PÚBLICO (/p/[token]) — DIBUJO NATIVO
+// ═══════════════════════════════════════════════════════════════
+//
+// Reemplaza el enfoque anterior de esta página (html2canvas capturando el
+// DOM como una imagen larga, cortada en bloques A4 fijos) — corte real
+// reportado por Javier el 2026-08-10: las tarjetas quedaban partidas a la
+// mitad entre página y página, además de arrastrar el bug de
+// html2canvas/oklch. Este generador dibuja cada bloque con jsPDF
+// directamente, igual que generarCotizacionPDF() de arriba, verificando el
+// espacio restante ANTES de dibujar cada sección — si no cabe, salta de
+// página primero, así ninguna tarjeta ni línea queda cortada a la mitad.
+
+export interface PresupuestoPublicoData {
+  nombreCliente: string;
+  nombreProyecto: string;
+  conjunto: string;
+  fecha: string; // ya formateada, ej. "10 de agosto de 2026"
+  refNum: string; // ej. "V3 · 20260810"
+  planBase: string;
+  precioEfectivo: number;
+  secciones: Array<{
+    seccion: string;
+    items: Array<{ nombre: string; aplica: boolean; cantidad: number }>;
+  }>;
+  adicionales: Array<{ nombre: string; qty: number; total: number }>;
+  subtotalAdicionales: number;
+  itemsManuales: Array<{ nombre: string; precio: number; cantidad: number }>;
+  subtotalManuales: number;
+  iva: number;
+  totalFinal: number;
+  condiciones: string[];
+  notas: string;
+}
+
+function renderHeaderPresupuesto(doc: jsPDF, pageWidth: number): number {
+  doc.setFillColor(...COLORS.darkNavy);
+  doc.rect(0, 0, pageWidth, 26, "F");
+
+  doc.setTextColor(...COLORS.gold);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("CONSTRUCTORA COLOMBIA", pageWidth / 2, 10, { align: "center" });
+
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("REMODELA", pageWidth / 2, 18, { align: "center" });
+
+  doc.setTextColor(210, 201, 184);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text("constructoracolombia.com", pageWidth / 2, 23, { align: "center" });
+
+  return 26;
+}
+
+// Verifica si cabe el bloque siguiente antes de dibujarlo — si no cabe,
+// cierra la página actual (footer) y abre una nueva con el header mini.
+function ensureSpacePresupuesto(
+  doc: jsPDF,
+  currentY: number,
+  neededHeight: number,
+  margin: number,
+  pageWidth: number,
+  pageHeight: number,
+  maxY: number
+): number {
+  if (currentY + neededHeight <= maxY) return currentY;
+  renderFooter(doc, margin, pageWidth, pageHeight);
+  doc.addPage();
+  return renderHeaderPresupuesto(doc, pageWidth) + 10;
+}
+
+// Tarjeta blanca con borde dorado sutil — mismo lenguaje visual que el
+// resto del PDF (COLORS.gold al 20% de opacidad simulado con un gris claro
+// dorado, jsPDF no soporta alpha en setDrawColor de forma sencilla).
+function drawCardBackground(doc: jsPDF, x: number, y: number, width: number, height: number) {
+  doc.setFillColor(...COLORS.white);
+  doc.setDrawColor(230, 220, 200);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, width, height, 3, 3, "FD");
+}
+
+export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData): Promise<Blob> {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - 2 * margin;
+  const maxY = pageHeight - margin - 14; // espacio para footer
+
+  let currentY = renderHeaderPresupuesto(doc, pageWidth) + 10;
+
+  // ── CLIENTE / PROYECTO ──
+  const clienteBoxHeight = 32;
+  drawCardBackground(doc, margin, currentY, contentWidth, clienteBoxHeight);
+  doc.setTextColor(...COLORS.gold);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.text("COTIZACIÓN DE REMODELACIÓN", margin + 6, currentY + 8);
+
+  doc.setTextColor(...COLORS.textPrimary);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text(data.nombreCliente, margin + 6, currentY + 17);
+
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  const proyectoLinea = data.conjunto
+    ? `${data.conjunto}${data.nombreProyecto ? ` · ${data.nombreProyecto}` : ""}`
+    : data.nombreProyecto;
+  if (proyectoLinea) doc.text(proyectoLinea, margin + 6, currentY + 23);
+
+  doc.setTextColor(...COLORS.textTertiary);
+  doc.setFontSize(8);
+  doc.text(`${data.fecha}  ·  ${data.refNum}`, margin + 6, currentY + 29);
+
+  currentY += clienteBoxHeight + 8;
+
+  // ── INVERSIÓN TOTAL ──
+  const totalBoxHeight = 32;
+  doc.setFillColor(253, 246, 236);
+  doc.setDrawColor(...COLORS.gold);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(margin, currentY, contentWidth, totalBoxHeight, 3, 3, "FD");
+
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text("INVERSIÓN TOTAL", pageWidth / 2, currentY + 9, { align: "center" });
+
+  doc.setTextColor(...COLORS.gold);
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatPrice(data.totalFinal), pageWidth / 2, currentY + 21, { align: "center" });
+
+  doc.setTextColor(...COLORS.textSecondary);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "italic");
+  doc.text("Precio fijo · Sin sobrecostos", pageWidth / 2, currentY + 28, { align: "center" });
+
+  currentY += totalBoxHeight + 8;
+
+  // ── PLAN BASE (secciones con checks) ──
+  if (data.planBase && data.secciones.length > 0) {
+    // Altura estimada: badge + cada sección (título + items) + total
+    const alturaEstimadaPlan =
+      14 +
+      data.secciones.reduce((s, sec) => s + 6 + sec.items.length * 5.5, 0) +
+      14;
+
+    currentY = ensureSpacePresupuesto(doc, currentY, Math.min(alturaEstimadaPlan, 60), margin, pageWidth, pageHeight, maxY);
+
+    const planBoxStartY = currentY;
+    doc.setFillColor(...COLORS.gold);
+    doc.roundedRect(margin + 4, currentY + 4, doc.getTextWidth(data.planBase.toUpperCase()) + 10, 6.5, 3, 3, "F");
+    doc.setTextColor(...COLORS.white);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text(data.planBase.toUpperCase(), margin + 9, currentY + 8.3);
+
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("· Todo lo que incluye tu remodelación", margin + 14 + doc.getTextWidth(data.planBase.toUpperCase()), currentY + 8.3);
+
+    currentY += 14;
+
+    for (const sec of data.secciones) {
+      const alturaSeccion = 6 + sec.items.length * 5.5;
+      // Si una sección puntual no cabe completa, saltar de página ANTES de
+      // empezarla — nunca partir una sección a la mitad.
+      currentY = ensureSpacePresupuesto(doc, currentY, alturaSeccion, margin, pageWidth, pageHeight, maxY);
+
+      doc.setTextColor(...COLORS.gold);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text(sec.seccion.toUpperCase(), margin + 6, currentY);
+      currentY += 5.5;
+
+      for (const item of sec.items) {
+        if (item.aplica) {
+          drawCheck(doc, margin + 6, currentY, COLORS.success);
+          doc.setTextColor(...COLORS.textPrimary);
+        } else {
+          doc.setDrawColor(...COLORS.textTertiary);
+          doc.setLineWidth(0.4);
+          doc.line(margin + 6, currentY - 1.3, margin + 9, currentY - 1.3);
+          doc.setTextColor(...COLORS.textTertiary);
+        }
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        const cantTxt = item.aplica && item.cantidad > 1 ? `  ×${item.cantidad}` : "";
+        doc.text(`${item.nombre}${cantTxt}`, margin + 12, currentY);
+        currentY += 5.5;
+      }
+    }
+
+    currentY += 2;
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(0.3);
+    doc.line(margin + 6, currentY, pageWidth - margin - 6, currentY);
+    currentY += 6;
+
+    doc.setTextColor(...COLORS.textSecondary);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total ${data.planBase}`, margin + 6, currentY);
+    doc.setTextColor(...COLORS.gold);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(formatPrice(data.precioEfectivo), pageWidth - margin - 6, currentY, { align: "right" });
+
+    // Borde de la tarjeta completa del plan (dibujado al final, ya con la
+    // altura real conocida — si cruzó de página, el borde queda por bloque).
+    const alturaCard = currentY - planBoxStartY + 6;
+    doc.setDrawColor(230, 220, 200);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, planBoxStartY - 4, contentWidth, alturaCard, 3, 3, "S");
+
+    currentY += 12;
+  }
+
+  // ── ADICIONALES ──
+  if (data.adicionales.length > 0) {
+    const altura = 12 + data.adicionales.length * 6 + 10;
+    currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
+    const startY = currentY;
+
+    doc.setTextColor(...COLORS.gold);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("+ ADICIONALES SELECCIONADOS", margin + 6, currentY + 6);
+    currentY += 12;
+
+    for (const a of data.adicionales) {
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const cantTxt = a.qty > 1 ? `  ×${a.qty}` : "";
+      doc.text(`${a.nombre}${cantTxt}`, margin + 6, currentY);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatPrice(a.total), pageWidth - margin - 6, currentY, { align: "right" });
+      currentY += 6;
+    }
+
+    currentY += 2;
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(0.3);
+    doc.line(margin + 6, currentY, pageWidth - margin - 6, currentY);
+    currentY += 6;
+    doc.setTextColor(...COLORS.textSecondary);
+    doc.setFontSize(9);
+    doc.text("Subtotal adicionales", margin + 6, currentY);
+    doc.setTextColor(...COLORS.gold);
+    doc.setFont("helvetica", "bold");
+    doc.text(formatPrice(data.subtotalAdicionales), pageWidth - margin - 6, currentY, { align: "right" });
+
+    const alturaCard = currentY - startY + 8;
+    doc.setDrawColor(230, 220, 200);
+    doc.roundedRect(margin, startY - 6, contentWidth, alturaCard, 3, 3, "S");
+    currentY += 12;
+  }
+
+  // ── PERSONALIZADOS ──
+  if (data.itemsManuales.length > 0) {
+    const altura = 12 + data.itemsManuales.length * 6 + 10;
+    currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
+    const startY = currentY;
+
+    doc.setTextColor(...COLORS.gold);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("+ PERSONALIZADOS", margin + 6, currentY + 6);
+    currentY += 12;
+
+    for (const item of data.itemsManuales) {
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const cantTxt = item.cantidad > 1 ? `  ×${item.cantidad}` : "";
+      doc.text(`${item.nombre}${cantTxt}`, margin + 6, currentY);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatPrice(item.precio * item.cantidad), pageWidth - margin - 6, currentY, { align: "right" });
+      currentY += 6;
+    }
+
+    currentY += 2;
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(0.3);
+    doc.line(margin + 6, currentY, pageWidth - margin - 6, currentY);
+    currentY += 6;
+    doc.setTextColor(...COLORS.textSecondary);
+    doc.setFontSize(9);
+    doc.text("Subtotal personalizados", margin + 6, currentY);
+    doc.setTextColor(...COLORS.gold);
+    doc.setFont("helvetica", "bold");
+    doc.text(formatPrice(data.subtotalManuales), pageWidth - margin - 6, currentY, { align: "right" });
+
+    const alturaCard = currentY - startY + 8;
+    doc.setDrawColor(230, 220, 200);
+    doc.roundedRect(margin, startY - 6, contentWidth, alturaCard, 3, 3, "S");
+    currentY += 12;
+  }
+
+  // ── BONUS GRATIS ──
+  {
+    doc.setFontSize(8.5);
+    const bonoTextWidth = contentWidth - 17;
+    const bonoLineas = BONUS_ITEMS.map((b) => doc.splitTextToSize(b, bonoTextWidth) as string[]);
+    const totalLineas = bonoLineas.reduce((s, l) => s + l.length, 0);
+    const altura = 22 + totalLineas * 5.2;
+
+    currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
+    const startY = currentY;
+
+    doc.setFillColor(240, 253, 244);
+    doc.setDrawColor(134, 239, 172);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin, currentY, contentWidth, altura - 4, 3, 3, "FD");
+
+    doc.setTextColor(21, 128, 61);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    // Sin emoji: la fuente estándar de jsPDF (helvetica, WinAnsiEncoding) no
+    // tiene el glifo y lo renderiza como un carácter roto — mismo motivo por
+    // el que los checks se dibujan con drawCheck() en vez de usar "✓".
+    doc.text("BONUS GRATIS INCLUIDO", margin + 6, currentY + 8);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7.5);
+    doc.setTextColor(22, 101, 52);
+    doc.text("Solo por confirmar en este mes", margin + 6, currentY + 13);
+
+    let bonoY = currentY + 20;
+    doc.setFontSize(8.5);
+    bonoLineas.forEach((lineas) => {
+      drawCheck(doc, margin + 6, bonoY, [22, 163, 74]);
+      doc.setTextColor(22, 101, 52);
+      doc.setFont("helvetica", "normal");
+      doc.text(lineas, margin + 11, bonoY);
+      bonoY += lineas.length * 5.2;
+    });
+
+    currentY = startY + altura + 6;
+  }
+
+  // ── DESGLOSE TOTALES ──
+  {
+    const filas = [
+      data.planBase ? 1 : 0,
+      data.subtotalAdicionales > 0 ? 1 : 0,
+      data.subtotalManuales > 0 ? 1 : 0,
+      data.iva > 0 ? 1 : 0,
+    ].reduce((a, b) => a + b, 0);
+    const altura = filas * 7 + 20;
+    currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
+    const startY = currentY;
+    currentY += 6;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    if (data.planBase) {
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.text(data.planBase, margin + 6, currentY);
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatPrice(data.precioEfectivo), pageWidth - margin - 6, currentY, { align: "right" });
+      currentY += 7;
+    }
+    if (data.subtotalAdicionales > 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.text("Adicionales", margin + 6, currentY);
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatPrice(data.subtotalAdicionales), pageWidth - margin - 6, currentY, { align: "right" });
+      currentY += 7;
+    }
+    if (data.subtotalManuales > 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.text("Personalizados", margin + 6, currentY);
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatPrice(data.subtotalManuales), pageWidth - margin - 6, currentY, { align: "right" });
+      currentY += 7;
+    }
+    if (data.iva > 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.text("IVA (19%)", margin + 6, currentY);
+      doc.setTextColor(...COLORS.textPrimary);
+      doc.setFont("helvetica", "bold");
+      doc.text(formatPrice(data.iva), pageWidth - margin - 6, currentY, { align: "right" });
+      currentY += 7;
+    }
+
+    currentY += 2;
+    doc.setDrawColor(...COLORS.gold);
+    doc.setLineWidth(0.6);
+    doc.line(margin + 6, currentY, pageWidth - margin - 6, currentY);
+    currentY += 8;
+
+    doc.setTextColor(...COLORS.textPrimary);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL GENERAL", margin + 6, currentY);
+    doc.setTextColor(...COLORS.gold);
+    doc.setFontSize(15);
+    doc.text(formatPrice(data.totalFinal), pageWidth - margin - 6, currentY, { align: "right" });
+
+    const alturaCard = currentY - startY + 6;
+    doc.setDrawColor(230, 220, 200);
+    doc.roundedRect(margin, startY, contentWidth, alturaCard, 3, 3, "S");
+    currentY += 14;
+  }
+
+  // ── CONDICIONES ──
+  {
+    const alturaNotas = data.notas?.trim() ? 8 + doc.splitTextToSize(data.notas, contentWidth - 12).length * 5 : 0;
+    const altura = 12 + data.condiciones.length * 6.5 + alturaNotas + 6;
+    currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
+    const startY = currentY;
+
+    doc.setTextColor(...COLORS.gold);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONDICIONES", margin + 6, currentY + 6);
+    currentY += 12;
+
+    doc.setFontSize(9);
+    for (const c of data.condiciones) {
+      doc.setTextColor(...COLORS.gold);
+      doc.setFont("helvetica", "normal");
+      doc.text("·", margin + 6, currentY);
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.text(c, margin + 11, currentY);
+      currentY += 6.5;
+    }
+
+    if (data.notas?.trim()) {
+      currentY += 2;
+      doc.setDrawColor(230, 220, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margin + 6, currentY, pageWidth - margin - 6, currentY);
+      currentY += 6;
+      doc.setTextColor(...COLORS.textSecondary);
+      doc.setFontSize(8.5);
+      const notasLines = doc.splitTextToSize(data.notas, contentWidth - 12);
+      doc.text(notasLines, margin + 6, currentY);
+      currentY += notasLines.length * 5;
+    }
+
+    const alturaCard = currentY - startY + 6;
+    doc.setDrawColor(230, 220, 200);
+    doc.roundedRect(margin, startY - 6, contentWidth, alturaCard, 3, 3, "S");
+    currentY += alturaCard;
+  }
+
+  // Bug real corregido 2026-08-10: había un bloque extra de texto de marca
+  // aquí ("@constructoraColombia..." / "Bucaramanga...") duplicando lo que
+  // renderFooter() YA dibuja en la barra oscura de cada página — en la
+  // verificación real con datos de producción, ese bloque sobrante empujaba
+  // 2 líneas sueltas a una página 3 casi en blanco. renderFooter() solo
+  // basta.
   renderFooter(doc, margin, pageWidth, pageHeight);
 
   return doc.output("blob");

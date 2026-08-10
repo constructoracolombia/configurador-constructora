@@ -9,6 +9,7 @@ import {
   WA_EMPRESA,
   type PlanSeccion,
 } from "@/lib/plan-constants";
+import { generarPresupuestoPublicoPDF } from "@/lib/utils/pdf-generator";
 
 // ── tipos ───────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,6 @@ export default function PresupuestoPublicoPage() {
   const [copiado, setCopiado] = useState(false);
   const [descargandoPDF, setDescargandoPDF] = useState(false);
   const hasTrackedRef = useRef(false);
-  const pdfContentRef = useRef<HTMLDivElement>(null);
 
   // ── carga de datos ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -163,55 +163,61 @@ export default function PresupuestoPublicoPage() {
   };
 
   const descargarPDF = async () => {
-    if (!pdfContentRef.current || !ppto) return;
+    if (!ppto) return;
     setDescargandoPDF(true);
     try {
-      // Bug real corregido 2026-08-10: "html2canvas" (sin el sufijo -pro) no
-      // sabe parsear los colores CSS modernos oklch()/lab() que usa
-      // Tailwind CSS v4 en el resto del sitio — tira "Attempting to parse an
-      // unsupported color function 'lab'" y aborta la captura por completo,
-      // incluso cuando esta página en concreto solo usa colores hex/rgb
-      // inline (el color problemático viene heredado del CSS global de
-      // Tailwind). Reproducido igual en Chrome DevTools, no era un tema de
-      // Brave Shields. "html2canvas-pro" es un fork mantenido, mismo import
-      // y API, que sí soporta color()/lab()/lch()/oklab()/oklch().
-      const html2canvas = (await import("html2canvas-pro")).default;
-      const { jsPDF } = await import("jspdf");
-
-      const canvas = await html2canvas(pdfContentRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: BG,
-        logging: false,
+      // Segundo rediseño 2026-08-10 (pedido explícito de Javier): el enfoque
+      // anterior (html2canvas-pro capturando el DOM como una imagen larga y
+      // cortándola en bloques A4 fijos) arreglaba el error de colores
+      // oklch/lab, pero seguía partiendo tarjetas a la mitad entre página y
+      // página — no se veía profesional. Ahora se dibuja el PDF con jsPDF
+      // nativo (generarPresupuestoPublicoPDF), verificando el espacio
+      // restante antes de cada sección para saltar de página limpio, nunca
+      // a mitad de una tarjeta. Ya no depende de html2canvas en absoluto.
+      const blob = await generarPresupuestoPublicoPDF({
+        nombreCliente: ppto.nombre_cliente,
+        nombreProyecto: ppto.nombre_proyecto,
+        conjunto: ppto.conjunto,
+        fecha: fechaFormato,
+        refNum,
+        planBase: ppto.plan_base,
+        precioEfectivo,
+        secciones: secciones.map(({ seccion, items: secItems }) => ({
+          seccion,
+          items: secItems
+            .filter((n) => !itemsOcultosSet.has(`${seccion}_${n}`))
+            .map((nombre) => {
+              const estado = ppto.items_plan_estado[nombre];
+              return { nombre, aplica: estado?.aplica ?? true, cantidad: estado?.cantidad ?? 1 };
+            }),
+        })).filter((s) => s.items.length > 0),
+        adicionales: adicionales.map((a) => ({ nombre: a.nombre, qty: a.qty, total: a.total })),
+        subtotalAdicionales,
+        itemsManuales: ppto.items_manuales.map((i) => ({ nombre: i.nombre, precio: i.precio, cantidad: i.cantidad })),
+        subtotalManuales,
+        iva,
+        totalFinal,
+        condiciones: getCondiciones(ppto.plan_base),
+        notas: ppto.notas || "",
       });
-
-      const imgData = canvas.toDataURL("image/jpeg", 0.92);
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = pdf.internal.pageSize.getHeight();
-      const imgW = pdfW;
-      const imgH = (canvas.height / canvas.width) * pdfW;
-
-      const pageCount = Math.ceil(imgH / pdfH);
-      for (let i = 0; i < pageCount; i++) {
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, -(i * pdfH), imgW, imgH);
-      }
 
       const clienteSlug = ppto.nombre_cliente.split(" ")[0]!.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "");
       const fecha = ppto.created_at.slice(0, 10).replace(/-/g, "");
-      pdf.save(`Presupuesto-${clienteSlug}-V${ppto.version_num}-${fecha}.pdf`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Presupuesto-${clienteSlug}-V${ppto.version_num}-${fecha}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err) {
       // Bug real corregido 2026-08-10: este bloque no tenía catch, solo
-      // finally — si html2canvas o jsPDF fallaban (canvas "tainted" por
-      // protecciones anti-fingerprinting del navegador, error de memoria en
-      // el render a scale:2, etc.), el error quedaba como una promesa
+      // finally — si el generador fallaba, el error quedaba como una promesa
       // rechazada sin manejar, invisible para quien hace clic: el botón
       // volvía a la normalidad sin descargar nada y sin ningún aviso.
       console.error("Error generando el PDF de la cotización:", err);
-      alert(
-        "No se pudo generar el PDF. Si usas Brave u otro navegador con bloqueo de huella digital (fingerprinting) activado, prueba desactivando los Shields para este sitio y vuelve a intentar. Si el problema sigue, avísale a soporte con el error de la consola (F12)."
-      );
+      alert("No se pudo generar el PDF. Vuelve a intentarlo; si el problema sigue, avísale a soporte con el error de la consola (F12).");
     } finally {
       setDescargandoPDF(false);
     }
@@ -220,9 +226,6 @@ export default function PresupuestoPublicoPage() {
   // ── render ───────────────────────────────────────────────────────────────
   return (
     <div style={{ background: BG, minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
-
-      {/* ── ZONA CAPTURADA POR PDF ── */}
-      <div ref={pdfContentRef} style={{ background: BG }}>
 
       {/* ── HEADER (oscuro — identidad de marca) ── */}
       <div style={{ background: "#111D2E", borderBottom: `2px solid ${GOLD}`, padding: "16px 20px", textAlign: "center" }}>
@@ -446,9 +449,8 @@ export default function PresupuestoPublicoPage() {
         </div>
 
       </div>{/* cierra inner max-width */}
-      </div>{/* cierra pdfContentRef */}
 
-      {/* ── BOTONES DE ACCIÓN (excluidos del PDF) ── */}
+      {/* ── BOTONES DE ACCIÓN ── */}
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 16px 40px" }}>
 
         {/* ── ALTA DEMANDA ── */}
