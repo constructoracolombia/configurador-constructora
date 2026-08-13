@@ -15,6 +15,14 @@ const PLAN_BASE_PRESUPUESTO: Record<string, string> = {
   intermedio: "Plan Intermedio Plus",
 };
 
+// Mismo criterio de normalización ya usado en lib/utils/crm-groups.ts
+// (Kanban viejo /crm) — solo dígitos, ignora espacios/guiones/+57, para
+// poder comparar contra lo que ya haya en la BD sin importar el formato
+// con que se guardó cada vez.
+function normalizarTelefono(telefono: string | null | undefined): string {
+  return (telefono || "").replace(/\D/g, "");
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -90,35 +98,114 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: cotError.message }, { status: 500 });
     }
 
-    const { data: lead, error: leadError } = await supabaseAdmin
-      .from("leads")
-      .insert({
-        nombre: cliente_nombre,
-        telefono: cliente_telefono || "Sin teléfono",
-        email: cliente_email,
-        proyecto: proyecto_nombre,
-        presupuesto_estimado,
-        fuente: fuente ?? "WEB",
-        origen: origen ?? "WEB",
-        fuente_detalle: "Configurador online",
-        etapa: "COTIZACION",
-        probabilidad: 40,
-        cotizacion_id: cotizacion.id,
-        utm_source,
-        utm_medium,
-        utm_campaign,
-        utm_content,
-        utm_term,
-        fbclid,
-        gclid,
-        landing_page,
-        referrer,
-      })
-      .select("id")
-      .single();
+    // Agrupar por teléfono los leads que vienen de WEB — antes, cada vez
+    // que el mismo cliente volvía a cotizar (ej. cambiaba acabados) desde
+    // el configurador, se creaba un lead nuevo en el Kanban en vez de sumar
+    // el presupuesto al lead ya existente. Bug real reportado por Javier
+    // 2026-08-12. Solo aplica cuando el origen resuelto es "WEB" (el único
+    // caso pedido) y hay un teléfono real — nunca agrupa contra leads de
+    // otros canales (PAUTA_META, WHATSAPP, manual) ni entre sí los leads
+    // sin teléfono.
+    const origenResuelto = origen ?? "WEB";
+    const telefonoLimpio = normalizarTelefono(cliente_telefono);
 
-    if (leadError) {
-      console.error("Error insertando lead:", leadError);
+    let leadExistente: { id: string; presupuesto_estimado: number | null } | null = null;
+    if (telefonoLimpio && origenResuelto === "WEB") {
+      const { data: leadsWeb, error: buscarError } = await supabaseAdmin
+        .from("leads")
+        .select("id, telefono, presupuesto_estimado")
+        .eq("origen", "WEB")
+        .is("deleted_at", null);
+
+      if (buscarError) {
+        console.error("Error buscando lead existente por teléfono:", buscarError);
+      } else {
+        leadExistente = (leadsWeb || []).find((l) => normalizarTelefono(l.telefono) === telefonoLimpio) ?? null;
+      }
+    }
+
+    let lead: { id: string } | null = null;
+
+    if (leadExistente) {
+      // Mismo cliente WEB de siempre: no crea lead nuevo — actualiza el
+      // existente con los datos más recientes y sube presupuesto_estimado
+      // solo si el nuevo total es mayor (el indicador del lead siempre
+      // muestra el valor más alto que ese cliente ha cotizado, no el
+      // último que haya tocado por accidente un plan más barato).
+      const presupuestoMasAlto = Math.max(
+        Number(leadExistente.presupuesto_estimado) || 0,
+        Number(presupuesto_estimado) || 0
+      );
+      const { data: leadActualizado, error: updateError } = await supabaseAdmin
+        .from("leads")
+        .update({
+          nombre: cliente_nombre,
+          email: cliente_email,
+          proyecto: proyecto_nombre,
+          presupuesto_estimado: presupuestoMasAlto,
+          cotizacion_id: cotizacion.id,
+          ultima_interaccion: new Date().toISOString(),
+          ultima_actividad_fecha: new Date().toISOString(),
+          // etapa/probabilidad NO se tocan — si el asesor ya avanzó este
+          // lead a NEGOCIACION/CIERRE, una nueva cotización del cliente no
+          // debe retrocederlo a COTIZACION.
+        })
+        .eq("id", leadExistente.id)
+        .select("id")
+        .single();
+
+      if (updateError) {
+        console.error("Error actualizando lead existente:", updateError);
+      } else {
+        lead = leadActualizado;
+      }
+
+      if (lead?.id) {
+        const { error: actividadError } = await supabaseAdmin.from("lead_actividades").insert({
+          lead_id: lead.id,
+          // "NOTA" es el valor de tipo más cercano disponible en el CHECK
+          // de lead_actividades — no existe "NUEVA_COTIZACION" y agregar un
+          // valor nuevo requeriría su propia migración (mismo bug real ya
+          // encontrado 2026-08-12 en construnovelas_estilo_check).
+          tipo: "NOTA",
+          descripcion: `Cliente generó una nueva cotización desde el configurador web (#${numero_cotizacion}) — mismo lead, teléfono ya registrado.`,
+          usuario: "Sistema",
+        });
+        if (actividadError) console.error("Error registrando actividad de re-cotización:", actividadError);
+      }
+    } else {
+      const { data: leadNuevo, error: leadError } = await supabaseAdmin
+        .from("leads")
+        .insert({
+          nombre: cliente_nombre,
+          telefono: cliente_telefono || "Sin teléfono",
+          email: cliente_email,
+          proyecto: proyecto_nombre,
+          presupuesto_estimado,
+          fuente: fuente ?? "WEB",
+          origen: origenResuelto,
+          fuente_detalle: "Configurador online",
+          etapa: "COTIZACION",
+          probabilidad: 40,
+          cotizacion_id: cotizacion.id,
+          utm_source,
+          utm_medium,
+          utm_campaign,
+          utm_content,
+          utm_term,
+          fbclid,
+          gclid,
+          landing_page,
+          referrer,
+        })
+        .select("id")
+        .single();
+
+      if (leadError) {
+        console.error("Error insertando lead:", leadError);
+      } else {
+        lead = leadNuevo;
+      }
     }
 
     // Fila real en `presupuestos` — misma tabla que usa el presupuesto
