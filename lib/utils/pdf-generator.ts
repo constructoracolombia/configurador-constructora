@@ -751,6 +751,33 @@ function drawCardBackground(doc: jsPDF, x: number, y: number, width: number, hei
   doc.roundedRect(x, y, width, height, 3, 3, "FD");
 }
 
+// Dibuja el borde de una tarjeta "envolvente" (startY capturado antes del
+// contenido, currentY después de dibujarlo) SOLO si el contenido no cruzó
+// de página — cruzar de página produce una altura corrupta (a veces
+// negativa) porque startY y currentY quedan en sistemas de coordenadas de
+// páginas distintas, y el rectángulo termina siendo una caja suelta mal
+// ubicada encima de lo que venga después. Bug real reportado por Javier
+// 2026-08-13, confirmado con datos reales: el presupuesto de Silvia
+// Badillo (Plan Intermedio Plus, 7 secciones) no cabía completo en una
+// página — el borde de esa tarjeta salía con height=-22 en la página 2,
+// superpuesto justo encima de la tarjeta de Adicionales ("una caja dentro
+// de otra caja"). Sin cruce de página, dibuja el borde normal de siempre;
+// con cruce, prefiere quedarse sin borde decorativo antes que dibujar uno
+// corrupto — el contenido sigue siendo perfectamente legible sin el marco.
+function drawCardBorderSiNoCruzoPagina(
+  doc: jsPDF,
+  paginaAlEmpezar: number,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
+  if (doc.getNumberOfPages() !== paginaAlEmpezar) return;
+  doc.setDrawColor(230, 220, 200);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(x, y, width, height, 3, 3, "S");
+}
+
 export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData): Promise<Blob> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
@@ -824,6 +851,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     currentY = ensureSpacePresupuesto(doc, currentY, Math.min(alturaEstimadaPlan, 60), margin, pageWidth, pageHeight, maxY);
 
     const planBoxStartY = currentY;
+    const paginaAlEmpezarPlan = doc.getNumberOfPages();
     doc.setFillColor(...COLORS.gold);
     doc.roundedRect(margin + 4, currentY + 4, doc.getTextWidth(data.planBase.toUpperCase()) + 10, 6.5, 3, 3, "F");
     doc.setTextColor(...COLORS.white);
@@ -884,11 +912,10 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     doc.text(formatPrice(data.precioEfectivo), pageWidth - margin - 6, currentY, { align: "right" });
 
     // Borde de la tarjeta completa del plan (dibujado al final, ya con la
-    // altura real conocida — si cruzó de página, el borde queda por bloque).
+    // altura real conocida) — solo si no cruzó de página, ver
+    // drawCardBorderSiNoCruzoPagina.
     const alturaCard = currentY - planBoxStartY + 6;
-    doc.setDrawColor(230, 220, 200);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(margin, planBoxStartY - 4, contentWidth, alturaCard, 3, 3, "S");
+    drawCardBorderSiNoCruzoPagina(doc, paginaAlEmpezarPlan, margin, planBoxStartY - 4, contentWidth, alturaCard);
 
     currentY += 12;
   }
@@ -898,6 +925,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     const altura = 12 + data.adicionales.length * 6 + 10;
     currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
     const startY = currentY;
+    const paginaAlEmpezarAdicionales = doc.getNumberOfPages();
 
     doc.setTextColor(...COLORS.gold);
     doc.setFontSize(8);
@@ -929,8 +957,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     doc.text(formatPrice(data.subtotalAdicionales), pageWidth - margin - 6, currentY, { align: "right" });
 
     const alturaCard = currentY - startY + 8;
-    doc.setDrawColor(230, 220, 200);
-    doc.roundedRect(margin, startY - 6, contentWidth, alturaCard, 3, 3, "S");
+    drawCardBorderSiNoCruzoPagina(doc, paginaAlEmpezarAdicionales, margin, startY - 6, contentWidth, alturaCard);
     currentY += 12;
   }
 
@@ -939,6 +966,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     const altura = 12 + data.itemsManuales.length * 6 + 10;
     currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
     const startY = currentY;
+    const paginaAlEmpezarPersonalizados = doc.getNumberOfPages();
 
     doc.setTextColor(...COLORS.gold);
     doc.setFontSize(8);
@@ -970,8 +998,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     doc.text(formatPrice(data.subtotalManuales), pageWidth - margin - 6, currentY, { align: "right" });
 
     const alturaCard = currentY - startY + 8;
-    doc.setDrawColor(230, 220, 200);
-    doc.roundedRect(margin, startY - 6, contentWidth, alturaCard, 3, 3, "S");
+    drawCardBorderSiNoCruzoPagina(doc, paginaAlEmpezarPersonalizados, margin, startY - 6, contentWidth, alturaCard);
     currentY += 12;
   }
 
@@ -1027,6 +1054,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     const altura = filas * 7 + 20;
     currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
     const startY = currentY;
+    const paginaAlEmpezarDesglose = doc.getNumberOfPages();
     currentY += 6;
 
     doc.setFontSize(9);
@@ -1082,8 +1110,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     doc.text(formatPrice(data.totalFinal), pageWidth - margin - 6, currentY, { align: "right" });
 
     const alturaCard = currentY - startY + 6;
-    doc.setDrawColor(230, 220, 200);
-    doc.roundedRect(margin, startY, contentWidth, alturaCard, 3, 3, "S");
+    drawCardBorderSiNoCruzoPagina(doc, paginaAlEmpezarDesglose, margin, startY, contentWidth, alturaCard);
     currentY += 14;
   }
 
@@ -1093,6 +1120,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     const altura = 12 + data.condiciones.length * 6.5 + alturaNotas + 6;
     currentY = ensureSpacePresupuesto(doc, currentY, altura, margin, pageWidth, pageHeight, maxY);
     const startY = currentY;
+    const paginaAlEmpezarCondiciones = doc.getNumberOfPages();
 
     doc.setTextColor(...COLORS.gold);
     doc.setFontSize(8);
@@ -1124,8 +1152,7 @@ export async function generarPresupuestoPublicoPDF(data: PresupuestoPublicoData)
     }
 
     const alturaCard = currentY - startY + 6;
-    doc.setDrawColor(230, 220, 200);
-    doc.roundedRect(margin, startY - 6, contentWidth, alturaCard, 3, 3, "S");
+    drawCardBorderSiNoCruzoPagina(doc, paginaAlEmpezarCondiciones, margin, startY - 6, contentWidth, alturaCard);
     currentY += alturaCard;
   }
 
