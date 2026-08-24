@@ -300,8 +300,21 @@ function CentroOperacionesDashboard() {
 
       setLeads(leadsNormalizados);
 
+      // Leads de "Entrega 2027" (fecha_entrega_apartamento en 2027) tienen su
+      // propia carpeta dedicada (/entrega-2027) porque Javier no les da
+      // seguimiento semanal como al resto del pipeline — solo hasta
+      // principios de 2027. Se excluyen del Flujo Comercial principal igual
+      // que ya se excluyen los leads PERDIDO/DESCALIFICADO (misma lógica de
+      // fecha ya usada en el contador del botón "Entrega 2027" más abajo).
+      const esEntrega2027 = (l: Lead) => {
+        const f = l.fecha_entrega_apartamento;
+        return !!f && f >= "2027-01-01" && f < "2028-01-01";
+      };
+
       const leadsEnFlujoPrincipal = leadsNormalizados.filter(
-        (l) => !["PERDIDO", "DESCALIFICADO"].includes(normalizarEtapa(l.etapa))
+        (l) =>
+          !["PERDIDO", "DESCALIFICADO"].includes(normalizarEtapa(l.etapa)) &&
+          !esEntrega2027(l)
       );
 
       const etapasConDatos = ETAPAS_VISUALES.map((etapa) => {
@@ -342,10 +355,11 @@ function CentroOperacionesDashboard() {
       const conversionPromedio =
         totalLeads > 0 ? (cerrados / totalLeads) * 100 : 0;
       const pipelineTotal = leadsNormalizados
-        .filter((l) =>
-          !["PERDIDO", "DESCALIFICADO", "ELIMINADO"].includes(
-            normalizarEtapa(l.etapa)
-          )
+        .filter(
+          (l) =>
+            !["PERDIDO", "DESCALIFICADO", "ELIMINADO"].includes(
+              normalizarEtapa(l.etapa)
+            ) && !esEntrega2027(l)
         )
         .reduce((sum, l) => sum + (l.presupuesto_estimado || 0), 0);
 
