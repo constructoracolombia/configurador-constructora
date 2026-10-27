@@ -1758,7 +1758,28 @@ export default function PresupuestoManual() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <div className="text-xs uppercase tracking-wide text-white/50">Total</div>
-                    <div className="text-xl font-bold text-[#b08d4f]">{cop(totalFinal)}</div>
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="text-xl font-bold text-[#b08d4f]">$</span>
+                      <input
+                        type="text"
+                        value={totalFinal.toLocaleString("es-CO")}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\./g, "").replace(/[^0-9-]/g, "");
+                          const num = parseInt(raw, 10);
+                          if (!isNaN(num)) setTotalManual(num);
+                        }}
+                        className="w-32 border-b border-[#b08d4f]/50 bg-transparent text-right text-xl font-bold text-[#b08d4f] outline-none focus:border-[#b08d4f]"
+                      />
+                    </div>
+                    {totalManual !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setTotalManual(null)}
+                        className="mt-0.5 text-[10px] text-white/50 underline hover:text-white/80"
+                      >
+                        restaurar calculado ({cop(totalCalculado)})
+                      </button>
+                    )}
                   </div>
                   <Button
                     className="shrink-0 bg-[#b08d4f] text-white hover:bg-[#96773f]"
