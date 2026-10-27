@@ -258,6 +258,7 @@ export default function PresupuestoManual() {
   const [itemsPlanEstado, setItemsPlanEstado] = useState<Record<string, EstadoItemPlan>>({});
   const [itemsOcultos, setItemsOcultos] = useState<Set<string>>(new Set());
   const [precioManual, setPrecioManual] = useState<number | null>(null);
+  const [totalManual, setTotalManual] = useState<number | null>(null);
   const [itemsManuales, setItemsManuales] = useState<Array<{
     id: string;
     nombre: string;
@@ -726,7 +727,13 @@ export default function PresupuestoManual() {
   const baseTotal = precioBase !== null ? precioEfectivo + subtotalAdicionales : subtotalSinPlan;
   const iva = aplicaIva ? Math.round(baseTotal * 0.19) : 0;
   const subtotalManuales = itemsManuales.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const totalFinal = Math.round(baseTotal + iva + subtotalManuales);
+  const totalCalculado = Math.round(baseTotal + iva + subtotalManuales);
+  // Ajuste manual del total final (ej. redondear $43.486.800 a $43.450.000
+  // para que coincida con lo ya cotizado al cliente). Se resetea solo si
+  // cambia la suma real de ítems, para que un ajuste viejo nunca quede
+  // tapando en silencio un total distinto al que se ve en la tabla.
+  useEffect(() => { setTotalManual(null); }, [totalCalculado]);
+  const totalFinal = totalManual !== null ? totalManual : totalCalculado;
 
   const hayDescuentos = Object.values(itemsPlanEstado).some((e) => !e.aplica);
   const diasEntrega = planBase === "Plan Básico" ? 39 : 59;
@@ -2009,9 +2016,35 @@ export default function PresupuestoManual() {
                       {aplicaIva && <span className="text-sm font-semibold text-gray-900">{cop(iva)}</span>}
                     </div>
 
-                    <div className="flex w-72 justify-between border-t border-gray-300 pt-2">
+                    <div className="flex w-72 items-start justify-between border-t border-gray-300 pt-2">
                       <span className="text-base font-bold text-gray-900">TOTAL GENERAL</span>
-                      <span className="text-base font-bold text-[#b08d4f]">{cop(totalFinal)}</span>
+                      <div className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <span className="text-base font-bold text-[#b08d4f]">$</span>
+                          <input
+                            type="text"
+                            value={totalFinal.toLocaleString("es-CO")}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/\./g, "").replace(/[^0-9-]/g, "");
+                              const num = parseInt(raw, 10);
+                              if (!isNaN(num)) setTotalManual(num);
+                            }}
+                            className="w-28 border-b border-[#b08d4f]/50 bg-transparent text-right text-base font-bold text-[#b08d4f] outline-none focus:border-[#b08d4f]"
+                          />
+                        </div>
+                        {totalManual !== null && (
+                          <div className="mt-0.5 text-[10px] text-gray-400">
+                            ajustado manualmente (calculado: {cop(totalCalculado)}){" "}
+                            <button
+                              type="button"
+                              onClick={() => setTotalManual(null)}
+                              className="text-[#b08d4f] underline"
+                            >
+                              restaurar
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
