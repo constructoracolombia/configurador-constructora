@@ -726,7 +726,7 @@ export default function PresupuestoManual() {
   const baseTotal = precioBase !== null ? precioEfectivo + subtotalAdicionales : subtotalSinPlan;
   const iva = aplicaIva ? Math.round(baseTotal * 0.19) : 0;
   const subtotalManuales = itemsManuales.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const totalFinal = Math.round((baseTotal + iva + subtotalManuales) / 100000) * 100000;
+  const totalFinal = Math.round(baseTotal + iva + subtotalManuales);
 
   const hayDescuentos = Object.values(itemsPlanEstado).some((e) => !e.aplica);
   const diasEntrega = planBase === "Plan Básico" ? 39 : 59;
